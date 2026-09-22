@@ -1,0 +1,1 @@
+export { AdminBranchesPage } from "./AdminBranchesPage";

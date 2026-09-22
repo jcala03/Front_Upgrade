@@ -1,0 +1,133 @@
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-splash);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.splash__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #05070a;
+}
+
+.splash__logo-wrap {
+  position: relative;
+  z-index: 3;
+  width: clamp(390px, 42vw, 640px);
+  opacity: 0;
+  transform-origin: center;
+}
+
+.splash__logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.splash__effects {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.splash__tracks {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: clamp(200px, 30vh, 330px);
+  overflow: visible;
+  opacity: 1;
+  transform: translateY(-50%);
+}
+
+.splash__track-stroke {
+  fill: none;
+  stroke: rgba(3, 5, 7, 0.92);
+  stroke-linecap: round;
+  stroke-width: 19;
+}
+
+.splash__track-stroke--lower {
+  stroke-width: 22;
+}
+
+.splash__track-breaks {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.16);
+  stroke-dasharray: 4 12 18 9 3 20 28 13;
+  stroke-linecap: butt;
+  stroke-width: 7;
+}
+
+.splash__track-breaks--lower {
+  stroke-dasharray: 13 7 3 17 24 11 5 20;
+  stroke-width: 8;
+}
+
+.splash__streak {
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 15px);
+  width: min(62vw, 900px);
+  height: clamp(110px, 17vw, 190px);
+  overflow: visible;
+  transform: translateY(-50%);
+}
+
+.splash__smoke {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(36vw, 520px);
+  min-width: 300px;
+  height: auto;
+  overflow: visible;
+  opacity: 1;
+  transform: translate(-72%, -47%);
+}
+
+@media (max-width: 760px) {
+  .splash__logo-wrap {
+    width: clamp(300px, 82vw, 470px);
+  }
+
+  .splash__tracks {
+    width: 148%;
+    height: 220px;
+    transform: translate(-18%, -50%);
+  }
+
+  .splash__streak {
+    left: calc(50% - 10px);
+    width: 92vw;
+    height: 130px;
+  }
+
+  .splash__smoke {
+    left: 48%;
+    width: 390px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .splash__logo-wrap {
+    width: 88vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash__effects {
+    display: none;
+  }
+}

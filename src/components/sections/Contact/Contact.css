@@ -1,0 +1,934 @@
+.contact {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border-soft);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(180deg, #05070a 0%, #030405 42%, #000 100%);
+  background-size: 160px 100%, auto;
+}
+
+.contact::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 48%, rgba(0, 149, 212, 0.035), transparent 76%);
+}
+
+.contact__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(300px, 0.68fr) minmax(580px, 1fr);
+  gap: clamp(48px, 6.5vw, 104px);
+  align-items: start;
+}
+
+.contact__copy {
+  position: sticky;
+  top: 112px;
+  max-width: 620px;
+}
+
+.contact__eyebrow,
+.contact__title,
+.contact__copy > p,
+.contact__scheduler,
+.contact__secondary {
+  opacity: 0;
+}
+
+.contact__eyebrow {
+  transform: translateY(12px);
+}
+
+.contact__title {
+  transform: translateY(18px);
+}
+
+.contact__copy > p {
+  transform: translateY(10px);
+}
+
+.contact__scheduler {
+  transform: translateX(20px);
+}
+
+.contact.is-visible .contact__eyebrow,
+.contact.is-visible .contact__title,
+.contact.is-visible .contact__copy > p,
+.contact.is-visible .contact__scheduler,
+.contact.is-visible .contact__secondary {
+  opacity: 1;
+  transform: translate(0);
+}
+
+.contact.is-visible .contact__eyebrow {
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__title {
+  transition: opacity 460ms 100ms ease, transform 560ms 100ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__copy > p {
+  transition: opacity 420ms 240ms ease, transform 500ms 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__scheduler {
+  transition: opacity 520ms 220ms ease, transform 620ms 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__scheduler::before {
+  transform: scaleX(1);
+  transition: transform 560ms 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact__calendar-toolbar,
+.contact__weekdays,
+.contact__days {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.contact.is-visible .contact__calendar-toolbar {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 360ms 380ms ease, transform 440ms 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__weekdays,
+.contact.is-visible .contact__days {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 360ms 460ms ease, transform 440ms 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact.is-visible .contact__secondary {
+  transition: opacity 420ms 480ms ease;
+}
+
+.contact__title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(3.8rem, 5.6vw, 7.2rem);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.contact__title span {
+  display: block;
+}
+
+.contact__copy > p {
+  max-width: 500px;
+  margin: 30px 0 0;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: clamp(0.98rem, 1.05vw, 1.1rem);
+  line-height: 1.75;
+}
+
+.contact__scheduler {
+  position: relative;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.contact__scheduler::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #0095d4 0 18%, rgba(148, 163, 184, 0.24) 18% 100%);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.contact__scheduler::after {
+  content: "";
+  position: absolute;
+  inset: -60px -50px auto -90px;
+  z-index: -1;
+  height: 440px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 64% 42%, rgba(148, 163, 184, 0.075), transparent 66%);
+}
+
+.contact__scheduler-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 20px;
+  color: rgba(226, 232, 240, 0.84);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contact__scheduler-head small {
+  color: rgba(148, 163, 184, 0.58);
+  font: inherit;
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+}
+
+.contact__progress {
+  --contact-progress: 0%;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 27px;
+}
+
+.contact__progress::before,
+.contact__progress::after {
+  content: "";
+  position: absolute;
+  top: 9px;
+  right: 16.666%;
+  left: 16.666%;
+  height: 1px;
+}
+
+.contact__progress::before { background: rgba(148, 163, 184, 0.2); }
+.contact__progress::after {
+  right: auto;
+  width: var(--contact-progress);
+  background: #0095d4;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.contact__progress--step-2 { --contact-progress: 33.333%; }
+.contact__progress--step-3 { --contact-progress: 66.667%; }
+
+.contact__progress > div {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: rgba(148, 163, 184, 0.38);
+  font-family: var(--font-display);
+}
+
+.contact__progress > div::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  z-index: -1;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: #05070a;
+  transform: rotate(45deg);
+}
+
+.contact__progress > div.is-active { color: #f8fafc; }
+.contact__progress > div.is-active::before { border-color: #38bdf8; }
+.contact__progress span {
+  min-width: 34px;
+  background: #05070a;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.contact__progress small {
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contact__calendar-section,
+.contact__time-section,
+.contact__details {
+  padding-block: clamp(30px, 3.2vw, 42px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.17);
+}
+
+.contact__step-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+  padding-bottom: 18px;
+}
+
+.contact__step-heading > span {
+  min-width: 50px;
+  color: #38bdf8;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+}
+
+.contact__step-heading p,
+.contact__step-heading label {
+  display: block;
+  margin: 0;
+  color: #f8fafc;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.contact__step-heading small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(148, 163, 184, 0.75);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.contact__calendar {
+  width: 100%;
+}
+
+.contact__calendar-toolbar {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.contact__calendar-toolbar > strong {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  color: #f8fafc;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 2.7vw, 2.7rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  text-transform: capitalize;
+}
+
+.contact__calendar-toolbar > strong small {
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+}
+
+.contact__calendar-toolbar > div {
+  display: flex;
+  gap: 5px;
+}
+
+.contact__calendar-toolbar button {
+  display: inline-grid;
+  width: 48px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(11, 15, 20, 0.72);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.contact__calendar-toolbar button:hover:not(:disabled) {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.48);
+  background: #0d1218;
+  transform: translateY(-1px);
+}
+
+.contact__calendar-toolbar button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.contact__calendar-toolbar button:disabled {
+  border-color: rgba(148, 163, 184, 0.08);
+  background: rgba(11, 15, 20, 0.3);
+  color: rgba(148, 163, 184, 0.25);
+  cursor: not-allowed;
+}
+
+.contact__weekdays,
+.contact__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.contact__weekdays {
+  padding-top: 15px;
+  border-inline: 1px solid rgba(148, 163, 184, 0.07);
+}
+
+.contact__weekdays span {
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  color: rgba(148, 163, 184, 0.66);
+  font-family: var(--font-display);
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+}
+
+.contact__days {
+  border: 1px solid rgba(148, 163, 184, 0.07);
+  border-top: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: calc(100% / 7) 48px, calc(100% / 7) 100%;
+}
+
+.contact.is-visible .contact__days {
+  animation: contact-month-in 180ms ease both;
+}
+
+.contact__days > span,
+.contact__days > button {
+  min-width: 0;
+  min-height: 48px;
+}
+
+.contact__days > button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgba(248, 250, 252, 0.84);
+  font-family: var(--font-display);
+  font-size: 0.94rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.contact__days > button::before {
+  content: "";
+  position: absolute;
+  width: 39px;
+  height: 39px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  transform: scale(0.96);
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.contact__days > button:hover:not(:disabled)::before {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.055);
+  transform: scale(1);
+}
+
+.contact__today-label {
+  position: absolute;
+  bottom: 1px;
+  color: #38bdf8;
+  font-size: 0.42rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.contact__days > button.is-selected {
+  color: #fff;
+  font-weight: 700;
+}
+
+.contact__days > button.is-selected::before {
+  border-color: rgba(248, 250, 252, 0.78);
+  background: #0b0f14;
+  box-shadow: inset 0 -2px 0 #0095d4;
+  transform: scale(1);
+}
+
+.contact__days > button.is-selected::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 1px;
+  height: 7px;
+  background: #38bdf8;
+}
+
+.contact__days > button:disabled {
+  color: rgba(148, 163, 184, 0.24);
+  cursor: not-allowed;
+}
+
+.contact__selected-date {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.38fr) 1fr;
+  gap: 22px;
+  align-items: baseline;
+  margin-top: 22px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 18px;
+  animation: contact-selected-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.contact__selected-date span {
+  color: rgba(148, 163, 184, 0.66);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.contact__selected-date strong {
+  color: #f8fafc;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 1.8vw, 1.65rem);
+  font-weight: 550;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+}
+
+.contact__days > button:focus-visible,
+.contact__calendar-toolbar button:focus-visible,
+.contact input:focus-visible,
+.contact textarea:focus-visible,
+.contact__submit:focus-visible,
+.contact__secondary a:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+.contact__progressive {
+  animation: contact-progressive-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.contact__time-section > input {
+  width: min(100%, 240px);
+  min-height: 64px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  padding-inline: 8px;
+  background: linear-gradient(180deg, rgba(11, 15, 20, 0.72), rgba(9, 13, 18, 0.32));
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+}
+
+.contact input,
+.contact textarea {
+  min-height: 50px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 2px;
+  padding: 0 14px;
+  background: rgba(7, 10, 14, 0.84);
+  color: #f8fafc;
+  font: inherit;
+  color-scheme: dark;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.contact textarea {
+  min-height: 94px;
+  resize: vertical;
+  padding-block: 13px;
+  line-height: 1.55;
+}
+
+.contact input:hover,
+.contact textarea:hover {
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.contact input:focus,
+.contact textarea:focus {
+  border-color: #0095d4;
+  background: #0b1016;
+}
+
+.contact input[aria-invalid="true"],
+.contact textarea[aria-invalid="true"] {
+  border-color: #f87171;
+}
+
+.contact__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 20px;
+}
+
+.contact__field {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.contact__field--wide {
+  grid-column: 1 / -1;
+}
+
+.contact__field > label {
+  color: rgba(226, 232, 240, 0.78);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.contact__field > label span {
+  color: rgba(148, 163, 184, 0.65);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.contact__error {
+  margin: 8px 0 0;
+  color: #fca5a5;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.contact__field .contact__error {
+  margin: 0;
+}
+
+.contact__summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 24px;
+  margin-top: 28px;
+  border-left: 2px solid #0095d4;
+  padding: 4px 0 4px 18px;
+}
+
+.contact__summary > span {
+  grid-row: 1 / 4;
+  color: #38bdf8;
+  font-family: var(--font-display);
+  font-size: 0.69rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contact__summary strong {
+  color: #f8fafc;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.contact__summary p {
+  margin: 3px 0 0;
+  color: rgba(203, 213, 225, 0.72);
+  font-size: 0.86rem;
+}
+
+.contact__submit {
+  display: inline-flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+  border: 1px solid #0095d4;
+  border-radius: 3px;
+  background: #0095d4;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+
+.contact__submit:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  background: #087fb3;
+}
+
+.contact__submit:active {
+  transform: translateY(0);
+}
+
+.contact__disclaimer {
+  margin: 12px 0 0;
+  color: rgba(148, 163, 184, 0.72);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.contact__secondary {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(22px, 4vw, 58px);
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 24px;
+  color: rgba(148, 163, 184, 0.72);
+  font-family: var(--font-display);
+  font-size: 0.69rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contact__secondary a {
+  color: rgba(226, 232, 240, 0.76);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.contact__secondary a:hover {
+  color: #38bdf8;
+}
+
+@keyframes contact-month-in {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+@keyframes contact-selected-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes contact-progressive-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1040px) {
+  .contact__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .contact__copy {
+    position: static;
+    max-width: 760px;
+  }
+
+  .contact__scheduler {
+    width: min(100%, 760px);
+  }
+
+  .contact__secondary {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .contact {
+    background-size: 100px 100%, auto;
+  }
+
+  .contact__inner {
+    gap: 42px;
+  }
+
+  .contact__title {
+    font-size: clamp(3.25rem, 15.2vw, 4.8rem);
+    line-height: 0.94;
+  }
+
+  .contact__copy > p {
+    margin-top: 22px;
+  }
+
+  .contact__scheduler::after {
+    inset: -28px -16px auto -16px;
+    height: 340px;
+  }
+
+  .contact__scheduler-head {
+    align-items: flex-start;
+    gap: 12px;
+    padding-top: 17px;
+    font-size: 0.66rem;
+  }
+
+  .contact__scheduler-head small {
+    max-width: 112px;
+    font-size: 0.57rem;
+    line-height: 1.45;
+    text-align: right;
+  }
+
+  .contact__progress {
+    margin-top: 23px;
+  }
+
+  .contact__progress small {
+    font-size: 0.56rem;
+    letter-spacing: 0.1em;
+  }
+
+  .contact__calendar-section,
+  .contact__time-section,
+  .contact__details {
+    padding-block: 25px;
+  }
+
+  .contact__calendar-toolbar {
+    min-height: 70px;
+  }
+
+  .contact__calendar-toolbar > strong {
+    gap: 10px;
+    font-size: clamp(1.7rem, 8vw, 2.2rem);
+  }
+
+  .contact__calendar-toolbar button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .contact__weekdays span {
+    min-height: 34px;
+  }
+
+  .contact__days {
+    background-size: calc(100% / 7) 44px, calc(100% / 7) 100%;
+  }
+
+  .contact__days > span,
+  .contact__days > button {
+    min-height: 44px;
+  }
+
+  .contact__days > button::before {
+    width: 36px;
+    height: 36px;
+  }
+
+  .contact__fields {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .contact__field--wide {
+    grid-column: auto;
+  }
+
+  .contact__time-section > input {
+    width: 100%;
+  }
+
+  .contact__selected-date {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .contact__summary {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .contact__summary > span {
+    grid-row: auto;
+    margin-bottom: 5px;
+  }
+
+  .contact__secondary {
+    flex-wrap: wrap;
+    gap: 16px 28px;
+  }
+}
+
+@media (max-width: 390px) {
+  .contact__days > span,
+  .contact__days > button {
+    min-height: 42px;
+  }
+
+  .contact__days > button::before {
+    width: 34px;
+    height: 34px;
+  }
+
+  .contact__step-heading {
+    gap: 12px;
+  }
+
+  .contact__step-heading > span {
+    min-width: 44px;
+  }
+
+  .contact__calendar-toolbar > strong {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .contact__calendar-toolbar > strong small {
+    font-size: 0.68rem;
+  }
+
+  .contact__progress span {
+    min-width: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact__eyebrow,
+  .contact__title,
+  .contact__copy > p,
+  .contact__scheduler,
+  .contact__secondary {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .contact__scheduler::before {
+    transform: scaleX(1);
+    transition: none;
+  }
+
+  .contact__calendar-toolbar,
+  .contact__weekdays,
+  .contact__days {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .contact__days,
+  .contact__progressive,
+  .contact__selected-date {
+    animation: none;
+  }
+
+  .contact__progress::after,
+  .contact__days > button,
+  .contact__days > button::before {
+    transition: none;
+  }
+
+  .contact__submit:hover {
+    transform: none;
+  }
+}

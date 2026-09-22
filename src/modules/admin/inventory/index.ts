@@ -1,0 +1,1 @@
+export { AdminInventoryPage } from "./AdminInventoryPage";
