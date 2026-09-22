@@ -1,0 +1,1 @@
+export { AdminCommissionsPage } from "./AdminCommissionsPage";

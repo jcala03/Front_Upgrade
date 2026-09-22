@@ -1,0 +1,233 @@
+.atelier {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border-soft);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.04), transparent 26%),
+    radial-gradient(circle at 72% 18%, rgba(0, 149, 212, 0.07), transparent 28%),
+    linear-gradient(180deg, #000 0%, #030303 42%, #000 100%);
+}
+
+.atelier::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 150px, 150px 100%;
+  mask-image: linear-gradient(180deg, transparent 0, black 16%, black 78%, transparent 100%);
+}
+
+.atelier__inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(340px, 0.88fr) minmax(0, 1fr);
+  gap: clamp(56px, 7vw, 116px);
+  align-items: center;
+}
+
+.atelier__visual {
+  position: relative;
+  min-height: clamp(520px, 46vw, 680px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: #05070a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 30px 120px rgba(0, 0, 0, 0.42);
+}
+
+.atelier__visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(5, 7, 10, 0.04), transparent 58%),
+    linear-gradient(0deg, rgba(5, 7, 10, 0.22), transparent 32%);
+}
+
+.atelier__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.atelier__copy {
+  max-width: 760px;
+}
+
+.atelier__title {
+  max-width: 780px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(4rem, 6.1vw, 7.8rem);
+  font-weight: 920;
+  letter-spacing: -0.082em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.atelier__title span {
+  display: block;
+}
+
+.atelier__title i {
+  display: inline-block;
+  width: 0.14em;
+  height: 0.14em;
+  margin-left: 0.075em;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 34px rgba(0, 149, 212, 0.72);
+  transform: translateY(-0.03em);
+}
+
+.atelier__description {
+  max-width: 640px;
+  margin-top: clamp(28px, 4vw, 46px);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: clamp(1rem, 1.08vw, 1.14rem);
+  line-height: 1.88;
+}
+
+.atelier__process {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: clamp(30px, 4vw, 52px);
+}
+
+.atelier__process-card {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  min-height: 164px;
+  padding: 22px 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 60%),
+    rgba(255, 255, 255, 0.022);
+  transition:
+    transform var(--transition-premium),
+    border-color var(--transition-premium),
+    background var(--transition-premium),
+    box-shadow var(--transition-premium);
+}
+
+.atelier__process-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0, 149, 212, 0.16), transparent 44%),
+    linear-gradient(180deg, transparent, rgba(0, 149, 212, 0.035));
+  transition: opacity var(--transition-premium);
+}
+
+.atelier__process-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 149, 212, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 60%),
+    rgba(0, 149, 212, 0.04);
+  box-shadow: 0 24px 70px rgba(0, 149, 212, 0.08);
+}
+
+.atelier__process-card:hover::after {
+  opacity: 1;
+}
+
+.atelier__process-card > strong {
+  position: relative;
+  z-index: 2;
+  display: block;
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.atelier__process-card svg {
+  position: relative;
+  z-index: 2;
+  display: block;
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 20px rgba(0, 149, 212, 0.3));
+}
+
+.atelier__process-card div {
+  position: relative;
+  z-index: 2;
+}
+
+.atelier__process-card span {
+  display: block;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.72rem;
+  font-weight: 840;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.atelier__process-card p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1040px) {
+  .atelier__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .atelier__visual {
+    min-height: 520px;
+  }
+
+  .atelier__copy {
+    max-width: 860px;
+  }
+}
+
+@media (max-width: 700px) {
+  .atelier__title {
+    font-size: clamp(3rem, 13.8vw, 5rem);
+    letter-spacing: -0.076em;
+    line-height: 0.94;
+  }
+
+  .atelier__visual {
+    min-height: 430px;
+  }
+
+  .atelier__process {
+    grid-template-columns: 1fr;
+  }
+
+  .atelier__process-card {
+    min-height: auto;
+  }
+
+}
+
+@media (max-width: 460px) {
+  .atelier__title {
+    font-size: clamp(2.65rem, 13.2vw, 4.1rem);
+  }
+}

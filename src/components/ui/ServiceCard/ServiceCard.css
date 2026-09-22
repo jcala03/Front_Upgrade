@@ -1,0 +1,98 @@
+.service-card {
+  position: relative;
+  min-height: clamp(240px, 24vw, 330px);
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  padding: clamp(22px, 2.7vw, 34px);
+  background: #030303;
+  box-shadow: none;
+  transition:
+    background var(--transition-premium),
+    transform var(--transition-premium);
+}
+
+.service-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 8%, rgba(0, 149, 212, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 54%);
+  opacity: 0;
+  transition: opacity var(--transition-premium);
+}
+
+.service-card::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 86px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+  transform: scaleX(0.42);
+  transform-origin: right;
+  transition: transform var(--transition-premium), background var(--transition-premium);
+}
+
+.service-card:hover {
+  background: #070707;
+  transform: translateY(-6px);
+}
+
+.service-card:hover::before {
+  opacity: 1;
+}
+
+.service-card:hover::after {
+  background: var(--color-accent);
+  transform: scaleX(1);
+}
+
+.service-card__number {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-bottom: clamp(48px, 6vw, 86px);
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.22em;
+}
+
+.service-card__icon {
+  position: absolute;
+  top: clamp(20px, 2.4vw, 32px);
+  right: clamp(20px, 2.4vw, 32px);
+  z-index: 1;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.service-card h3 {
+  position: relative;
+  z-index: 1;
+  max-width: 310px;
+  margin-bottom: 16px;
+  font-size: clamp(1.8rem, 3.4vw, 3.8rem);
+  font-weight: 740;
+  letter-spacing: -0.075em;
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+.service-card p {
+  position: relative;
+  z-index: 1;
+  max-width: 340px;
+  color: var(--color-text-secondary);
+  font-size: 0.94rem;
+  line-height: 1.68;
+}
