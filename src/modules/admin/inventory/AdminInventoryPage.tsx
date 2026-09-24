@@ -10,6 +10,11 @@ import type { InventoryCatalogProduct, InventoryMovement, InventoryMovementPaylo
 import { formatCrmTimestamp } from "../../../utils/crmDateTime";
 import { hasPermission } from "../../../utils/authStorage";
 import "./AdminInventoryPage.css";
+import { getAdminProductCategories } from "../../../api/productCategories";
+import { getAdminProductBrands } from "../../../api/productBrands";
+import { getAdminVehicleBrands, getAdminVehicleModels, getAdminVehicleMultimediaSystems, getAdminVehicleVersions, } from "../../../api/vehicles";
+import { ProductForm } from "./product-form/ProductForm";
+import type { ProductFormCatalogs } from "./product-form/productFormTypes";
 
 export type InventoryView = "stocks" | "movements" | "transfers";
 const movementLabels: Record<InventoryMovementType, string> = { entry: "Entrada", exit: "Salida", adjustment: "Ajuste", sale: "Venta", sale_reversal: "Reversión de venta", transfer_out: "Salida por traslado", transfer_in: "Entrada por traslado" };
@@ -53,83 +58,296 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
   const [minimumStock, setMinimumStock] = useState<InventoryStock | null>(null);
   const [movementStock, setMovementStock] = useState<InventoryStock | null>(null);
   const [enteringInventory, setEnteringInventory] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
   const [dialogBusy, setDialogBusy] = useState(false);
   const requestId = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => { const current = ++requestId.current; setLoading(true); setError(""); try { const result = await getInventoryStocks({ branch_id: branchId ? Number(branchId) : undefined, search: submittedSearch || undefined, low_stock: criticalOnly || undefined, page, per_page: 25 }, signal); if (current === requestId.current) { setStocks(result.data); setPages(Math.max(1, result.last_page)); setTotal(result.total); } } catch (cause) { if (!(cause instanceof DOMException && cause.name === "AbortError") && current === requestId.current) setError(errorMessage(cause, "No se pudieron cargar las existencias.")); } finally { if (current === requestId.current) setLoading(false); } }, [branchId, criticalOnly, page, submittedSearch]);
   useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => { requestId.current += 1; controller.abort(); }; }, [load]);
   return <>
 <header className="inventory-heading">
-<div>
-<span>Inventario multisede</span>
-<h2>Existencias por sede</h2>
-<p>La disponibilidad operativa se consulta por artículo y ubicación.</p>
-</div>{canUpdate ? <button className="is-primary" type="button" onClick={() => setEnteringInventory(true)}><Plus size={18} />Ingresar inventario</button> : null}</header>
-<form className="inventory-filters" onSubmit={(event) => { event.preventDefault(); setPage(1); setSubmittedSearch(search.trim()); }}>
-<label>
-<span>Sede</span>
-<select value={branchId} onChange={(event) => { setBranchId(event.target.value); setPage(1); }}>
-<option value="">Todas las sedes</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}{branch.is_active ? "" : " (inactiva)"}</option>)}</select>
-</label>
-<label className="is-grow">
-<span>Producto o SKU</span>
-<div className="inventory-search">
-<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar producto, variante o SKU" />
-<button type="submit" aria-label="Buscar">
-<Search size={17} />
-</button>
-</div>
-</label>
-<label className="inventory-check">
-<input type="checkbox" checked={criticalOnly} onChange={(event) => { setCriticalOnly(event.target.checked); setPage(1); }} />
-<span>Solo stock bajo</span>
-</label>
-</form>{message ? <p className="inventory-feedback" role="status">{message}</p> : null}{error ? <div className="inventory-feedback is-error" role="alert">{error}<button type="button" onClick={() => void load()}>Reintentar</button>
-</div> : null}{loading && !stocks.length ? <p className="inventory-state" role="status">Cargando existencias...</p> : null}{!loading && !stocks.length && !error ? <p className="inventory-state">No hay existencias que coincidan con los filtros.</p> : null}{stocks.length ? <div className="inventory-table-wrap" aria-busy={loading}>
-<table className="inventory-table">
-<thead>
-<tr>
-<th>Artículo</th>
-<th>Sede</th>
-<th>Estado</th>
-<th>Existencia</th>
-<th>Mínimo</th>
-<th>Acciones</th>
-</tr>
-</thead>
-<tbody>{stocks.map((stock) => <tr key={stock.id}>
-<td data-label="Artículo">
-<strong>{itemName(stock)}</strong>
-<small>{itemSku(stock)} · {stock.type === "variant" ? "Variante" : "Producto simple"}</small>
-</td>
-<td data-label="Sede">
-<strong>{stock.branch?.name ?? `Sede #${stock.branch_id}`}</strong>
-<small>{stock.branch?.code}</small>
-</td>
-<td data-label="Estado">
-<StatusBadge label={stockLabels[stock.status]} tone={stockTones[stock.status]} />
-</td>
-<td data-label="Existencia">
-<strong className={stock.status !== "normal" ? "is-critical" : ""}>{stock.quantity}</strong>
-</td>
-<td data-label="Mínimo">{stock.minimum_quantity}</td>
-<td data-label="Acciones">
-<div className="inventory-actions">{canUpdate ? <>
-<button type="button" onClick={() => setMovementStock(stock)}>Movimiento</button>
-<button type="button" onClick={() => setMinimumStock(stock)}>
-<Pencil size={14} />Mínimo</button>
-</> : <span>Solo lectura</span>}</div>
-</td>
-</tr>)}</tbody>
-</table>
-</div> : null}<Pagination page={page} pages={pages} total={total} onPage={setPage} />
-<CrmDialog open={minimumStock !== null} titleId="minimum-title" onClose={() => setMinimumStock(null)} busy={dialogBusy}>
-  {minimumStock ? <MinimumForm key={minimumStock.id} stock={minimumStock} onBusyChange={setDialogBusy} onClose={() => setMinimumStock(null)} onSaved={(updated) => { setStocks((current) => current.map((item) => item.id === updated.id ? updated : item)); setMinimumStock(null); setMessage("Stock mínimo actualizado correctamente."); void load(); }} /> : null}
+  <div>
+    <span>Inventario multisede</span>
+    <h2>Existencias por sede</h2>
+    <p>La disponibilidad operativa se consulta por artículo y ubicación.</p>
+  </div>
+
+  {canUpdate ? (
+    <div className="inventory-heading__actions">
+      <button
+        type="button"
+        onClick={() => setCreatingProduct(true)}
+      >
+        <Plus size={18} />
+        Crear producto
+      </button>
+
+      <button
+        className="is-primary"
+        type="button"
+        onClick={() => setEnteringInventory(true)}
+      >
+        <Plus size={18} />
+        Ajustar existencias
+      </button>
+    </div>
+  ) : null}
+</header>
+
+<form
+  className="inventory-filters"
+  onSubmit={(event) => {
+    event.preventDefault();
+    setPage(1);
+    setSubmittedSearch(search.trim());
+  }}
+>
+  <label>
+    <span>Sede</span>
+    <select
+      value={branchId}
+      onChange={(event) => {
+        setBranchId(event.target.value);
+        setPage(1);
+      }}
+    >
+      <option value="">Todas las sedes</option>
+      {branches.map((branch) => (
+        <option key={branch.id} value={branch.id}>
+          {branch.name}
+          {branch.is_active ? "" : " (inactiva)"}
+        </option>
+      ))}
+    </select>
+  </label>
+
+  <label className="is-grow">
+    <span>Producto o SKU</span>
+    <div className="inventory-search">
+      <input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Buscar producto, variante o SKU"
+      />
+      <button type="submit" aria-label="Buscar">
+        <Search size={17} />
+      </button>
+    </div>
+  </label>
+
+  <label className="inventory-check">
+    <input
+      type="checkbox"
+      checked={criticalOnly}
+      onChange={(event) => {
+        setCriticalOnly(event.target.checked);
+        setPage(1);
+      }}
+    />
+    <span>Solo stock bajo</span>
+  </label>
+</form>
+
+{message ? (
+  <p className="inventory-feedback" role="status">
+    {message}
+  </p>
+) : null}
+
+{error ? (
+  <div className="inventory-feedback is-error" role="alert">
+    {error}
+    <button type="button" onClick={() => void load()}>
+      Reintentar
+    </button>
+  </div>
+) : null}
+
+{loading && !stocks.length ? (
+  <p className="inventory-state" role="status">
+    Cargando existencias...
+  </p>
+) : null}
+
+{!loading && !stocks.length && !error ? (
+  <p className="inventory-state">
+    No hay existencias que coincidan con los filtros.
+  </p>
+) : null}
+
+{stocks.length ? (
+  <div className="inventory-table-wrap" aria-busy={loading}>
+    <table className="inventory-table">
+      <thead>
+        <tr>
+          <th>Artículo</th>
+          <th>Sede</th>
+          <th>Estado</th>
+          <th>Existencia</th>
+          <th>Mínimo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {stocks.map((stock) => (
+          <tr key={stock.id}>
+            <td data-label="Artículo">
+              <strong>{itemName(stock)}</strong>
+              <small>
+                {itemSku(stock)} ·{" "}
+                {stock.type === "variant" ? "Variante" : "Producto simple"}
+              </small>
+            </td>
+
+            <td data-label="Sede">
+              <strong>
+                {stock.branch?.name ?? `Sede #${stock.branch_id}`}
+              </strong>
+              <small>{stock.branch?.code}</small>
+            </td>
+
+            <td data-label="Estado">
+              <StatusBadge
+                label={stockLabels[stock.status]}
+                tone={stockTones[stock.status]}
+              />
+            </td>
+
+            <td data-label="Existencia">
+              <strong
+                className={stock.status !== "normal" ? "is-critical" : ""}
+              >
+                {stock.quantity}
+              </strong>
+            </td>
+
+            <td data-label="Mínimo">{stock.minimum_quantity}</td>
+
+            <td data-label="Acciones">
+              <div className="inventory-actions">
+                {canUpdate ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMovementStock(stock)}
+                    >
+                      Movimiento
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMinimumStock(stock)}
+                    >
+                      <Pencil size={14} />
+                      Mínimo
+                    </button>
+                  </>
+                ) : (
+                  <span>Solo lectura</span>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+) : null}
+
+<Pagination
+  page={page}
+  pages={pages}
+  total={total}
+  onPage={setPage}
+/>
+
+{/* CREAR PRODUCTO */}
+<CrmDialog
+  open={creatingProduct}
+  titleId="product-create-title"
+  onClose={() => setCreatingProduct(false)}
+  busy={false}
+>
+  {creatingProduct ? (
+    <CreateProductForm
+      onClose={() => setCreatingProduct(false)}
+      onSaved={(successMessage) => {
+        setCreatingProduct(false);
+        setMessage(successMessage);
+        void load();
+      }}
+    />
+  ) : null}
 </CrmDialog>
-<CrmDialog open={movementStock !== null} titleId="movement-title" onClose={() => setMovementStock(null)} busy={dialogBusy}>
-  {movementStock ? <MovementForm key={movementStock.id} stock={movementStock} onBusyChange={setDialogBusy} onClose={() => setMovementStock(null)} onSaved={() => { setMovementStock(null); setMessage("Movimiento registrado correctamente."); void load(); }} /> : null}
+
+{/* MODIFICAR STOCK MÍNIMO */}
+<CrmDialog
+  open={minimumStock !== null}
+  titleId="minimum-title"
+  onClose={() => setMinimumStock(null)}
+  busy={dialogBusy}
+>
+  {minimumStock ? (
+    <MinimumForm
+      key={minimumStock.id}
+      stock={minimumStock}
+      onBusyChange={setDialogBusy}
+      onClose={() => setMinimumStock(null)}
+      onSaved={(updated) => {
+        setStocks((current) =>
+          current.map((item) =>
+            item.id === updated.id ? updated : item
+          )
+        );
+        setMinimumStock(null);
+        setMessage("Stock mínimo actualizado correctamente.");
+        void load();
+      }}
+    />
+  ) : null}
 </CrmDialog>
-<CrmDialog open={enteringInventory} titleId="inventory-entry-title" onClose={() => setEnteringInventory(false)} busy={dialogBusy}>
-  {enteringInventory ? <InventoryEntryForm branches={branches} onBusyChange={setDialogBusy} onClose={() => setEnteringInventory(false)} onSaved={() => { setEnteringInventory(false); setMessage("Ingreso de inventario registrado correctamente."); void load(); }} /> : null}
+
+{/* MOVIMIENTO MANUAL */}
+<CrmDialog
+  open={movementStock !== null}
+  titleId="movement-title"
+  onClose={() => setMovementStock(null)}
+  busy={dialogBusy}
+>
+  {movementStock ? (
+    <MovementForm
+      key={movementStock.id}
+      stock={movementStock}
+      onBusyChange={setDialogBusy}
+      onClose={() => setMovementStock(null)}
+      onSaved={() => {
+        setMovementStock(null);
+        setMessage("Movimiento registrado correctamente.");
+        void load();
+      }}
+    />
+  ) : null}
+</CrmDialog>
+
+{/* Ajustar existencias */}
+<CrmDialog
+  open={enteringInventory}
+  titleId="inventory-entry-title"
+  onClose={() => setEnteringInventory(false)}
+  busy={dialogBusy}
+>
+  {enteringInventory ? (
+    <InventoryEntryForm
+      branches={branches}
+      onBusyChange={setDialogBusy}
+      onClose={() => setEnteringInventory(false)}
+      onSaved={() => {
+        setEnteringInventory(false);
+        setMessage("Ingreso de inventario registrado correctamente.");
+        void load();
+      }}
+    />
+  ) : null}
 </CrmDialog>
 </>;
 };
@@ -273,7 +491,7 @@ const InventoryEntryForm = ({ branches, onBusyChange, onClose, onSaved }: { bran
   };
 
   return <form className="inventory-dialog" onSubmit={submit}>
-<DialogHeader title="Ingresar inventario" id="inventory-entry-title" onClose={onClose} disabled={saving} />
+<DialogHeader title="Ajustar existencias" id="inventory-entry-title" onClose={onClose} disabled={saving} />
 <div className="inventory-dialog__body">
 <p>Registra una entrada para una posición existente o para el primer ingreso del artículo en la sede.</p>
 <div className="inventory-form-grid">
@@ -286,8 +504,129 @@ const InventoryEntryForm = ({ branches, onBusyChange, onClose, onSaved }: { bran
 <label className="is-wide"><span>Motivo *</span><input required maxLength={255} value={reason} onChange={(event) => setReason(event.target.value)} />{errors.reason?.[0] ? <small>{errors.reason[0]}</small> : null}</label>
 <label className="is-wide"><span>Notas</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} />{errors.notes?.[0] ? <small>{errors.notes[0]}</small> : null}</label>
 </div>{error ? <p role="alert" className="inventory-form-error">{error}</p> : null}</div>
-<DialogFooter onClose={onClose} saving={saving} label="Ingresar inventario" />
+<DialogFooter onClose={onClose} saving={saving} label="Ajustar existencias" />
 </form>;
+};
+
+
+
+
+const CreateProductForm = ({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) => {
+  const [catalogs, setCatalogs] = useState<ProductFormCatalogs | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCatalogs = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [
+          categories,
+          productBrands,
+          vehicleBrands,
+          vehicleModels,
+          vehicleVersions,
+          vehicleMultimediaSystems,
+        ] = await Promise.all([
+          getAdminProductCategories(),
+          getAdminProductBrands(),
+          getAdminVehicleBrands(),
+          getAdminVehicleModels(),
+          getAdminVehicleVersions(),
+          getAdminVehicleMultimediaSystems(),
+        ]);
+
+        if (!active) return;
+
+        setCatalogs({
+          categories,
+          productBrands,
+          vehicleBrands,
+          vehicleModels,
+          vehicleVersions,
+          vehicleMultimediaSystems,
+        });
+      } catch (cause) {
+        if (!active) return;
+
+        setError(
+          errorMessage(
+            cause,
+            "No se pudieron cargar los datos necesarios para crear el producto."
+          )
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadCatalogs();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="inventory-dialog">
+        <DialogHeader
+          id="product-create-title"
+          title="Crear producto"
+          onClose={onClose}
+          disabled={false}
+        />
+
+        <div className="inventory-dialog__body">
+          <p className="inventory-state" role="status">
+            Cargando formulario...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !catalogs) {
+    return (
+      <div className="inventory-dialog">
+        <DialogHeader
+          id="product-create-title"
+          title="Crear producto"
+          onClose={onClose}
+          disabled={false}
+        />
+
+        <div className="inventory-dialog__body">
+          <p className="inventory-form-error" role="alert">
+            {error || "No se pudo preparar el formulario."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ProductForm
+      product={null}
+      {...catalogs}
+      onCancel={onClose}
+      onSaved={(message) => {
+        onSaved(message);
+      }}
+    />
+  );
 };
 
 const MovementsView = ({ branches }: { branches: Branch[] }) => { const [movements, setMovements] = useState<InventoryMovement[]>([]);

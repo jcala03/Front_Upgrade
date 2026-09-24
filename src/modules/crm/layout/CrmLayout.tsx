@@ -14,14 +14,15 @@ import {
   LayoutDashboard,
   LineChart,
   ListTodo,
-  Wrench,
   LogOut,
   Settings,
   ShoppingBag,
   Store,
+  Tags,
   Target,
   UserRound,
   UsersRound,
+  Wrench,
 } from "lucide-react";
 import logo from "../../../assets/logos/upgrade79-logo.png";
 import { logout } from "../../../api/auth";
@@ -59,6 +60,18 @@ const operationItems: NavigationItem[] = [
     matches: ["/crm/inventory", "/admin/inventory", "/crm/inventory/movements", "/admin/inventory/movements", "/crm/inventory/transfers", "/admin/inventory/transfers"],
     permission: "inventory.view",
   },
+  {
+  label: "Categorías",
+  href: "/crm/categories",
+  icon: Tags,
+  matches: [
+    "/crm/categories",
+    "/crm/settings/categories",
+    "/admin/categories",
+    "/admin/product-categories",
+  ],
+  permission: "products.view",
+  },  
   {
     label: "Órdenes",
     href: "/crm/orders",
