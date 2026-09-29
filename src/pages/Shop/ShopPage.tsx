@@ -269,7 +269,7 @@ export const ShopPage = () => {
         vehicle_version_id: vehicleVersionId,
         year,
         in_stock: inStock,
-        featured: featuredOnly,
+        featured: featuredOnly ? true : undefined,
         sort,
         specs: cleanSpecs,
       });

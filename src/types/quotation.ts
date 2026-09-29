@@ -22,7 +22,7 @@ export type QuotationStatusHistory = {
 };
 
 export type Quotation = {
-  id: number; quotation_number: string; status: QuotationStatus; valid_until: string | null;
+  id: number; branch_id: number; quotation_number: string; status: QuotationStatus; valid_until: string | null;
   customer_id: number | null; customer_vehicle_id: number | null;
   customer_name: string | null; customer_email: string | null; customer_phone: string | null;
   customer_document: string | null; customer_city: string | null; customer_address: string | null;
@@ -43,7 +43,7 @@ export type QuotationItemPayload =
   | { product_id: number; product_variant_id?: number | null; quantity: number; discount_amount?: number }
   | { item_type: "service"; service_id: number; quantity: number; discount_amount?: number };
 export type QuotationPayload = {
-  valid_until?: string; customer_id?: number | null; customer_vehicle_id?: number | null;
+  branch_id: number; valid_until?: string; customer_id?: number | null; customer_vehicle_id?: number | null;
   customer_name?: string; customer_email?: string; customer_phone?: string; customer_document?: string;
   customer_city?: string; customer_address?: string; customer_notes?: string;
   vehicle_brand_id?: number | null; vehicle_model_id?: number | null; vehicle_version_id?: number | null;

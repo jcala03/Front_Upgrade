@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { getProductBySlug } from "../../api/products";
@@ -34,7 +34,7 @@ const formatPrice = (value: number) => {
 };
 
 export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
-  const { addItem, totalItems } = useCart();
+  const { addItem, items, totalItems } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -44,7 +44,10 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
     "loading"
   );
   const [wasAdded, setWasAdded] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [pulseKey, setPulseKey] = useState(0);
+  const isAddingRef = useRef(false);
+  const addStartTotalRef = useRef(totalItems);
 
   const imageUrl = useMemo(() => {
     const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId);
@@ -52,6 +55,8 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
   }, [product, selectedVariantId]);
 
   useEffect(() => {
+    isAddingRef.current = false;
+    setIsAdding(false);
     setStatus("loading");
 
     getProductBySlug(slug)
@@ -76,6 +81,23 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
   const selectedVariant = publicVariants.find((variant) => variant.id === selectedVariantId) ?? null;
   const availableStock = Number(selectedVariant?.stock ?? (hasVariants ? product?.total_variant_stock : product?.stock) ?? 0);
   const effectivePrice = selectedVariant?.price ?? (hasVariants ? product?.lowest_variant_price : product?.price) ?? 0;
+  const cartQuantity = product
+    ? items.find(
+        (item) =>
+          item.product.id === product.id &&
+          (item.variant?.id ?? null) === (selectedVariant?.id ?? null)
+      )?.quantity ?? 0
+    : 0;
+  const remainingStock = Math.max(availableStock - cartQuantity, 0);
+
+  useEffect(() => {
+    if (!isAdding || totalItems === addStartTotalRef.current) {
+      return;
+    }
+
+    isAddingRef.current = false;
+    setIsAdding(false);
+  }, [isAdding, totalItems]);
 
   const selectVariant = (variant: ProductVariant | null) => {
     setSelectedVariantId(variant?.id ?? null);
@@ -96,15 +118,18 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
   };
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || isAddingRef.current) return;
     if (hasVariants && !selectedVariant) {
       setSelectionError("Selecciona una versión antes de agregar el producto.");
       return;
     }
-    if (availableStock <= 0 || quantity <= 0) {
+    if (availableStock <= 0 || remainingStock <= 0 || quantity <= 0) {
       return;
     }
 
+    isAddingRef.current = true;
+    addStartTotalRef.current = totalItems;
+    setIsAdding(true);
     addItem(product, quantity, selectedVariant);
     setWasAdded(true);
     setPulseKey((currentKey) => currentKey + 1);
@@ -301,7 +326,12 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
             <motion.button
               className="product-detail__button"
               type="button"
-              disabled={availableStock <= 0 || (hasVariants && !selectedVariant)}
+              disabled={
+                isAdding ||
+                availableStock <= 0 ||
+                remainingStock <= 0 ||
+                (hasVariants && !selectedVariant)
+              }
               onClick={handleAddToCart}
               whileTap={{ scale: 0.97 }}
               animate={
@@ -317,11 +347,31 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
               }
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span>{wasAdded ? "Agregado" : hasVariants && !selectedVariant ? "Selecciona una versión" : "Agregar al carrito"}</span>
+              <span>
+                {isAdding
+                  ? "Agregando…"
+                  : remainingStock <= 0 && availableStock > 0
+                    ? "Stock máximo en carrito"
+                    : wasAdded
+                      ? "Agregado"
+                      : hasVariants && !selectedVariant
+                        ? "Selecciona una versión"
+                        : "Agregar al carrito"}
+              </span>
             </motion.button>
           </div>
 
-          <small className="product-detail__note">
+          <small
+            className="product-detail__note"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {isAdding
+              ? "Agregando producto al carrito…"
+              : wasAdded
+                ? "Producto agregado. "
+                : null}
             Productos en carrito: <strong>{totalItems}</strong>
           </small>
         </div>

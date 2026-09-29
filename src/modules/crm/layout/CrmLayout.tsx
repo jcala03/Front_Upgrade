@@ -15,6 +15,7 @@ import {
   LineChart,
   ListTodo,
   LogOut,
+  Menu,
   Settings,
   ShoppingBag,
   Store,
@@ -23,6 +24,7 @@ import {
   UserRound,
   UsersRound,
   Wrench,
+  X,
 } from "lucide-react";
 import logo from "../../../assets/logos/upgrade79-logo.png";
 import { logout } from "../../../api/auth";
@@ -280,6 +282,9 @@ const normalizePathname = (pathname: string) => {
   return pathname.replace(/\/$/, "") || "/";
 };
 
+const compactNavigationQuery = "(max-width: 1080px)";
+const navigationFocusableSelector = "a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
 const isNavigationItemActive = (
   pathname: string,
   item: NavigationItem
@@ -298,7 +303,11 @@ export const CrmLayout = ({
   const isStandardUser = user?.role === "user";
   const canViewNotifications = hasPermission("notifications.view");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isCompactNavigation, setIsCompactNavigation] = useState(() => window.matchMedia(compactNavigationQuery).matches);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const unreadRequestId = useRef(0);
+  const navigationRef = useRef<HTMLElement>(null);
+  const navigationButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const updateUser = (event: Event) => setUser((event as CustomEvent<AuthUser | null>).detail);
@@ -340,6 +349,51 @@ export const CrmLayout = ({
     };
   }, [canViewNotifications]);
 
+  useEffect(() => {
+    const query = window.matchMedia(compactNavigationQuery);
+    const updateNavigationMode = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsCompactNavigation(event.matches);
+      if (!event.matches) setNavigationOpen(false);
+    };
+    updateNavigationMode(query);
+    query.addEventListener("change", updateNavigationMode);
+    return () => query.removeEventListener("change", updateNavigationMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isCompactNavigation || !navigationOpen) return;
+    const navigation = navigationRef.current;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : navigationButtonRef.current;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => {
+      (navigation?.querySelector<HTMLElement>("[aria-current='page']") ?? navigation?.querySelector<HTMLElement>(navigationFocusableSelector))?.focus({ preventScroll: true });
+    }, 200);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setNavigationOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !navigation) return;
+      const focusable = Array.from(navigation.querySelectorAll<HTMLElement>(navigationFocusableSelector)).filter((element) => element.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [isCompactNavigation, navigationOpen]);
+
   const renderNavigationItem = (item: NavigationItem) => {
     if (item.permission && !hasPermission(item.permission)) {
       return null;
@@ -359,6 +413,7 @@ export const CrmLayout = ({
         aria-current={isActive ? "page" : undefined}
         aria-label={item.label}
         title={item.label}
+        onClick={() => { if (isCompactNavigation) setNavigationOpen(false); }}
       >
         <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
         <span>{item.label}</span>
@@ -377,12 +432,16 @@ export const CrmLayout = ({
 
   return (
     <div className="crm-layout">
-      <aside className="crm-layout__sidebar" aria-label="Navegación del CRM">
-        <a className="crm-layout__brand" href={isStandardUser ? "/crm/me" : "/crm"}>
-          <img src={logo} alt="UP GRADE 79" />
+      <button className={`crm-layout__nav-backdrop${navigationOpen ? " is-open" : ""}`} type="button" aria-label="Cerrar menú" tabIndex={-1} onClick={() => setNavigationOpen(false)} />
+      <aside ref={navigationRef} id="crm-navigation" className={`crm-layout__sidebar${navigationOpen ? " is-open" : ""}`} aria-label="Navegación del CRM" aria-hidden={isCompactNavigation && !navigationOpen ? true : undefined} role={isCompactNavigation ? "dialog" : undefined} aria-modal={isCompactNavigation && navigationOpen ? true : undefined}>
+        <div className="crm-layout__sidebar-header">
+          <a className="crm-layout__brand" href={isStandardUser ? "/crm/me" : "/crm"} onClick={() => { if (isCompactNavigation) setNavigationOpen(false); }}>
+            <img src={logo} alt="UP GRADE 79" />
 
-          <span>CRM interno</span>
-        </a>
+            <span>CRM interno</span>
+          </a>
+          <button className="crm-layout__nav-close" type="button" aria-label="Cerrar menú" onClick={() => setNavigationOpen(false)}><X size={20} aria-hidden="true" /></button>
+        </div>
 
         {isStandardUser ? <nav className="crm-layout__nav crm-layout__user-nav" aria-label="Mi espacio">
           <span className="crm-layout__nav-label">Mi espacio</span>
@@ -418,9 +477,10 @@ export const CrmLayout = ({
         </div>
       </aside>
 
-      <div className="crm-layout__main">
+      <div className="crm-layout__main" aria-hidden={isCompactNavigation && navigationOpen ? true : undefined}>
         <header className="crm-layout__topbar">
-          <div>
+          <button ref={navigationButtonRef} className="crm-layout__nav-toggle" type="button" aria-label="Abrir menú" aria-controls="crm-navigation" aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={20} aria-hidden="true" /><span>Menú</span></button>
+          <div className="crm-layout__topbar-heading">
             <span className="crm-layout__eyebrow">
               {isStandardUser ? "Mi espacio CRM" : "Panel administrativo"}
             </span>
