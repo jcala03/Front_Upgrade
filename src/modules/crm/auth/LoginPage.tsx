@@ -4,8 +4,8 @@ import { consumeAuthNotice, saveAuthUser } from "../../../utils/authStorage";
 import "./LoginPage.css";
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState("***REMOVED***");
-  const [password, setPassword] = useState("***REMOVED***");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(() => consumeAuthNotice());
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,6 +47,7 @@ export const LoginPage = () => {
             <span>Email</span>
             <input
               type="email"
+              autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -57,6 +58,7 @@ export const LoginPage = () => {
             <span>Contraseña</span>
             <input
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
