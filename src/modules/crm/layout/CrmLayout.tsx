@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldAlert,
   ShoppingBag,
   Store,
   Tags,
@@ -167,6 +168,13 @@ const catalogItems: NavigationItem[] = [
 ];
 
 const analysisItems: NavigationItem[] = [
+  {
+    label: "Conciliaciones de pagos",
+    href: "/crm/payment-reconciliations",
+    icon: ShieldAlert,
+    matches: ["/crm/payment-reconciliations", "/admin/payment-reconciliations"],
+    permission: "payments.view",
+  },
   {
     label: "Comisiones",
     href: "/crm/commissions",

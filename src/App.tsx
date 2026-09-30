@@ -84,6 +84,10 @@ const LazyAdminCommissionsPage = lazyNamed(
   () => import("./modules/admin/commissions"),
   "AdminCommissionsPage",
 );
+const LazyAdminPaymentReconciliationsPage = lazyNamed(
+  () => import("./modules/admin/payment-reconciliations"),
+  "AdminPaymentReconciliationsPage",
+);
 const LazyMyCommissionsPage = lazyNamed(
   () => import("./modules/crm/my-commissions"),
   "MyCommissionsPage",
@@ -194,6 +198,14 @@ const commissionsRoute = {
   audience: "admin",
 } satisfies CrmRouteDefinition;
 
+const paymentReconciliationsRoute = {
+  paths: ["/crm/payment-reconciliations", "/admin/payment-reconciliations"],
+  title: "Conciliaciones de pagos",
+  description: "Consulta y documenta discrepancias Wompi sin alterar el estado financiero.",
+  permission: "payments.view",
+  audience: "admin",
+} satisfies CrmRouteDefinition;
+
 const myCommissionsRoute = {
   paths: ["/crm/me/commissions"],
   title: "Mis comisiones",
@@ -207,6 +219,7 @@ type PrivatePageProps = {
   title: string;
   description?: string;
   permission?: string;
+  adminOnly?: boolean;
 };
 
 const PrivateState = ({
@@ -228,13 +241,14 @@ const PrivateState = ({
   </section>
 );
 
-const PrivatePage = ({ children, title, description, permission }: PrivatePageProps) => {
-  if (!getAuthUser()) {
+const PrivatePage = ({ children, title, description, permission, adminOnly = false }: PrivatePageProps) => {
+  const user = getAuthUser();
+  if (!user) {
     window.location.replace("/login");
     return null;
   }
 
-  if (permission && !hasPermission(permission)) {
+  if ((adminOnly && user.role !== "admin") || (permission && !hasPermission(permission))) {
     return (
       <CrmLayout title="Acceso denegado">
         <PrivateState
@@ -317,6 +331,8 @@ const AppContent = () => {
       document.title = "Mis ventas | Upgrade La 79";
     } else if (matchesCrmRoute(pathname, commissionsRoute)) {
       document.title = "Comisiones | Upgrade La 79";
+    } else if (matchesCrmRoute(pathname, paymentReconciliationsRoute)) {
+      document.title = "Conciliaciones de pagos | Upgrade La 79";
     } else if (matchesCrmRoute(pathname, myCommissionsRoute)) {
       document.title = "Mis comisiones | Upgrade La 79";
     } else if (["/crm/inventory", "/admin/inventory"].includes(pathname)) {
@@ -576,6 +592,10 @@ const AppContent = () => {
 
   if (matchesCrmRoute(pathname, commissionsRoute)) {
     return <PrivatePage title={commissionsRoute.title} description={commissionsRoute.description} permission={commissionsRoute.permission}><Suspense fallback={<CrmRouteFallback />}><LazyAdminCommissionsPage /></Suspense></PrivatePage>;
+  }
+
+  if (matchesCrmRoute(pathname, paymentReconciliationsRoute)) {
+    return <PrivatePage title={paymentReconciliationsRoute.title} description={paymentReconciliationsRoute.description} permission={paymentReconciliationsRoute.permission} adminOnly><Suspense fallback={<CrmRouteFallback />}><LazyAdminPaymentReconciliationsPage /></Suspense></PrivatePage>;
   }
 
   if (matchesCrmRoute(pathname, myCommissionsRoute)) {

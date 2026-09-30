@@ -62,6 +62,8 @@ const statuses: AppointmentStatus[] = ["requested", "confirmed", "in_progress", 
 const emptyResult: AppointmentPaginator = { current_page: 1, data: [], last_page: 1, per_page: 25, total: 0, from: null, to: null };
 const terminalStatuses: AppointmentStatus[] = ["completed", "cancelled", "no_show"];
 const reasonCodes: AvailabilityReasonCode[] = ["inactive_employee", "outside_work_schedule", "no_work_schedule", "approved_leave", "task_overlap", "appointment_overlap"];
+const appointmentErrorOrder = ["responsible_employee_id", "customer_id", "customer_vehicle_id", "service_id", "status", "title", "starts_at", "ends_at", "contact_name", "contact_phone", "contact_email", "vehicle_description", "description", "availability_override_reason"];
+const additionalDetailFields = ["contact_email", "vehicle_description", "description"];
 
 const timestampFromLocal = (value: string) => value ? bogotaDateTimeLocalToTimestamp(value) ?? undefined : undefined;
 const branchLabel = (appointment: AdminAppointment) => appointment.branch ? `${appointment.branch.name} · ${appointment.branch.code}` : "Sin sede histórica";
@@ -71,6 +73,29 @@ const customerLabel = (appointment: AdminAppointment) => appointment.customer?.n
 const vehicleLabel = (vehicle: CustomerVehicle) => [vehicle.nickname, vehicle.vehicle_brand?.name ?? vehicle.vehicleBrand?.name, vehicle.vehicle_model?.name ?? vehicle.vehicleModel?.name, vehicle.vehicle_version?.display_name ?? vehicle.vehicleVersion?.display_name, vehicle.year, vehicle.plate].filter(Boolean).join(" · ") || `Vehículo #${vehicle.id}`;
 const statusTone = (status: AppointmentStatus) => status === "completed" ? "success" : status === "cancelled" || status === "no_show" ? "danger" : status === "in_progress" ? "warning" : "neutral";
 const localRangesOverlap = (startsA: string, endsA: string, startsB: string, endsB: string) => Boolean(startsA && endsA && startsB && endsB && startsA < endsB && endsA > startsB);
+const validDuration = (service?: Service) => service && Number.isFinite(service.estimated_duration_minutes) && service.estimated_duration_minutes > 0
+  ? service.estimated_duration_minutes
+  : null;
+const addLocalMinutes = (value: string, minutes: number) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) return "";
+  const [, year, month, day, hour, minute] = match;
+  const result = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute) + minutes));
+  return Number.isNaN(result.getTime()) ? "" : result.toISOString().slice(0, 16);
+};
+const localDurationMinutes = (startsAt: string, endsAt: string) => {
+  const start = Date.parse(`${startsAt}:00Z`);
+  const end = Date.parse(`${endsAt}:00Z`);
+  const minutes = Math.round((end - start) / 60_000);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+};
+const durationLabel = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!hours) return `${remainder} min`;
+  if (!remainder) return `${hours} h`;
+  return `${hours} h ${remainder} min`;
+};
 
 const allowedActions = (appointment: AdminAppointment): AppointmentAction[] => {
   if (appointment.status === "requested") return ["confirm"];
@@ -405,16 +430,26 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [additionalDetailsOpen, setAdditionalDetailsOpen] = useState(Boolean(appointment?.description || appointment?.contact_email || (!appointment?.customer_vehicle_id && appointment?.vehicle_description)));
+  const [derivedEnd, setDerivedEnd] = useState(isReschedule);
   const [availability, setAvailability] = useState<AvailabilityState>({ status: "idle" });
   const availabilityRequest = useRef(0);
+  const submitInFlight = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const appointmentNeedsAvailability = appointment?.status === "confirmed" || appointment?.status === "in_progress";
   const availabilityRelevant = Boolean(employeeId && startsAt && endsAt && (isCreate ? status === "confirmed" : isReschedule || appointmentNeedsAvailability));
   const validRange = isDateTimeRangeValid(startsAt, endsAt) && isSameLocalDateTimeDay(startsAt, endsAt);
   const originalStartsAt = timestampToBogotaDateTimeLocal(appointment?.starts_at) ?? "";
   const originalEndsAt = timestampToBogotaDateTimeLocal(appointment?.ends_at) ?? "";
+  const originalDuration = localDurationMinutes(originalStartsAt, originalEndsAt);
   const sameCurrentEmployee = Boolean(appointment && employeeId === appointment.responsible_employee_id);
   const rescheduleMaySelfOverlap = isReschedule && sameCurrentEmployee && localRangesOverlap(startsAt, endsAt, originalStartsAt, originalEndsAt);
   const shouldPrecheckAvailability = Boolean(availabilityRelevant && (isCreate || (!isReschedule && appointmentNeedsAvailability && !sameCurrentEmployee) || (isReschedule && !rescheduleMaySelfOverlap)));
+  const selectedCustomer = customers.find((customer) => customer.id === customerId);
+  const selectedService = services.find((service) => service.id === serviceId);
+  const selectedDuration = validDuration(selectedService);
+  const schedulingDuration = isReschedule ? originalDuration : selectedDuration;
+  const firstErrorField = appointmentErrorOrder.find((field) => errors[field]?.length);
 
   useEffect(() => {
     let active = true;
@@ -442,14 +477,35 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
     void getCustomerVehicles(customerId)
       .then((rows) => {
         if (!active) return;
-        setVehicles(rows);
-        if (vehicleId && !rows.some((vehicle) => vehicle.id === vehicleId)) setVehicleId(null);
+        const validVehicles = rows.filter((vehicle) => vehicle.is_active || vehicle.id === appointment?.customer_vehicle_id);
+        setVehicles(validVehicles);
+        setVehicleId((current) => {
+          if (current && validVehicles.some((vehicle) => vehicle.id === current)) return current;
+          if (validVehicles.length === 1) {
+            setVehicleDescription(vehicleLabel(validVehicles[0]));
+            return validVehicles[0].id;
+          }
+          return null;
+        });
       })
       .catch(() => {
         if (active) setVehicles([]);
       });
     return () => { active = false; };
-  }, [customerId, vehicleId]);
+  }, [appointment?.customer_vehicle_id, customerId]);
+
+  useEffect(() => {
+    if (firstErrorField && additionalDetailFields.includes(firstErrorField)) setAdditionalDetailsOpen(true);
+  }, [firstErrorField]);
+
+  useEffect(() => {
+    if (!firstErrorField || (additionalDetailFields.includes(firstErrorField) && !additionalDetailsOpen)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const field = formRef.current?.querySelector<HTMLElement>(`[data-appointment-field="${firstErrorField}"]`);
+      (field?.matches("input, select, textarea, button") ? field : field?.querySelector<HTMLElement>("input, select, textarea, button"))?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [additionalDetailsOpen, firstErrorField]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -501,12 +557,44 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
     ? selectedBranch ? `Sede que tomará el backend: ${selectedBranch.name} · ${selectedBranch.code}` : "Este empleado no tiene sede activa; el backend rechazará una cita operacional."
     : "La sede se deriva del responsable y no se envía en el formulario.";
 
+  const selectCustomer = (nextCustomerId: number | null) => {
+    const customer = customers.find((row) => row.id === nextCustomerId);
+    setCustomerId(nextCustomerId);
+    setVehicleId(null);
+    setVehicleDescription("");
+    setContactName(customer?.name ?? "");
+    setContactPhone(customer?.phone ?? "");
+    setContactEmail(customer?.email ?? "");
+  };
+
+  const selectVehicle = (nextVehicleId: number | null) => {
+    const vehicle = vehicles.find((row) => row.id === nextVehicleId);
+    setVehicleId(nextVehicleId);
+    setVehicleDescription(vehicle ? vehicleLabel(vehicle) : "");
+  };
+
+  const selectService = (nextServiceId: number | null) => {
+    const service = services.find((row) => row.id === nextServiceId);
+    const duration = validDuration(service);
+    setServiceId(nextServiceId);
+    setDerivedEnd(isCreate && Boolean(duration));
+    if (isCreate && duration && startsAt) setEndsAt(addLocalMinutes(startsAt, duration));
+  };
+
+  const changeStart = (nextStart: string) => {
+    setStartsAt(nextStart);
+    if (derivedEnd && schedulingDuration) setEndsAt(addLocalMinutes(nextStart, schedulingDuration));
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (saving) return;
+    if (submitInFlight.current) return;
     setError("");
     setErrors({});
     if (!title.trim() && !isReschedule) { setErrors({ title: ["El título es obligatorio."] }); return; }
+    if (!isReschedule && !customerId && !contactName.trim()) { setErrors({ contact_name: ["El nombre del contacto es obligatorio sin cliente registrado."] }); return; }
+    if (!isReschedule && !customerId && !contactPhone.trim()) { setErrors({ contact_phone: ["El teléfono es obligatorio sin cliente registrado."] }); return; }
+    if (!isReschedule && selectedCustomer && !selectedCustomer.phone?.trim()) { setErrors({ customer_id: ["Este cliente no tiene teléfono. Actualiza su ficha o usa contacto manual."] }); return; }
     if (!startsAt || !endsAt) { setErrors({ ends_at: ["Completa inicio y fin de la cita."] }); return; }
     if (!isSameLocalDateTimeDay(startsAt, endsAt)) { setErrors({ ends_at: ["La cita debe iniciar y terminar el mismo día en Colombia."] }); return; }
     if (!isDateTimeRangeValid(startsAt, endsAt)) { setErrors({ ends_at: ["La fecha final debe ser posterior a la inicial."] }); return; }
@@ -519,6 +607,7 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
     if (!startTimestamp || !endTimestamp) { setError("No se pudo interpretar la fecha en hora de Colombia."); return; }
 
     const availabilityOverride = override ? { availability_override: true as const, availability_override_reason: overrideReason.trim() } : {};
+    submitInFlight.current = true;
     setSaving(true);
     try {
       let savedAppointment: AdminAppointment;
@@ -570,23 +659,42 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
       }
       setError(cause instanceof Error ? cause.message : "No se pudo guardar la cita.");
     } finally {
+      submitInFlight.current = false;
       setSaving(false);
     }
   };
 
   const titleText = isCreate ? "Nueva cita" : isReschedule ? "Reprogramar cita" : "Editar cita";
   return <CrmDialog open titleId="appointment-form-title" onClose={onClose} busy={saving} className="appointment-dialog">
-    <form className="appointment-form" onSubmit={submit} noValidate aria-busy={saving}>
+    <form ref={formRef} className="appointment-form" onSubmit={submit} noValidate aria-busy={saving}>
       <header><div><span>Agenda operativa</span><h2 id="appointment-form-title" data-dialog-initial tabIndex={-1}>{titleText}</h2></div><button type="button" aria-label="Cerrar" disabled={saving} onClick={onClose}><X size={20} aria-hidden="true" /></button></header>
       <div className="appointment-form__body">
-        {!isReschedule ? <><EmployeeSelector value={employeeId} onChange={(employee) => { setSelectedEmployee(employee); setEmployeeId(employee?.id ?? null); }} onResolved={setSelectedEmployee} disabled={saving} label="Responsable" validationError={fieldError("responsible_employee_id")} validationErrorId="appointment-employee-error" /><p className="appointment-form__hint">{employeeBranchHelp}</p>
-          <div className="appointment-form__grid"><label><span>Cliente</span><select value={customerId ?? ""} disabled={saving || loadingOptions} aria-invalid={Boolean(fieldError("customer_id"))} onChange={(event) => { setCustomerId(event.target.value ? Number(event.target.value) : null); setVehicleId(null); }}><option value="">Contacto manual</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}{customer.phone ? ` · ${customer.phone}` : ""}</option>)}</select>{fieldError("customer_id") ? <small className="appointment-field-error">{fieldError("customer_id")}</small> : null}</label><label><span>Vehículo</span><select value={vehicleId ?? ""} disabled={saving || !customerId || !vehicles.length} aria-invalid={Boolean(fieldError("customer_vehicle_id"))} onChange={(event) => setVehicleId(event.target.value ? Number(event.target.value) : null)}><option value="">Sin vehículo registrado</option>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>)}</select>{fieldError("customer_vehicle_id") ? <small className="appointment-field-error">{fieldError("customer_vehicle_id")}</small> : null}</label></div>
-          <div className="appointment-form__grid"><label><span>Servicio</span><select value={serviceId ?? ""} disabled={saving || loadingOptions} aria-invalid={Boolean(fieldError("service_id"))} onChange={(event) => setServiceId(event.target.value ? Number(event.target.value) : null)}><option value="">Sin servicio asociado</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select>{fieldError("service_id") ? <small className="appointment-field-error">{fieldError("service_id")}</small> : null}</label>{isCreate ? <label><span>Estado inicial</span><select value={status} disabled={saving} onChange={(event) => setStatus(event.target.value as "requested" | "confirmed")}><option value="confirmed">Confirmada</option><option value="requested">Solicitada</option></select></label> : null}</div>
-          <label><span>Título</span><input required maxLength={180} value={title} disabled={saving} aria-invalid={Boolean(fieldError("title"))} onChange={(event) => setTitle(event.target.value)} />{fieldError("title") ? <small className="appointment-field-error">{fieldError("title")}</small> : null}</label>
-          <label><span>Descripción</span><textarea value={description} disabled={saving} aria-invalid={Boolean(fieldError("description"))} onChange={(event) => setDescription(event.target.value)} />{fieldError("description") ? <small className="appointment-field-error">{fieldError("description")}</small> : null}</label>
-          <div className="appointment-form__grid"><label><span>Contacto</span><input maxLength={160} value={contactName} disabled={saving} aria-invalid={Boolean(fieldError("contact_name"))} onChange={(event) => setContactName(event.target.value)} />{fieldError("contact_name") ? <small className="appointment-field-error">{fieldError("contact_name")}</small> : null}</label><label><span>Teléfono</span><input maxLength={40} value={contactPhone} disabled={saving} aria-invalid={Boolean(fieldError("contact_phone"))} onChange={(event) => setContactPhone(event.target.value)} />{fieldError("contact_phone") ? <small className="appointment-field-error">{fieldError("contact_phone")}</small> : null}</label></div>
-          <div className="appointment-form__grid"><label><span>Email</span><input type="email" maxLength={160} value={contactEmail} disabled={saving} aria-invalid={Boolean(fieldError("contact_email"))} onChange={(event) => setContactEmail(event.target.value)} />{fieldError("contact_email") ? <small className="appointment-field-error">{fieldError("contact_email")}</small> : null}</label><label><span>Vehículo snapshot</span><input maxLength={255} value={vehicleDescription} disabled={saving} aria-invalid={Boolean(fieldError("vehicle_description"))} onChange={(event) => setVehicleDescription(event.target.value)} />{fieldError("vehicle_description") ? <small className="appointment-field-error">{fieldError("vehicle_description")}</small> : null}</label></div></> : null}
-        <fieldset className="appointment-form__schedule"><legend>Horario · Colombia</legend><div className="appointment-form__grid"><label><span>Inicio</span><input required type="datetime-local" value={startsAt} disabled={saving} aria-invalid={Boolean(fieldError("starts_at"))} onChange={(event) => setStartsAt(event.target.value)} />{fieldError("starts_at") ? <small className="appointment-field-error">{fieldError("starts_at")}</small> : null}</label><label><span>Fin</span><input required type="datetime-local" value={endsAt} disabled={saving} aria-invalid={Boolean(fieldError("ends_at"))} onChange={(event) => setEndsAt(event.target.value)} />{fieldError("ends_at") ? <small className="appointment-field-error">{fieldError("ends_at")}</small> : null}</label></div><AvailabilityBlock state={availability} outsideOnly={outsideOnly} override={override} overrideReason={overrideReason} disabled={saving} reasonError={fieldError("availability_override_reason")} onOverride={setOverride} onReason={setOverrideReason} /></fieldset>
+        {!isReschedule ? <>
+          <div className="appointment-form__employee" data-appointment-field="responsible_employee_id"><EmployeeSelector value={employeeId} onChange={(employee) => { setSelectedEmployee(employee); setEmployeeId(employee?.id ?? null); }} onResolved={setSelectedEmployee} disabled={saving} label="Responsable" validationError={fieldError("responsible_employee_id")} validationErrorId="appointment-employee-error" /></div>
+          <p className="appointment-form__hint">{employeeBranchHelp}</p>
+          <div className="appointment-form__grid">
+            <label data-appointment-field="customer_id"><span>Cliente o contacto</span><select value={customerId ?? ""} disabled={saving || loadingOptions} aria-invalid={Boolean(fieldError("customer_id"))} onChange={(event) => selectCustomer(event.target.value ? Number(event.target.value) : null)}><option value="">Contacto manual</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}{customer.phone ? ` · ${customer.phone}` : " · Sin teléfono"}</option>)}</select>{fieldError("customer_id") ? <small className="appointment-field-error">{fieldError("customer_id")}</small> : null}</label>
+            <label data-appointment-field="customer_vehicle_id"><span>Vehículo</span><select value={vehicleId ?? ""} disabled={saving || !customerId || !vehicles.length} aria-invalid={Boolean(fieldError("customer_vehicle_id"))} onChange={(event) => selectVehicle(event.target.value ? Number(event.target.value) : null)}><option value="">{customerId && !vehicles.length ? "Sin vehículos activos" : "Sin vehículo registrado"}</option>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>)}</select>{fieldError("customer_vehicle_id") ? <small className="appointment-field-error">{fieldError("customer_vehicle_id")}</small> : null}</label>
+          </div>
+          {selectedCustomer ? <div className="appointment-form__reused-data" role="status"><strong>Datos del cliente reutilizados</strong><span>{selectedCustomer.name} · {selectedCustomer.phone || "sin teléfono"}{selectedCustomer.email ? ` · ${selectedCustomer.email}` : ""}</span><small>El backend conservará estos datos como snapshot de la cita.</small></div> : <div className="appointment-form__grid">
+            <label data-appointment-field="contact_name"><span>Nombre del contacto</span><input required maxLength={160} value={contactName} disabled={saving} aria-invalid={Boolean(fieldError("contact_name"))} onChange={(event) => setContactName(event.target.value)} />{fieldError("contact_name") ? <small className="appointment-field-error">{fieldError("contact_name")}</small> : null}</label>
+            <label data-appointment-field="contact_phone"><span>Teléfono</span><input required type="tel" maxLength={40} value={contactPhone} disabled={saving} aria-invalid={Boolean(fieldError("contact_phone"))} onChange={(event) => setContactPhone(event.target.value)} />{fieldError("contact_phone") ? <small className="appointment-field-error">{fieldError("contact_phone")}</small> : null}</label>
+          </div>}
+          <div className="appointment-form__grid">
+            <label data-appointment-field="service_id"><span>Servicio</span><select value={serviceId ?? ""} disabled={saving || loadingOptions} aria-invalid={Boolean(fieldError("service_id"))} onChange={(event) => selectService(event.target.value ? Number(event.target.value) : null)}><option value="">Sin servicio asociado</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {durationLabel(service.estimated_duration_minutes)}</option>)}</select>{selectedDuration ? <small>Duración estimada: {durationLabel(selectedDuration)}.</small> : null}{fieldError("service_id") ? <small className="appointment-field-error">{fieldError("service_id")}</small> : null}</label>
+            {isCreate ? <label data-appointment-field="status"><span>Estado inicial</span><select value={status} disabled={saving} onChange={(event) => setStatus(event.target.value as "requested" | "confirmed")}><option value="confirmed">Confirmada</option><option value="requested">Solicitada</option></select><small>Confirmada reserva disponibilidad; solicitada queda pendiente.</small></label> : null}
+          </div>
+          <label data-appointment-field="title"><span>Título</span><input required maxLength={180} value={title} disabled={saving} aria-invalid={Boolean(fieldError("title"))} onChange={(event) => setTitle(event.target.value)} />{fieldError("title") ? <small className="appointment-field-error">{fieldError("title")}</small> : null}</label>
+          <details className="appointment-form__additional" open={additionalDetailsOpen} onToggle={(event) => setAdditionalDetailsOpen(event.currentTarget.open)}>
+            <summary>Detalles adicionales <small>Opcionales</small></summary>
+            <div>
+              <label data-appointment-field="description"><span>Descripción</span><textarea value={description} disabled={saving} aria-invalid={Boolean(fieldError("description"))} onChange={(event) => setDescription(event.target.value)} />{fieldError("description") ? <small className="appointment-field-error">{fieldError("description")}</small> : null}</label>
+              {!selectedCustomer ? <label data-appointment-field="contact_email"><span>Email del contacto</span><input type="email" maxLength={160} value={contactEmail} disabled={saving} aria-invalid={Boolean(fieldError("contact_email"))} onChange={(event) => setContactEmail(event.target.value)} />{fieldError("contact_email") ? <small className="appointment-field-error">{fieldError("contact_email")}</small> : null}</label> : null}
+              {!vehicleId ? <label data-appointment-field="vehicle_description"><span>Descripción manual del vehículo</span><input maxLength={255} value={vehicleDescription} disabled={saving} aria-invalid={Boolean(fieldError("vehicle_description"))} onChange={(event) => setVehicleDescription(event.target.value)} />{fieldError("vehicle_description") ? <small className="appointment-field-error">{fieldError("vehicle_description")}</small> : null}</label> : <p className="appointment-form__snapshot-note">Snapshot automático: {vehicleDescription}</p>}
+            </div>
+          </details>
+        </> : null}
+        <fieldset className="appointment-form__schedule"><legend>Horario · Colombia</legend><div className="appointment-form__grid"><label data-appointment-field="starts_at"><span>Inicio</span><input required type="datetime-local" value={startsAt} disabled={saving} aria-invalid={Boolean(fieldError("starts_at"))} onChange={(event) => changeStart(event.target.value)} />{fieldError("starts_at") ? <small className="appointment-field-error">{fieldError("starts_at")}</small> : null}</label><label data-appointment-field="ends_at"><span>Fin</span><input required type="datetime-local" value={endsAt} disabled={saving} aria-invalid={Boolean(fieldError("ends_at"))} onChange={(event) => { setEndsAt(event.target.value); setDerivedEnd(false); }} />{schedulingDuration && derivedEnd ? <small>{isReschedule ? `Conserva la duración actual de ${durationLabel(schedulingDuration)}; puedes ajustarla.` : "Calculado con la duración del servicio; puedes ajustarlo."}</small> : null}{fieldError("ends_at") ? <small className="appointment-field-error">{fieldError("ends_at")}</small> : null}</label></div><div data-appointment-field="availability_override_reason"><AvailabilityBlock state={availability} outsideOnly={outsideOnly} override={override} overrideReason={overrideReason} disabled={saving} reasonError={fieldError("availability_override_reason")} onOverride={setOverride} onReason={setOverrideReason} /></div></fieldset>
         {error ? <p className="appointment-form__error" role="alert">{error}</p> : null}
       </div>
       <footer><button type="button" disabled={saving} onClick={onClose}>Cancelar</button><button className="is-primary" type="submit" disabled={saving || availability.status === "checking"}>{saving ? "Guardando..." : isCreate ? "Crear cita" : "Guardar cambios"}</button></footer>

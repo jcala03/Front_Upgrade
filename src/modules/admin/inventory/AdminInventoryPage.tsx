@@ -15,6 +15,7 @@ import { getAdminProductBrands } from "../../../api/productBrands";
 import { getAdminVehicleBrands, getAdminVehicleModels, getAdminVehicleMultimediaSystems, getAdminVehicleVersions, } from "../../../api/vehicles";
 import { ProductForm } from "./product-form/ProductForm";
 import type { ProductFormCatalogs } from "./product-form/productFormTypes";
+import type { AdminProduct } from "../../../types/product";
 
 export type InventoryView = "stocks" | "movements" | "transfers";
 const movementLabels: Record<InventoryMovementType, string> = { entry: "Entrada", exit: "Salida", adjustment: "Ajuste", sale: "Venta", sale_reversal: "Reversión de venta", transfer_out: "Salida por traslado", transfer_in: "Entrada por traslado" };
@@ -58,6 +59,7 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
   const [minimumStock, setMinimumStock] = useState<InventoryStock | null>(null);
   const [movementStock, setMovementStock] = useState<InventoryStock | null>(null);
   const [enteringInventory, setEnteringInventory] = useState(false);
+  const [inventoryContinuation, setInventoryContinuation] = useState<AdminProduct | null>(null);
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [dialogBusy, setDialogBusy] = useState(false);
   const requestId = useRef(0);
@@ -271,9 +273,10 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
   {creatingProduct ? (
     <CreateProductForm
       onClose={() => setCreatingProduct(false)}
-      onSaved={(successMessage) => {
+      onSaved={(successMessage, savedProduct, continueToInventory) => {
         setCreatingProduct(false);
         setMessage(successMessage);
+        if (continueToInventory) setInventoryContinuation(savedProduct);
         void load();
       }}
     />
@@ -331,18 +334,28 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
 
 {/* Ajustar existencias */}
 <CrmDialog
-  open={enteringInventory}
+  open={enteringInventory || inventoryContinuation !== null}
   titleId="inventory-entry-title"
-  onClose={() => setEnteringInventory(false)}
+  onClose={() => {
+    setEnteringInventory(false);
+    if (inventoryContinuation) setMessage(`El producto ${inventoryContinuation.name} quedó creado sin cambios de inventario.`);
+    setInventoryContinuation(null);
+  }}
   busy={dialogBusy}
 >
-  {enteringInventory ? (
+  {enteringInventory || inventoryContinuation ? (
     <InventoryEntryForm
       branches={branches}
+      initialProduct={inventoryContinuation}
       onBusyChange={setDialogBusy}
-      onClose={() => setEnteringInventory(false)}
+      onClose={() => {
+        setEnteringInventory(false);
+        if (inventoryContinuation) setMessage(`El producto ${inventoryContinuation.name} quedó creado sin cambios de inventario.`);
+        setInventoryContinuation(null);
+      }}
       onSaved={() => {
         setEnteringInventory(false);
+        setInventoryContinuation(null);
         setMessage("Ingreso de inventario registrado correctamente.");
         void load();
       }}
@@ -431,9 +444,9 @@ const inventoryCatalogOptions = (products: InventoryCatalogProduct[]): EntryCata
   return [{ key: `product-${product.id}`, productId: product.id, variantId: null, name: product.name, sku: product.sku, isActive: product.is_active }];
 });
 
-const InventoryEntryForm = ({ branches, onBusyChange, onClose, onSaved }: { branches: Branch[]; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: () => void }) => {
+const InventoryEntryForm = ({ branches, initialProduct, onBusyChange, onClose, onSaved }: { branches: Branch[]; initialProduct?: AdminProduct | null; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: () => void }) => {
   const activeBranches = branches.filter((branch) => branch.is_active);
-  const [branchId, setBranchId] = useState(String(activeBranches[0]?.id ?? ""));
+  const [branchId, setBranchId] = useState(initialProduct ? "" : String(activeBranches[0]?.id ?? ""));
   const [products, setProducts] = useState<InventoryCatalogProduct[]>([]);
   const [itemKey, setItemKey] = useState("");
   const [search, setSearch] = useState("");
@@ -459,12 +472,16 @@ const InventoryEntryForm = ({ branches, onBusyChange, onClose, onSaved }: { bran
     return () => controller.abort();
   }, []);
 
-  const options = useMemo(() => inventoryCatalogOptions(products), [products]);
+  const options = useMemo(() => inventoryCatalogOptions(products).filter((option) => !initialProduct || option.productId === initialProduct.id), [initialProduct, products]);
   const selected = options.find((option) => option.key === itemKey) ?? null;
   const visibleOptions = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("es");
     return options.filter((option) => !term || `${option.name} ${option.sku ?? ""}`.toLocaleLowerCase("es").includes(term));
   }, [options, search]);
+
+  useEffect(() => {
+    if (initialProduct && options.length === 1) setItemKey(options[0].key);
+  }, [initialProduct, options]);
 
   useEffect(() => {
     if (!branchId || !selected) { setCurrentStock(null); return; }
@@ -491,12 +508,12 @@ const InventoryEntryForm = ({ branches, onBusyChange, onClose, onSaved }: { bran
   };
 
   return <form className="inventory-dialog" onSubmit={submit}>
-<DialogHeader title="Ajustar existencias" id="inventory-entry-title" onClose={onClose} disabled={saving} />
+<DialogHeader title={initialProduct ? "Asignar inventario al producto" : "Ajustar existencias"} id="inventory-entry-title" onClose={onClose} disabled={saving} />
 <div className="inventory-dialog__body">
-<p>Registra una entrada para una posición existente o para el primer ingreso del artículo en la sede.</p>
+<p>{initialProduct ? <><strong>{initialProduct.name}</strong> ya fue creado. Elige sede, artículo inventariable, cantidad y motivo para registrar una entrada independiente.</> : "Registra una entrada para una posición existente o para el primer ingreso del artículo en la sede."}</p>
 <div className="inventory-form-grid">
-<label><span>Sede *</span><select required value={branchId} onChange={(event) => setBranchId(event.target.value)}><option value="">Selecciona una sede</option>{activeBranches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name}</option>)}</select>{errors.branch_id?.[0] ? <small>{errors.branch_id[0]}</small> : null}</label>
-<label><span>Buscar producto o SKU</span><div className="inventory-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Producto, variante o SKU" /><button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearch("")}><X size={16} /></button></div></label>
+<label><span>Sede *</span><select data-dialog-initial={initialProduct ? "" : undefined} required value={branchId} onChange={(event) => setBranchId(event.target.value)}><option value="">Selecciona una sede</option>{activeBranches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name}</option>)}</select>{errors.branch_id?.[0] ? <small>{errors.branch_id[0]}</small> : null}</label>
+{!initialProduct ? <label><span>Buscar producto o SKU</span><div className="inventory-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Producto, variante o SKU" /><button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearch("")}><X size={16} /></button></div></label> : null}
 <label className="is-wide"><span>Producto / Variante *</span><select required value={itemKey} disabled={catalogLoading || Boolean(catalogError)} onChange={(event) => setItemKey(event.target.value)}><option value="">{catalogLoading ? "Cargando artículos..." : visibleOptions.length ? "Selecciona un artículo" : "Sin coincidencias"}</option>{visibleOptions.map((option) => <option value={option.key} key={option.key}>{option.name}{option.sku ? ` · SKU ${option.sku}` : ""}{option.isActive ? "" : " · Inactivo"}</option>)}</select>{errors.product_id?.[0] ? <small>{errors.product_id[0]}</small> : null}{errors.product_variant_id?.[0] ? <small>{errors.product_variant_id[0]}</small> : null}</label>
 {catalogError ? <p className="inventory-form-error is-wide" role="alert">{catalogError}</p> : null}
 <label><span>Cantidad *</span><input required type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />{errors.quantity?.[0] ? <small>{errors.quantity[0]}</small> : null}</label>
@@ -516,7 +533,7 @@ const CreateProductForm = ({
   onSaved,
 }: {
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (message: string, savedProduct: AdminProduct, continueToInventory: boolean) => void;
 }) => {
   const [catalogs, setCatalogs] = useState<ProductFormCatalogs | null>(null);
   const [loading, setLoading] = useState(true);
@@ -622,8 +639,8 @@ const CreateProductForm = ({
       product={null}
       {...catalogs}
       onCancel={onClose}
-      onSaved={(message) => {
-        onSaved(message);
+      onSaved={(message, savedProduct, continueToInventory) => {
+        onSaved(message, savedProduct, continueToInventory);
       }}
     />
   );

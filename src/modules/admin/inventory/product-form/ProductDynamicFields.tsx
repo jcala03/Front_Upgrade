@@ -33,6 +33,7 @@ export const ProductDynamicFields = ({
             <label className="smart-product-form__check" key={field.id} htmlFor={inputId}>
               <input
                 id={inputId}
+                data-error-key={errorKey}
                 type="checkbox"
                 checked={Boolean(value)}
                 onChange={(event) => onChange(field, event.target.checked)}
@@ -50,6 +51,7 @@ export const ProductDynamicFields = ({
             {field.type === "select" ? (
               <select
                 id={inputId}
+                data-error-key={errorKey}
                 value={typeof value === "string" ? value : ""}
                 onChange={(event) => onChange(field, event.target.value)}
                 required={field.is_required}
@@ -61,6 +63,7 @@ export const ProductDynamicFields = ({
             ) : (
               <input
                 id={inputId}
+                data-error-key={errorKey}
                 type={field.type === "number" ? "number" : "text"}
                 value={typeof value === "string" || typeof value === "number" ? value : ""}
                 onChange={(event) => onChange(field, event.target.value)}

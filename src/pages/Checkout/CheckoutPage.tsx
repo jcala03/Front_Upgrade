@@ -5,19 +5,17 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createOrder } from "../../api/orders";
-import type { PublicOrder } from "../../types/order";
+import type { PublicFulfillmentType, PublicOrder } from "../../types/order";
 import { CheckoutDelivery } from "./CheckoutDelivery";
 import { CheckoutOrderSummary } from "./CheckoutOrderSummary";
 import { cartItemKey, cartItemPrice, useCart, type CartItem } from "../../context/CartContext";
-import { CREATE_IDEMPOTENCY_KEY, finishActiveCheckout, readActiveCheckout, storeCreatedCheckout } from "../../utils/checkoutStorage";
+import { CREATE_IDEMPOTENCY_KEY, finishActiveCheckout, readActiveCheckout, storeCheckoutFulfillment, storeCreatedCheckout } from "../../utils/checkoutStorage";
 import "./CheckoutPage.css";
 
 type CheckoutForm = {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  customerCity: string;
-  customerAddress: string;
   customerNotes: string;
 };
 
@@ -25,10 +23,10 @@ const initialForm: CheckoutForm = {
   customerName: "",
   customerEmail: "",
   customerPhone: "",
-  customerCity: "",
-  customerAddress: "",
   customerNotes: "",
 };
+
+type CheckoutField = "fulfillment" | "customerName" | "customerEmail" | "customerPhone";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -56,14 +54,21 @@ const formatPrice = (value: number) => {
 export const CheckoutPage = () => {
   const { items, subtotal } = useCart();
 
+  const [initialCheckout] = useState(() => readActiveCheckout());
   const [form, setForm] = useState<CheckoutForm>(initialForm);
-  const [publicToken, setPublicToken] = useState<string | null>(() => readActiveCheckout()?.public_token ?? null);
+  const [fulfillmentMode, setFulfillmentMode] = useState<PublicFulfillmentType | null>(initialCheckout?.fulfillment_mode ?? null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CheckoutField, string>>>({});
+  const [publicToken, setPublicToken] = useState<string | null>(initialCheckout?.public_token ?? null);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [publicOrder, setPublicOrder] = useState<PublicOrder | null>(null);
   const [checkoutIssue, setCheckoutIssue] = useState<string | null>(null);
   const submitLock = useRef(false);
   const idempotencyKey = useRef<string | null>(sessionStorage.getItem(CREATE_IDEMPOTENCY_KEY));
+  const fulfillmentRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   const handleOrderChange = useCallback((order: PublicOrder) => {
     if (order.order_status !== "pending") {
@@ -81,25 +86,44 @@ export const CheckoutPage = () => {
     }, 0);
   }, [items]);
 
-  const canSubmit =
-    form.customerName.trim().length >= 3 &&
-    form.customerEmail.trim().includes("@") &&
-    form.customerPhone.trim().length >= 7 &&
-    form.customerCity.trim().length >= 2 &&
-    items.length > 0 &&
-    !isSubmitting;
+  const canSubmit = items.length > 0 && !isSubmitting;
 
   const handleChange = (field: keyof CheckoutForm, value: string) => {
     setForm((currentForm: CheckoutForm) => ({
       ...currentForm,
       [field]: value,
     }));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const selectFulfillment = (mode: PublicFulfillmentType) => {
+    setFulfillmentMode(mode);
+    setFieldErrors((current) => ({ ...current, fulfillment: undefined }));
+    if (publicToken) storeCheckoutFulfillment(publicToken, mode);
+  };
+
+  const validate = () => {
+    const errors: Partial<Record<CheckoutField, string>> = {};
+    if (!fulfillmentMode) errors.fulfillment = "Elige cómo quieres recibir tu pedido.";
+    if (form.customerName.trim().length < 3) errors.customerName = "Escribe tu nombre completo.";
+    if (!form.customerEmail.trim().includes("@")) errors.customerEmail = "Escribe un correo electrónico válido.";
+    if (form.customerPhone.trim().length < 7) errors.customerPhone = "Escribe un número de contacto válido.";
+    setFieldErrors(errors);
+
+    const firstInvalid = ([
+      ["fulfillment", fulfillmentRef],
+      ["customerName", nameRef],
+      ["customerEmail", emailRef],
+      ["customerPhone", phoneRef],
+    ] as const).find(([field]) => errors[field]);
+    firstInvalid?.[1].current?.focus();
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (publicToken || !canSubmit || submitLock.current) {
+    if (publicToken || !canSubmit || submitLock.current || !validate() || !fulfillmentMode) {
       return;
     }
 
@@ -114,8 +138,6 @@ export const CheckoutPage = () => {
         customer_name: form.customerName.trim(),
         customer_email: form.customerEmail.trim(),
         customer_phone: form.customerPhone.trim(),
-        customer_city: form.customerCity.trim(),
-        customer_address: form.customerAddress.trim(),
         customer_notes: form.customerNotes.trim(),
         items: items.map((item: CartItem) => ({
           product_id: item.product.id,
@@ -125,7 +147,7 @@ export const CheckoutPage = () => {
       }, idempotencyKey.current);
 
       if (!created.publicToken) throw new Error("No fue posible recuperar el token seguro de tu pedido.");
-      storeCreatedCheckout({ public_token: created.publicToken, order_number: created.order.order_number }, items);
+      storeCreatedCheckout({ public_token: created.publicToken, order_number: created.order.order_number, fulfillment_mode: fulfillmentMode }, items);
 
       setPublicToken(created.publicToken);
     } catch (error) {
@@ -171,20 +193,34 @@ export const CheckoutPage = () => {
       </section>
 
       <section className="checkout-layout">
-        {publicToken ? <CheckoutDelivery token={publicToken} buyerName={form.customerName} buyerPhone={form.customerPhone} onOrderChange={handleOrderChange} onCheckoutIssue={setCheckoutIssue} /> : <form className="checkout-form" onSubmit={handleSubmit}>
+        {publicToken ? <CheckoutDelivery token={publicToken} buyerName={form.customerName} buyerPhone={form.customerPhone} initialMode={fulfillmentMode} onModeChange={selectFulfillment} onOrderChange={handleOrderChange} onCheckoutIssue={setCheckoutIssue} /> : <form className="checkout-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
           <div className="checkout-form__heading">
-            <span>Datos del cliente</span>
-            <h2>Información de contacto</h2>
+            <span>Entrega y contacto</span>
+            <h2>Prepara tu pedido</h2>
             <p>
-              Usaremos estos datos para confirmar disponibilidad, entrega,
-              instalación o recogida.
+              Elige cómo quieres recibirlo y déjanos únicamente los datos necesarios para preparar la orden.
             </p>
           </div>
+
+          <fieldset className="checkout-fulfillment-selector" aria-describedby={fieldErrors.fulfillment ? "checkout-error-fulfillment" : undefined}>
+            <legend>¿Cómo quieres recibir tu pedido?</legend>
+            {([
+              ["shipping", "Envío", "Lo enviamos a la dirección que indiques."],
+              ["pickup", "Recoger en sede", "Recógelo en una de nuestras sedes disponibles."],
+            ] as const).map(([value, label, description], index) => <label key={value} data-active={fulfillmentMode === value}>
+              <input ref={index === 0 ? fulfillmentRef : undefined} type="radio" name="checkout-fulfillment" value={value} checked={fulfillmentMode === value} onChange={() => selectFulfillment(value)} aria-invalid={!!fieldErrors.fulfillment} />
+              <span><strong>{label}</strong><small>{description}</small></span>
+            </label>)}
+          </fieldset>
+          {fieldErrors.fulfillment && <p id="checkout-error-fulfillment" className="checkout-field-error">{fieldErrors.fulfillment}</p>}
+
+          <h3 className="checkout-form__section-title">Información de contacto</h3>
 
           <div className="checkout-form__grid">
             <label>
               <span>Nombre completo</span>
               <input
+                ref={nameRef}
                 type="text"
                 value={form.customerName}
                 disabled={isSubmitting}
@@ -192,12 +228,17 @@ export const CheckoutPage = () => {
                   handleChange("customerName", event.target.value)
                 }
                 placeholder="Ej: Juan Pérez"
+                autoComplete="name"
+                aria-invalid={!!fieldErrors.customerName}
+                aria-describedby={fieldErrors.customerName ? "checkout-error-name" : undefined}
               />
+              {fieldErrors.customerName && <small id="checkout-error-name" className="checkout-field-error">{fieldErrors.customerName}</small>}
             </label>
 
             <label>
               <span>Correo electrónico</span>
               <input
+                ref={emailRef}
                 type="email"
                 value={form.customerEmail}
                 disabled={isSubmitting}
@@ -205,12 +246,17 @@ export const CheckoutPage = () => {
                   handleChange("customerEmail", event.target.value)
                 }
                 placeholder="correo@ejemplo.com"
+                autoComplete="email"
+                aria-invalid={!!fieldErrors.customerEmail}
+                aria-describedby={fieldErrors.customerEmail ? "checkout-error-email" : undefined}
               />
+              {fieldErrors.customerEmail && <small id="checkout-error-email" className="checkout-field-error">{fieldErrors.customerEmail}</small>}
             </label>
 
             <label>
               <span>Celular / WhatsApp</span>
               <input
+                ref={phoneRef}
                 type="tel"
                 value={form.customerPhone}
                 disabled={isSubmitting}
@@ -218,48 +264,21 @@ export const CheckoutPage = () => {
                   handleChange("customerPhone", event.target.value)
                 }
                 placeholder="Ej: 323 000 0000"
+                autoComplete="tel"
+                aria-invalid={!!fieldErrors.customerPhone}
+                aria-describedby={fieldErrors.customerPhone ? "checkout-error-phone" : undefined}
               />
-            </label>
-
-            <label>
-              <span>Ciudad</span>
-              <input
-                type="text"
-                value={form.customerCity}
-                disabled={isSubmitting}
-                onChange={(event) =>
-                  handleChange("customerCity", event.target.value)
-                }
-                placeholder="Ej: Barranquilla"
-              />
+              {fieldErrors.customerPhone && <small id="checkout-error-phone" className="checkout-field-error">{fieldErrors.customerPhone}</small>}
             </label>
           </div>
 
-          <label className="checkout-form__full">
-            <span>Dirección o punto de entrega</span>
-            <input
-              type="text"
-              value={form.customerAddress}
-              disabled={isSubmitting}
-              onChange={(event) =>
-                handleChange("customerAddress", event.target.value)
-              }
-              placeholder="Dirección, taller, local o nota de recogida"
-            />
-          </label>
-
-          <label className="checkout-form__full">
-            <span>Notas adicionales</span>
-            <textarea
-              value={form.customerNotes}
-              disabled={isSubmitting}
-              onChange={(event) =>
-                handleChange("customerNotes", event.target.value)
-              }
-              placeholder="Ej: quiero instalación, confirmar compatibilidad, recoger en tienda..."
-              rows={5}
-            />
-          </label>
+          <details className="checkout-optional" open={Boolean(form.customerNotes)}>
+            <summary>Agregar una nota al pedido (opcional)</summary>
+            <label className="checkout-form__full">
+              <span>Notas adicionales</span>
+              <textarea value={form.customerNotes} disabled={isSubmitting} onChange={(event) => handleChange("customerNotes", event.target.value)} placeholder="Ej: quiero instalación o confirmar compatibilidad" rows={4} />
+            </label>
+          </details>
 
           <div className="checkout-form__security">
             <ShieldCheck size={18} strokeWidth={1.8} />
@@ -284,7 +303,7 @@ export const CheckoutPage = () => {
           </button>
 
           {submitError ? (
-            <div className="checkout-form__error">
+            <div className="checkout-form__error" role="alert">
               <strong>No se pudo crear la orden.</strong>
               <p>{submitError}</p>
             </div>

@@ -89,6 +89,28 @@
   font-size: 1.03rem;
 }
 
+.smart-product-form__disclosure {
+  margin-top: 0.9rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e5bd69;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.smart-product-form__disclosure.is-inline {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(212, 168, 83, 0.32);
+  border-radius: 0.62rem;
+}
+
+.smart-product-form__revealed {
+  margin-top: 0.9rem;
+}
+
 .smart-product-form__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -412,7 +434,7 @@
   bottom: 0;
   z-index: 4;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 0.7rem;
   padding: 1rem 1.5rem;
@@ -441,6 +463,12 @@
   border-color: #d4a853;
   background: #d4a853;
   color: #111216;
+}
+
+.smart-product-form__footer button.is-secondary-submit {
+  border-color: rgba(212, 168, 83, 0.55);
+  background: rgba(212, 168, 83, 0.1);
+  color: #f4d58f;
 }
 
 .smart-product-form__footer button:disabled {
@@ -501,6 +529,11 @@
 
   .smart-product-form__footer > div {
     grid-column: 1 / -1;
+  }
+
+  .smart-product-form__footer button.is-secondary-submit {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .smart-product-form__inventory-note {

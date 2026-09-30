@@ -13,7 +13,7 @@ type ProductLine = { key: string; kind: "product"; productId: number; variantId:
 type ServiceLine = { key: string; kind: "service"; serviceId: number; name: string; detail: string; unitPrice: number; quantity: number; discount: number; historical: boolean };
 type Line = ProductLine | ServiceLine;
 type CustomerMode = "counter" | "registered" | "adhoc";
-type Props = { kind: "quotation" | "sale"; quotation?: MyQuotation | null; branchName?: string | null; saving: boolean; error: string; errors: Record<string, string[]>; onClose: () => void; onSubmit: (payload: CreateMyQuotationPayload | CreateMySalePayload) => Promise<void> };
+type Props = { kind: "quotation" | "sale"; quotation?: MyQuotation | null; initialCustomer?: CustomerOption | null; branchName?: string | null; saving: boolean; error: string; errors: Record<string, string[]>; onClose: () => void; onSubmit: (payload: CreateMyQuotationPayload | CreateMySalePayload) => Promise<void> };
 type PickerProduct = Product | CommercialProduct;
 type PickerVariant = ProductVariant | CommercialProductVariant;
 
@@ -50,7 +50,7 @@ const historicalLine = (item: MyCommercialItem): Line | null => {
   return null;
 };
 
-export const MyCommercialForm = ({ kind, quotation, branchName, saving, error, errors, onClose, onSubmit }: Props) => {
+export const MyCommercialForm = ({ kind, quotation, initialCustomer = null, branchName, saving, error, errors, onClose, onSubmit }: Props) => {
   const hydratedCustomer = useMemo(() => quotation ? quotationCustomerOption(quotation) : null, [quotation]);
   const hydratedVehicle = useMemo(() => quotation ? quotationVehicleOption(quotation) : null, [quotation]);
   const hasAdHocCustomer = Boolean(quotation && !quotation.customer.id && (quotation.customer.name || quotation.customer.email || quotation.customer.phone || quotation.customer.city));
@@ -62,10 +62,12 @@ export const MyCommercialForm = ({ kind, quotation, branchName, saving, error, e
   const [productSearch, setProductSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<PickerProduct | null>(null);
   const [lines, setLines] = useState<Line[]>(() => (quotation?.items ?? []).map(historicalLine).filter((line): line is Line => line !== null));
-  const [customerMode, setCustomerMode] = useState<CustomerMode>(hydratedCustomer ? "registered" : hasAdHocCustomer ? "adhoc" : "counter");
+  const startingCustomer = hydratedCustomer ?? initialCustomer;
+  const startingVehicle = hydratedVehicle ?? (initialCustomer?.vehicles.length === 1 ? initialCustomer.vehicles[0] : null);
+  const [customerMode, setCustomerMode] = useState<CustomerMode>(startingCustomer ? "registered" : hasAdHocCustomer ? "adhoc" : "counter");
   const [customer, setCustomer] = useState({ name: quotation?.customer.name ?? "", email: quotation?.customer.email ?? "", phone: quotation?.customer.phone ?? "", city: quotation?.customer.city ?? "" });
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(hydratedCustomer);
-  const [selectedVehicle, setSelectedVehicle] = useState<CustomerVehicleOption | null>(hydratedVehicle);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(startingCustomer);
+  const [selectedVehicle, setSelectedVehicle] = useState<CustomerVehicleOption | null>(startingVehicle);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerOption[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
@@ -187,7 +189,7 @@ export const MyCommercialForm = ({ kind, quotation, branchName, saving, error, e
   };
   const addService = (service: ServiceOption) => { if (!lines.some((line) => line.kind === "service" && line.serviceId === service.id)) setLines((current) => [...current, { key: makeKey(), kind: "service", serviceId: service.id, name: service.name, detail: [service.category?.name, service.estimated_duration_minutes ? `${service.estimated_duration_minutes} min` : null].filter(Boolean).join(" · ") || "Servicio", unitPrice: Number(service.price), quantity: 1, discount: 0, historical: false }]); };
   const changeCustomerMode = (mode: CustomerMode) => { setCustomerMode(mode); setSelectedCustomer(null); setSelectedVehicle(null); setCustomerResults([]); setCustomerError(""); setCustomerSearch(""); };
-  const chooseCustomer = (option: CustomerOption) => { setSelectedCustomer(option); setSelectedVehicle(null); setCustomerResults([]); setCustomerSearch(""); };
+  const chooseCustomer = (option: CustomerOption) => { setSelectedCustomer(option); setSelectedVehicle(option.vehicles.length === 1 ? option.vehicles[0] : null); setCustomerResults([]); setCustomerSearch(""); };
   const total = lines.reduce((sum, line) => sum + Math.max(0, line.unitPrice * line.quantity - line.discount), 0);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -202,7 +204,7 @@ export const MyCommercialForm = ({ kind, quotation, branchName, saving, error, e
   const effectiveBranchName = kind === "sale" ? catalogBranch?.name ?? branchName ?? "Sin sede vinculada" : branchName ?? "Sin sede vinculada";
   const saleCatalogHelp = kind === "sale" ? (catalogBranch ? `Catálogo autoritativo de ${catalogBranch.name}.` : "La sede de venta la deriva el backend desde tu Employee.") : "La disponibilidad es informativa; una cotización no reserva unidades.";
   return <form className="my-commerce-dialog" onSubmit={submit}>
-    <header><div><span>Mi operación · {effectiveBranchName}</span><h2 id="my-commerce-form-title">{quotation ? "Editar cotización" : kind === "quotation" ? "Nueva cotización" : "Nueva venta"}</h2><p>Los precios y totales finales serán confirmados por el backend.</p></div><button type="button" aria-label="Cerrar" disabled={saving} onClick={onClose}><X size={20} /></button></header>
+    <header><div><span>Mi operación · {effectiveBranchName}</span><h2 id="my-commerce-form-title" data-dialog-initial tabIndex={-1}>{quotation ? "Editar cotización" : kind === "quotation" ? "Nueva cotización" : "Nueva venta"}</h2><p>Los precios y totales finales serán confirmados por el backend.</p></div><button type="button" aria-label="Cerrar" disabled={saving} onClick={onClose}><X size={20} /></button></header>
     <div className="my-commerce-dialog__body">
       <fieldset><legend>1. Items comerciales</legend><div className="my-branch-context"><strong>{kind === "sale" ? `Sede: ${effectiveBranchName}` : "Cotización"}</strong><span>{saleCatalogHelp}</span></div><div className="my-item-discovery">
         <section aria-labelledby="products-title"><h3 id="products-title"><Package size={17} /> Productos y variantes</h3><p className="my-commerce-help">{kind === "sale" ? "La disponibilidad usa el stock exacto de tu sede." : "La disponibilidad se muestra solo como referencia."}</p><label><span>Buscar producto, variante o SKU</span><div className="my-commerce-search"><Search size={17} /><input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} /></div></label>{productSearch.trim().length === 1 ? <p role="status">Escribe al menos 2 caracteres o limpia la búsqueda.</p> : loadingProducts ? <p role="status">Cargando catálogo...</p> : catalogError ? <p className="my-commerce-error" role="alert">{catalogError}</p> : selectedProduct ? <section className="my-product-results"><header><strong>{selectedProduct.name}</strong><button type="button" onClick={() => setSelectedProduct(null)}>Volver</button></header>{productVariants(selectedProduct).map((variant) => { const stock = branchStock(selectedProduct, variant); const disabled = kind === "sale" && stock <= 0; return <button type="button" key={variant.id} disabled={disabled} onClick={() => addProduct(selectedProduct, variant)}><span><strong>{variant.display_name || variant.name || "Versión"}</strong><small>{variant.sku ?? "Sin SKU"}{kind === "sale" ? ` · ${stock > 0 ? `Stock sede ${stock}` : "Agotada en tu sede"}` : ""}</small></span><b>{formatCurrency(Number(variant.price))}</b></button>; })}</section> : <section className="my-product-results">{productResults.map((product) => { const variants = productVariants(product); const hasVariants = Boolean(product.has_variants) || variants.length > 0; const variantStock = hasVariants ? variants.reduce((totalStock, variant) => totalStock + branchStock(product, variant), 0) : 0; const stock = hasVariants ? variantStock : branchStock(product); const saleBlocked = kind === "sale" && (hasVariants ? variantStock <= 0 : stock <= 0); const pricedVariants = kind === "sale" ? variants.filter((variant) => branchStock(product, variant) > 0) : variants; const price = pricedVariants.length ? Math.min(...pricedVariants.map((variant) => Number(variant.price))) : Number(product.price); return <button type="button" key={product.id} disabled={saleBlocked} onClick={() => variants.length ? setSelectedProduct(product) : addProduct(product, null)}><span><strong>{product.name}</strong><small>{product.sku ?? "Sin SKU"}{variants.length ? ` · ${variants.length} variantes` : ""}{kind === "sale" ? ` · ${stock > 0 ? `Stock sede ${stock}` : "Agotado en tu sede"}` : ""}</small></span><b>{variants.length ? kind === "sale" ? `Desde ${formatCurrency(price)}` : "Elegir variante" : formatCurrency(price)}</b></button>; })}{!productResults.length ? <p>No hay coincidencias.</p> : null}</section>}</section>

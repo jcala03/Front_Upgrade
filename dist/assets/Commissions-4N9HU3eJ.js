@@ -1,0 +1,1 @@
+const e={pending:"Pendiente",earned:"Ganada",voided:"Anulada"},s={pending:"warning",earned:"success",voided:"neutral"},d={pending:"Venta confirmada, todavía no completada.",earned:"Venta completada.",voided:"Venta cancelada antes de quedar ganada."},o=(a,n)=>n?.name?`${a.name} / ${n.name}`:a.name;export{o as a,s as b,e as c,d};

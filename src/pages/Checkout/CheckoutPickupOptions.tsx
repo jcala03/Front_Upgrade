@@ -27,6 +27,7 @@ export function CheckoutPickupOptions({ token, order, disabled, onOrder, onBusy,
   const [message, setMessage] = useState("");
   const loadLock = useRef(false);
   const applyLock = useRef(false);
+  const firstBranchRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     if (loadLock.current || applyLock.current) return;
@@ -54,7 +55,12 @@ export function CheckoutPickupOptions({ token, order, disabled, onOrder, onBusy,
   useEffect(() => { void load(); }, [token]);
 
   async function apply() {
-    if (!selected || disabled || applyLock.current || status !== "loaded") return;
+    if (disabled || applyLock.current || status !== "loaded") return;
+    if (!selected) {
+      setMessage("Selecciona una sede para continuar.");
+      firstBranchRef.current?.focus();
+      return;
+    }
     applyLock.current = true;
     onBusy(true);
     setStatus("applying");
@@ -83,12 +89,12 @@ export function CheckoutPickupOptions({ token, order, disabled, onOrder, onBusy,
     {(status === "loaded" || status === "applying" || status === "applied") && <>
       <fieldset className="checkout-options__list" disabled={disabled || status === "applying"}>
         <legend>Selecciona una sede</legend>
-        {options.map((branch) => <label className="checkout-option" data-active={selected === branch.slug} key={branch.slug}>
-          <input type="radio" name="pickup-branch" value={branch.slug} checked={selected === branch.slug} onChange={() => { setSelected(branch.slug); setStatus("loaded"); setMessage(""); }} />
+        {options.map((branch, index) => <label className="checkout-option" data-active={selected === branch.slug} key={branch.slug}>
+          <input ref={index === 0 ? firstBranchRef : undefined} type="radio" name="pickup-branch" value={branch.slug} checked={selected === branch.slug} onChange={() => { setSelected(branch.slug); setStatus("loaded"); setMessage(""); }} />
           <span className="checkout-option__content"><strong>{branch.name}</strong><span>{branch.city}</span></span>
         </label>)}
       </fieldset>
-      <button type="button" disabled={disabled || status === "applying" || status === "applied" || !selected} onClick={apply}>{status === "applying" ? "Aplicando sede…" : status === "applied" ? "Sede aplicada" : "Recoger en esta sede"}</button>
+      <button type="button" disabled={disabled || status === "applying" || status === "applied"} onClick={apply}>{status === "applying" ? "Aplicando sede…" : status === "applied" ? "Sede aplicada" : "Recoger en esta sede"}</button>
     </>}
     {(status === "empty" || status === "error") && <button type="button" disabled={disabled} onClick={load}>Reintentar</button>}
 

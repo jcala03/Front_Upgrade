@@ -85,7 +85,7 @@ export type ProductFormCatalogs = {
 export type ProductFormProps = ProductFormCatalogs & {
   product: AdminProduct | null;
   onCancel: () => void;
-  onSaved: (message: string) => Promise<void> | void;
+  onSaved: (message: string, savedProduct: AdminProduct, continueToInventory: boolean) => Promise<void> | void;
 };
 
 export type PricingDraft = Pick<

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createAdminOrder, getAdminOrder, getAdminOrders } from "../../../api/adminOrders";
+import { getCustomer } from "../../../api/customers";
 import type { CreateAdminOrderPayload, Order, OrderOrigin, OrderPaymentStatus, OrderStatus } from "../../../types/order";
+import type { Customer } from "../../../types/customer";
 import { formatCurrency } from "../../../utils/formatCurrency";
 import { hasPermission } from "../../../utils/authStorage";
+import { clearCustomerHandoff, readCustomerHandoffId } from "../../../utils/customerCommercialHandoff";
 import { OrderDetail } from "./OrderDetail";
 import { OrderList } from "./OrderList";
 import { originLabels, orderStatusLabels, paymentStatusLabels } from "./orderUtils";
@@ -16,6 +19,7 @@ export const AdminOrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
+  const [initialCustomer, setInitialCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -34,6 +38,18 @@ export const AdminOrdersPage = () => {
   };
 
   useEffect(() => { void loadOrders(); }, [canView]);
+  useEffect(() => {
+    const customerId = readCustomerHandoffId();
+    if (!customerId || !canCreate) return;
+    let active = true;
+    getCustomer(customerId).then((customer) => {
+      if (!active) return;
+      clearCustomerHandoff();
+      setInitialCustomer(customer);
+      setSaleOpen(true);
+    }).catch((cause) => { if (active) { clearCustomerHandoff(); setError(cause instanceof Error ? cause.message : "No se pudo abrir la venta para este cliente."); } });
+    return () => { active = false; };
+  }, [canCreate]);
 
   const filteredOrders = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("es");
@@ -64,12 +80,12 @@ export const AdminOrdersPage = () => {
 
   return (
     <section className="admin-orders">
-      <header className="admin-orders__toolbar"><div><span>Operación comercial</span><h2>Órdenes y ventas</h2><p>Consulta ecommerce y registra ventas de mostrador con inventario real.</p></div><div><button type="button" onClick={() => void loadOrders()} disabled={loading}>{loading ? "Actualizando..." : "Actualizar"}</button>{canCreate ? <button className="is-primary" type="button" onClick={() => setSaleOpen(true)}>Nueva venta</button> : null}</div></header>
+      <header className="admin-orders__toolbar"><div><span>Operación comercial</span><h2>Órdenes y ventas</h2><p>Consulta ecommerce y registra ventas de mostrador con inventario real.</p></div><div><button type="button" onClick={() => void loadOrders()} disabled={loading}>{loading ? "Actualizando..." : "Actualizar"}</button>{canCreate ? <button className="is-primary" type="button" onClick={() => { setInitialCustomer(null); setSaleOpen(true); }}>Nueva venta</button> : null}</div></header>
       <section className="orders-stats"><article><span>Total</span><strong>{orders.length}</strong></article><article><span>Pendientes</span><strong>{orders.filter((order) => order.status === "pending").length}</strong></article><article><span>Pagadas</span><strong>{orders.filter((order) => order.payment_status === "paid").length}</strong></article><article><span>Valor registrado</span><strong>{formatCurrency(orders.reduce((sum, order) => sum + Number(order.total), 0))}</strong></article></section>
       <section className="orders-filters" aria-label="Filtros de órdenes"><label className="orders-field orders-field--search"><span>Buscar</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Orden, cliente, teléfono o email" /></label><label className="orders-field"><span>Estado</span><select value={status} onChange={(event) => setStatus(event.target.value as FilterValue<OrderStatus>)}><option value="all">Todos</option>{Object.entries(orderStatusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label><label className="orders-field"><span>Pago</span><select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value as FilterValue<OrderPaymentStatus>)}><option value="all">Todos</option>{Object.entries(paymentStatusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label><label className="orders-field"><span>Origen</span><select value={origin} onChange={(event) => setOrigin(event.target.value as FilterValue<OrderOrigin>)}><option value="all">Todos</option>{Object.entries(originLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></section>
       {success ? <p className="orders-success" role="status">{success}</p> : null}{error ? <p className="orders-error" role="alert">{error}</p> : null}
       <OrderList orders={filteredOrders} loading={loading} onOpen={(id) => void openOrder(id)} />
-      <SaleForm open={saleOpen} onClose={() => setSaleOpen(false)} onSubmit={createSale} onCreated={handleCreated} />
+      <SaleForm open={saleOpen} initialCustomer={initialCustomer} onClose={() => { setSaleOpen(false); setInitialCustomer(null); }} onSubmit={createSale} onCreated={(order) => { setInitialCustomer(null); handleCreated(order); }} />
       <OrderDetail order={selectedOrder} loading={detailLoading} onClose={() => setSelectedOrder(null)} onChanged={handleOrderChanged} />
     </section>
   );

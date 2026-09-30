@@ -1,5 +1,5 @@
-import { FormEvent, useMemo, useState } from "react";
-import { createProduct, updateProduct } from "../../../../api/products";
+import { FormEvent, useMemo, useRef, useState } from "react";
+import { createProduct, ProductApiError, updateProduct } from "../../../../api/products";
 import { hasPermission } from "../../../../utils/authStorage";
 import type { ProductCategoryField } from "../../../../types/productCategory";
 import type { ProductCompatibilityType, ProductTechnicalSpecs } from "../../../../types/product";
@@ -123,6 +123,14 @@ export const ProductForm = ({
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [submitError, setSubmitError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showOptionalContent, setShowOptionalContent] = useState(Boolean(product?.description || product?.image_url));
+  const [showCategoryDetails, setShowCategoryDetails] = useState(Boolean(product));
+  const [showVariants, setShowVariants] = useState(Boolean(product?.variants?.length));
+  const [showCommercialAdvanced, setShowCommercialAdvanced] = useState(Boolean(
+    product && (Number(product.cost_price) > 0 || Number(product.tax_amount) > 0 || Number(product.extra_charges) > 0 || product.pricing_mode !== "manual" || product.commission_enabled)
+  ));
+  const submitLock = useRef(false);
+  const submitIntent = useRef<"save" | "inventory">("save");
 
   const selectedCategory = useMemo(
     () => categories.find((category) => String(category.id) === form.category_id) ?? null,
@@ -138,6 +146,8 @@ export const ProductForm = ({
   );
   const productPricing = useMemo(() => calculatePricingPreview(form), [form]);
   const canViewInventory = hasPermission("inventory.view");
+  const canContinueToInventory = !product && hasPermission("inventory.update");
+  const hasRequiredProductFields = productFields.some((field) => field.is_required);
 
   const updateForm = <K extends keyof ProductFormState>(key: K, value: ProductFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -169,6 +179,7 @@ export const ProductForm = ({
         return values;
       }, {}),
     })));
+    if (nextProductFields.some((field) => field.is_required)) setShowCategoryDetails(true);
   };
 
   const updateCompatibility = (
@@ -309,6 +320,20 @@ export const ProductForm = ({
     }]);
   };
 
+  const revealAndFocusError = (nextErrors: ProductFormErrors) => {
+    const firstKey = Object.keys(nextErrors)[0];
+    if (!firstKey) return;
+    if (firstKey.startsWith("productSpecs.")) setShowCategoryDetails(true);
+    if (firstKey.startsWith("variants.")) setShowVariants(true);
+    if (firstKey === "pricing" || firstKey === "commission_amount") setShowCommercialAdvanced(true);
+    globalThis.setTimeout(() => {
+      const escaped = globalThis.CSS?.escape ? globalThis.CSS.escape(firstKey) : firstKey.replaceAll('"', '\\"');
+      const target = document.querySelector<HTMLElement>(`[data-error-key="${escaped}"]`);
+      target?.focus();
+      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+  };
+
   const validate = () => {
     const nextErrors: ProductFormErrors = {};
     if (!form.name.trim()) nextErrors.name = "El nombre es obligatorio.";
@@ -356,14 +381,18 @@ export const ProductForm = ({
       if (!Number.isInteger(commissionAmount) || commissionAmount <= 0) nextErrors.commission_amount = "Ingresa una comisión entera mayor que cero.";
     }
     setErrors(nextErrors);
+    revealAndFocusError(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitLock.current) return;
     setSubmitError("");
     if (!validate()) return;
 
+    submitLock.current = true;
+    const requestedAction = submitIntent.current;
     try {
       setIsSaving(true);
       const normalizedVariants = variants.map((variant) => ({
@@ -377,12 +406,25 @@ export const ProductForm = ({
         generalCompatibilities,
         variants: normalizedVariants,
       });
-      if (product) await updateProduct(product.id, payload);
-      else await createProduct(payload);
-      await onSaved(product ? "Artículo actualizado correctamente." : "Artículo creado correctamente.");
+      const savedProduct = product
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload);
+      await onSaved(
+        product ? "Artículo actualizado correctamente." : "Artículo creado correctamente.",
+        savedProduct,
+        !product && requestedAction === "inventory"
+      );
     } catch (error) {
+      if (error instanceof ProductApiError && Object.keys(error.errors).length) {
+        const apiErrors = Object.fromEntries(
+          Object.entries(error.errors).map(([key, messages]) => [key, messages[0] ?? "Valor inválido."])
+        );
+        setErrors(apiErrors);
+        revealAndFocusError(apiErrors);
+      }
       setSubmitError(error instanceof Error ? error.message : "No se pudo guardar el artículo.");
     } finally {
+      submitLock.current = false;
       setIsSaving(false);
     }
   };
@@ -398,24 +440,21 @@ export const ProductForm = ({
         <section className="smart-product-form__section" aria-labelledby="product-information-title">
           <div className="smart-product-form__section-heading"><span>01</span><div><h3 id="product-information-title">Información</h3><p>Identidad principal del artículo.</p></div></div>
           <div className="smart-product-form__grid">
-            <label className="smart-product-form__field"><span>Nombre *</span><input value={form.name} onChange={(event) => updateForm("name", event.target.value)} aria-invalid={Boolean(errors.name)} />{errors.name ? <small className="smart-product-form__field-error">{errors.name}</small> : null}</label>
-            <label className="smart-product-form__field"><span>Categoría *</span><select value={form.category_id} onChange={(event) => handleCategoryChange(event.target.value)} aria-invalid={Boolean(errors.category_id)}><option value="">Seleccionar</option>{categories.filter((category) => category.is_active).map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>{errors.category_id ? <small className="smart-product-form__field-error">{errors.category_id}</small> : null}</label>
+            <label className="smart-product-form__field"><span>Nombre *</span><input data-error-key="name" value={form.name} onChange={(event) => updateForm("name", event.target.value)} aria-invalid={Boolean(errors.name)} />{errors.name ? <small className="smart-product-form__field-error">{errors.name}</small> : null}</label>
+            <label className="smart-product-form__field"><span>Categoría *</span><select data-error-key="category_id" value={form.category_id} onChange={(event) => handleCategoryChange(event.target.value)} aria-invalid={Boolean(errors.category_id)}><option value="">Seleccionar</option>{categories.filter((category) => category.is_active).map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>{errors.category_id ? <small className="smart-product-form__field-error">{errors.category_id}</small> : null}</label>
             <label className="smart-product-form__field"><span>Marca del producto</span><select value={form.product_brand_id} onChange={(event) => updateForm("product_brand_id", event.target.value)}><option value="">Sin marca</option>{productBrands.filter((brand) => brand.is_active).map((brand) => <option value={brand.id} key={brand.id}>{brand.name}</option>)}</select></label>
-            <label className="smart-product-form__field"><span>SKU / referencia</span><input value={form.sku} onChange={(event) => updateForm("sku", event.target.value)} /></label>
-            <label className="smart-product-form__field smart-product-form__wide"><span>Descripción</span><textarea rows={3} value={form.description} onChange={(event) => updateForm("description", event.target.value)} /></label>
-            <label className="smart-product-form__field smart-product-form__wide"><span>Imagen principal</span><input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(event) => updateForm("image", event.target.files?.[0] ?? null)} />{product?.image_url && !form.image ? <small>Se conservará la imagen actual.</small> : null}</label>
+            <label className="smart-product-form__field"><span>SKU / referencia</span><input data-error-key="sku" value={form.sku} aria-invalid={Boolean(errors.sku)} onChange={(event) => updateForm("sku", event.target.value)} />{errors.sku ? <small className="smart-product-form__field-error">{errors.sku}</small> : null}</label>
           </div>
+          <button className="smart-product-form__disclosure" type="button" aria-expanded={showOptionalContent} aria-controls="product-optional-content" onClick={() => setShowOptionalContent((open) => !open)}>{showOptionalContent ? "Ocultar descripción e imagen" : "Agregar descripción o imagen"}</button>
+          {showOptionalContent ? <div id="product-optional-content" className="smart-product-form__grid smart-product-form__revealed"><label className="smart-product-form__field smart-product-form__wide"><span>Descripción</span><textarea rows={3} value={form.description} onChange={(event) => updateForm("description", event.target.value)} /></label><label className="smart-product-form__field smart-product-form__wide"><span>Imagen principal</span><input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(event) => updateForm("image", event.target.files?.[0] ?? null)} />{product?.image_url && !form.image ? <small>Se conservará la imagen actual.</small> : null}</label></div> : null}
         </section>
 
-        <section className="smart-product-form__section" aria-labelledby="product-details-title">
-          <div className="smart-product-form__section-heading"><span>02</span><div><h3 id="product-details-title">Detalles</h3><p>Campos definidos por la categoría para el producto.</p></div></div>
-          <ProductDynamicFields fields={productFields} values={technicalSpecs} errors={errors} errorPrefix="productSpecs" onChange={(field, value) => setTechnicalSpecs((current) => ({ ...current, [field.field_key]: value }))} />
-        </section>
+        {productFields.length ? <section className="smart-product-form__section" aria-labelledby="product-details-title"><div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>02</span><div><h3 id="product-details-title">Detalles de {selectedCategory?.name}</h3><p>{hasRequiredProductFields ? "Completa los datos obligatorios de esta categoría." : "Datos opcionales definidos para esta categoría."}</p></div>{!hasRequiredProductFields ? <button className="smart-product-form__disclosure is-inline" type="button" aria-expanded={showCategoryDetails} aria-controls="product-category-details" onClick={() => setShowCategoryDetails((open) => !open)}>{showCategoryDetails ? "Ocultar" : "Completar detalles"}</button> : null}</div>{hasRequiredProductFields || showCategoryDetails ? <div id="product-category-details"><ProductDynamicFields fields={productFields} values={technicalSpecs} errors={errors} errorPrefix="productSpecs" onChange={(field, value) => setTechnicalSpecs((current) => ({ ...current, [field.field_key]: value }))} /></div> : null}</section> : null}
 
         <section className="smart-product-form__section" aria-labelledby="product-compatibility-title">
           <div className="smart-product-form__section-heading"><span>03</span><div><h3 id="product-compatibility-title">Compatibilidad</h3><p>¿Para qué vehículos sirve?</p></div></div>
           <div className="smart-product-form__choice-grid">
-            {(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={form.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input type="radio" name="product-compatibility" checked={form.compatibility_type === type} onChange={() => updateForm("compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Vehículos específicos"}</strong><small>{type === "universal" ? "No requiere selección vehicular." : "Define marcas, modelos o versiones."}</small></label>)}
+            {(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={form.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input data-error-key="compatibility" type="radio" name="product-compatibility" checked={form.compatibility_type === type} onChange={() => updateForm("compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Vehículos específicos"}</strong><small>{type === "universal" ? "No requiere selección vehicular." : "Define marcas, modelos o versiones."}</small></label>)}
           </div>
           {errors.compatibility ? <p className="smart-product-form__section-error">{errors.compatibility}</p> : null}
           {form.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(generalCompatibilities, setGeneralCompatibilities, "general", false) : <p className="smart-product-form__hint">Este artículo podrá utilizarse sin asociarlo a un vehículo concreto.</p>}
@@ -423,14 +462,13 @@ export const ProductForm = ({
 
         <section className="smart-product-form__section" aria-labelledby="product-pricing-title">
           <div className="smart-product-form__section-heading"><span>04</span><div><h3 id="product-pricing-title">Precio</h3><p>Valores comerciales base del producto.</p></div></div>
-          <PricingFields draft={form} update={updateForm} preview={productPricing} error={errors.pricing} />
+          <div className="smart-product-form__grid"><label className="smart-product-form__field"><span>Precio de venta</span><input type="number" min="0" value={form.price} onChange={(event) => updateForm("price", event.target.value)} /></label></div>
           <InventoryNotice canViewInventory={canViewInventory} />
         </section>
 
         <section className="smart-product-form__section" aria-labelledby="product-variants-title">
-          <div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>05</span><div><h3 id="product-variants-title">Variantes</h3><p>Opcionales: configuraciones con precio o compatibilidad propia.</p></div><button className="smart-product-form__secondary" type="button" onClick={() => setVariants((current) => [...current, emptyVariant(current.length)])}>+ Agregar variante</button></div>
-          {variants.length === 0 ? <p className="smart-product-form__empty">Este producto es simple. Agrega una variante solo si tiene versiones diferentes.</p> : null}
-          <div className="smart-product-form__variants">
+          <div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>05</span><div><h3 id="product-variants-title">Variantes</h3><p>{variants.length ? `${variants.length} configurada${variants.length === 1 ? "" : "s"}.` : "Producto simple. Úsalas solo si existen versiones diferentes."}</p></div><button className="smart-product-form__secondary" type="button" aria-expanded={showVariants} aria-controls="product-variants-content" onClick={() => { setShowVariants(true); if (!variants.length) setVariants([emptyVariant(0)]); }}>+ Agregar variante</button></div>
+          {showVariants && variants.length ? <div id="product-variants-content" className="smart-product-form__variants">
             {variants.map((variant, index) => {
               const pricing = calculatePricingPreview(variant);
               const variantRowsSetter = (rows: VariantCompatibilityDraft[]) => updateVariant(index, "vehicle_compatibilities", rows);
@@ -459,8 +497,8 @@ export const ProductForm = ({
                     </div>
                   </header>
                   <div className="smart-product-form__grid">
-                    <label className="smart-product-form__field"><span>Nombre</span><input value={variant.name} placeholder={suggestVariantName(variantFields, variant.specs) || "Nombre de variante"} onChange={(event) => { updateVariant(index, "name", event.target.value); updateVariant(index, "name_is_custom", event.target.value.trim() !== ""); }} />{errors[`variants.${index}.name`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.name`]}</small> : null}</label>
-                    <label className="smart-product-form__field"><span>SKU</span><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value)} />{errors[`variants.${index}.sku`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.sku`]}</small> : null}</label>
+                    <label className="smart-product-form__field"><span>Nombre</span><input data-error-key={`variants.${index}.name`} value={variant.name} placeholder={suggestVariantName(variantFields, variant.specs) || "Nombre de variante"} onChange={(event) => { updateVariant(index, "name", event.target.value); updateVariant(index, "name_is_custom", event.target.value.trim() !== ""); }} />{errors[`variants.${index}.name`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.name`]}</small> : null}</label>
+                    <label className="smart-product-form__field"><span>SKU</span><input data-error-key={`variants.${index}.sku`} value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value)} />{errors[`variants.${index}.sku`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.sku`]}</small> : null}</label>
                   </div>
                   <div className="smart-product-form__subsection"><h4>Detalles de esta variante</h4><ProductDynamicFields fields={variantFields} values={variant.specs} errors={errors} errorPrefix={`variants.${index}.specs`} onChange={(field, value) => updateVariantSpec(index, field, value)} /></div>
                   <div className="smart-product-form__subsection"><h4>Precio</h4><PricingFields draft={variant} update={(key, value) => updateVariant(index, key, value)} preview={pricing} error={errors[`variants.${index}.pricing`]} /></div>
@@ -469,16 +507,14 @@ export const ProductForm = ({
                 </article>
               );
             })}
-          </div>
+          </div> : null}
         </section>
 
-        <section className="smart-product-form__section" aria-labelledby="product-commission-title">
-          <div className="smart-product-form__section-heading"><span>06</span><div><h3 id="product-commission-title">Comisión comercial</h3><p>Configura el monto fijo que recibe el colaborador por cada unidad vendida.</p></div></div>
-          <div className="smart-product-form__commission">
+        <section className="smart-product-form__section" aria-labelledby="product-commercial-title"><div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>06</span><div><h3 id="product-commercial-title">Opciones comerciales avanzadas</h3><p>Costos, cálculo de precio y comisión.</p></div><button className="smart-product-form__disclosure is-inline" type="button" aria-expanded={showCommercialAdvanced} aria-controls="product-commercial-advanced" onClick={() => setShowCommercialAdvanced((open) => !open)}>{showCommercialAdvanced ? "Ocultar" : "Configurar"}</button></div>{showCommercialAdvanced ? <div id="product-commercial-advanced"><PricingFields draft={form} update={updateForm} preview={productPricing} error={errors.pricing} advancedOnly /><div className="smart-product-form__commission">
             <label className="smart-product-form__check"><input type="checkbox" checked={form.commission_enabled} onChange={(event) => { updateForm("commission_enabled", event.target.checked); if (!event.target.checked) updateForm("commission_amount", ""); }} /><span>Genera comisión</span></label>
-            <label className="smart-product-form__field"><span>Comisión por unidad (COP) {form.commission_enabled ? "*" : ""}</span><input type="number" min="1" step="1" inputMode="numeric" disabled={!form.commission_enabled} required={form.commission_enabled} value={form.commission_amount} aria-invalid={Boolean(errors.commission_amount)} onChange={(event) => updateForm("commission_amount", event.target.value)} />{errors.commission_amount ? <small className="smart-product-form__field-error">{errors.commission_amount}</small> : <small>Monto fijo que recibe el colaborador por cada unidad vendida.</small>}</label>
+            <label className="smart-product-form__field"><span>Comisión por unidad (COP) {form.commission_enabled ? "*" : ""}</span><input data-error-key="commission_amount" type="number" min="1" step="1" inputMode="numeric" disabled={!form.commission_enabled} required={form.commission_enabled} value={form.commission_amount} aria-invalid={Boolean(errors.commission_amount)} onChange={(event) => updateForm("commission_amount", event.target.value)} />{errors.commission_amount ? <small className="smart-product-form__field-error">{errors.commission_amount}</small> : <small>Monto fijo que recibe el colaborador por cada unidad vendida.</small>}</label>
           </div>
-          {variants.length > 0 ? <p className="smart-product-form__hint">Las variantes heredan la comisión configurada en el producto.</p> : null}
+          {variants.length > 0 ? <p className="smart-product-form__hint">Las variantes heredan la comisión configurada en el producto.</p> : null}</div> : null}
         </section>
 
         <section className="smart-product-form__section" aria-labelledby="product-publication-title">
@@ -488,9 +524,10 @@ export const ProductForm = ({
       </div>
 
       <footer className="smart-product-form__footer">
-        <div>{submitError ? <p role="alert">{submitError}</p> : Object.keys(errors).length > 0 ? <p role="alert">Revisa los campos marcados antes de guardar.</p> : null}</div>
+        <div>{submitError ? <p role="alert">{submitError}</p> : Object.values(errors).some(Boolean) ? <p role="alert">Revisa los campos marcados antes de guardar.</p> : null}</div>
         <button type="button" onClick={onCancel} disabled={isSaving}>Cancelar</button>
-        <button type="submit" disabled={isSaving}>{isSaving ? "Guardando…" : "Guardar producto"}</button>
+        {canContinueToInventory ? <button className="is-secondary-submit" type="submit" disabled={isSaving} onClick={() => { submitIntent.current = "inventory"; }}>{isSaving && submitIntent.current === "inventory" ? "Guardando…" : "Guardar y asignar inventario"}</button> : null}
+        <button type="submit" disabled={isSaving} onClick={() => { submitIntent.current = "save"; }}>{isSaving && submitIntent.current === "save" ? "Guardando…" : "Guardar producto"}</button>
       </footer>
     </form>
   );
@@ -501,6 +538,7 @@ type PricingFieldsProps<T extends ProductFormState | ProductVariantDraft> = {
   update: <K extends keyof T>(key: K, value: T[K]) => void;
   preview: ReturnType<typeof calculatePricingPreview>;
   error?: string;
+  advancedOnly?: boolean;
 };
 
 const InventoryNotice = ({ canViewInventory }: { canViewInventory: boolean }) => (
@@ -513,12 +551,12 @@ const InventoryNotice = ({ canViewInventory }: { canViewInventory: boolean }) =>
   </aside>
 );
 
-const PricingFields = <T extends ProductFormState | ProductVariantDraft>({ draft, update, preview, error }: PricingFieldsProps<T>) => (
+const PricingFields = <T extends ProductFormState | ProductVariantDraft>({ draft, update, preview, error, advancedOnly = false }: PricingFieldsProps<T>) => (
   <>
     <div className="smart-product-form__grid smart-product-form__pricing-grid">
       {(["cost_price", "tax_amount", "extra_charges"] as const).map((key) => <label className="smart-product-form__field" key={key}><span>{key === "cost_price" ? "Costo" : key === "tax_amount" ? "Impuestos" : "Cargos extra"}</span><input type="number" min="0" value={draft[key]} onChange={(event) => update(key, event.target.value as T[typeof key])} /></label>)}
       <label className="smart-product-form__field"><span>Modo de precio</span><select value={draft.pricing_mode} onChange={(event) => update("pricing_mode", event.target.value as T["pricing_mode"])}><option value="manual">Manual</option><option value="markup">Ganancia sobre costo</option><option value="margin">Margen real</option></select></label>
-      {draft.pricing_mode === "manual" ? <label className="smart-product-form__field"><span>Precio de venta</span><input type="number" min="0" value={draft.price} onChange={(event) => update("price", event.target.value as T["price"])} /></label> : <label className="smart-product-form__field"><span>{draft.pricing_mode === "markup" ? "Ganancia sobre costo %" : "Margen deseado %"}</span><input type="number" min="0" max={draft.pricing_mode === "margin" ? 99 : undefined} value={draft.target_profit_percent} onChange={(event) => update("target_profit_percent", event.target.value as T["target_profit_percent"])} /></label>}
+      {draft.pricing_mode === "manual" ? (advancedOnly ? null : <label className="smart-product-form__field"><span>Precio de venta</span><input type="number" min="0" value={draft.price} onChange={(event) => update("price", event.target.value as T["price"])} /></label>) : <label className="smart-product-form__field"><span>{draft.pricing_mode === "markup" ? "Ganancia sobre costo %" : "Margen deseado %"}</span><input data-error-key="pricing" type="number" min="0" max={draft.pricing_mode === "margin" ? 99 : undefined} value={draft.target_profit_percent} onChange={(event) => update("target_profit_percent", event.target.value as T["target_profit_percent"])} /></label>}
     </div>
     {error ? <p className="smart-product-form__section-error">{error}</p> : null}
     <div className="smart-product-form__pricing-preview"><span>Costo total <strong>{formatCurrency(preview.totalCost)}</strong></span><span>Venta <strong>{formatCurrency(preview.price)}</strong></span><span>Ganancia <strong>{formatCurrency(preview.profitAmount)}</strong></span><span>Margen <strong>{preview.profitMarginPercent.toFixed(2)}%</strong></span></div>

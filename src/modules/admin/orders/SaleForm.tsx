@@ -22,7 +22,7 @@ import { useDialogFocus } from "./useDialogFocus";
 export type SaleLine =
   | { type: "product"; key: string; product: CommercialProduct; variant: CommercialProductVariant | null; quantity: number; discount: number }
   | { type: "service"; key: string; service: Service; quantity: number; discount: number };
-type Props = { open: boolean; onClose: () => void; onSubmit: (payload: CreateAdminOrderPayload) => Promise<Order>; onCreated: (order: Order) => void };
+type Props = { open: boolean; initialCustomer?: Customer | null; onClose: () => void; onSubmit: (payload: CreateAdminOrderPayload) => Promise<Order>; onCreated: (order: Order) => void };
 const paymentMethods: PaymentMethod[] = ["cash", "transfer", "card_terminal", "wompi", "other"];
 type CustomerMode = "counter" | "existing" | "adhoc";
 type VehicleMode = "none" | "existing" | "adhoc";
@@ -31,7 +31,7 @@ const isAbort = (cause: unknown) => cause instanceof DOMException && cause.name 
 const errorMessage = (cause: unknown, fallback: string) => cause instanceof Error ? cause.message : fallback;
 const productStock = (product: CommercialProduct, variant: CommercialProductVariant | null) => Math.max(0, Number(variant?.branch_stock ?? product.branch_stock));
 
-export const SaleForm = ({ open, onClose, onSubmit, onCreated }: Props) => {
+export const SaleForm = ({ open, initialCustomer = null, onClose, onSubmit, onCreated }: Props) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchesError, setBranchesError] = useState("");
@@ -263,10 +263,16 @@ export const SaleForm = ({ open, onClose, onSubmit, onCreated }: Props) => {
     resetPersistentVehicle();
     const requestId = ++vehiclesRequestRef.current;
     setVehiclesLoading(true);
-    try { const nextVehicles = await getCustomerVehicles(nextCustomer.id); if (requestId === vehiclesRequestRef.current) setCustomerVehicles(nextVehicles); }
+    try { const nextVehicles = await getCustomerVehicles(nextCustomer.id); if (requestId === vehiclesRequestRef.current) { const activeVehicles = nextVehicles.filter((vehicle) => vehicle.is_active); setCustomerVehicles(nextVehicles); if (activeVehicles.length === 1) { setVehicleMode("existing"); setSelectedCustomerVehicle(activeVehicles[0]); } } }
     catch (cause) { if (requestId === vehiclesRequestRef.current) setVehiclesError(errorMessage(cause, "No se pudieron cargar los vehículos del cliente.")); }
     finally { if (requestId === vehiclesRequestRef.current) setVehiclesLoading(false); }
   };
+
+  useEffect(() => {
+    if (!open || !initialCustomer) return;
+    setCustomerMode("existing");
+    void selectCustomer(initialCustomer);
+  }, [open, initialCustomer?.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

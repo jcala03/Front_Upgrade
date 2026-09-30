@@ -1,18 +1,23 @@
 import type { CartItem, CartLineQuantity } from "../context/CartContext";
+import type { PublicFulfillmentType } from "../types/order";
 
 const LAST_ORDER_KEY = "upgrade79_last_order";
 const ACTIVE_CHECKOUT_KEY = "upgrade79_active_checkout";
 const CHECKOUT_STORAGE_VERSION_KEY = "upgrade79_checkout_storage_v2";
 export const CREATE_IDEMPOTENCY_KEY = "upgrade79_checkout_v1_idempotency_key";
 
-export type CheckoutReference = { public_token: string; order_number?: string };
+export type CheckoutReference = { public_token: string; order_number?: string; fulfillment_mode?: PublicFulfillmentType };
 
 const parseReference = (raw: string | null): CheckoutReference | null => {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<CheckoutReference>;
     return typeof value.public_token === "string" && value.public_token
-      ? { public_token: value.public_token, order_number: typeof value.order_number === "string" ? value.order_number : undefined }
+      ? {
+        public_token: value.public_token,
+        order_number: typeof value.order_number === "string" ? value.order_number : undefined,
+        fulfillment_mode: value.fulfillment_mode === "shipping" || value.fulfillment_mode === "pickup" ? value.fulfillment_mode : undefined,
+      }
       : null;
   } catch {
     return null;
@@ -50,6 +55,14 @@ export const storeCreatedCheckout = (reference: CheckoutReference, items: CartIt
     quantity: item.quantity,
   }));
   sessionStorage.setItem(cartSnapshotKey(reference.public_token), JSON.stringify(lines));
+};
+
+export const storeCheckoutFulfillment = (token: string, fulfillmentMode: PublicFulfillmentType) => {
+  const active = parseReference(sessionStorage.getItem(ACTIVE_CHECKOUT_KEY));
+  if (!active || active.public_token !== token) return;
+  const updated = { ...active, fulfillment_mode: fulfillmentMode };
+  sessionStorage.setItem(ACTIVE_CHECKOUT_KEY, JSON.stringify(updated));
+  sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(updated));
 };
 
 export const finishActiveCheckout = (token?: string) => {

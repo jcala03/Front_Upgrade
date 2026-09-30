@@ -71,6 +71,13 @@ type MessageResponse = {
   message: string;
 };
 
+export class ProductApiError extends Error {
+  constructor(message: string, public errors: Record<string, string[]> = {}) {
+    super(message);
+    this.name = "ProductApiError";
+  }
+}
+
 const getCookie = (name: string): string => {
   const value = document.cookie
     .split("; ")
@@ -112,10 +119,11 @@ const handleJsonResponse = async <T>(response: Response): Promise<T> => {
         ? Object.values(result.errors).flat().join(" ")
         : null;
 
-    throw new Error(
+    throw new ProductApiError(
       validationMessage ||
         result?.message ||
-        "No se pudo completar la solicitud."
+        "No se pudo completar la solicitud.",
+      result?.errors ?? {}
     );
   }
 
