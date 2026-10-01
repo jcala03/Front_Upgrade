@@ -26,7 +26,7 @@ export const ServicePicker = ({ onAdd, disabled = false }: Props) => {
     setLoading(true);
     setError("");
     getServices({ search: search || undefined, is_active: true, page: 1, per_page: 25, sort: "sort_order", direction: "asc" })
-      .then((result) => { if (current === requestId.current) setServices(result.data); })
+      .then((result) => { if (current === requestId.current) setServices(result.data.filter((service) => service.category?.is_active === true)); })
       .catch((cause) => { if (current === requestId.current) setError(cause instanceof Error ? cause.message : "No se pudieron cargar los servicios."); })
       .finally(() => { if (current === requestId.current) setLoading(false); });
     return () => { requestId.current += 1; };

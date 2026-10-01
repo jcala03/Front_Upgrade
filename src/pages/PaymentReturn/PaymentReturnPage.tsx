@@ -5,6 +5,7 @@ import { useCart } from "../../context/CartContext";
 import type { PublicOrder } from "../../types/order";
 import { finishActiveCheckout, paymentAttemptStorage, preparePaymentRetry, readLastOrder, reconcilePaidCart, startNewPurchase } from "../../utils/checkoutStorage";
 import { startWompiCheckout } from "../../utils/wompiCheckout";
+import { paymentReturnCopy as statusCopy, terminalPaymentAttempt } from "../../utils/paymentPresentation";
 import "./PaymentReturnPage.css";
 
 const MAX_POLLS = 6;
@@ -12,21 +13,13 @@ const POLL_DELAY = 5000;
 
 type QueryState = "idle" | "refreshing" | "error";
 
-const statusCopy = (order: PublicOrder, awaitingConfirmation: boolean, pollingExhausted: boolean) => {
-  if (order.payment_status === "paid") return { tone: "success", title: "Pago confirmado", message: "Confirmamos el pago de tu orden. Tu pedido continúa confirmado y te informaremos los siguientes pasos." };
-  if (order.payment_status === "refunded") return { tone: "warning", title: "Pago devuelto", message: "El pago de esta orden fue devuelto. Si necesitas ayuda, comunícate con nuestro equipo." };
-  if (order.payment_status === "partial") return { tone: "warning", title: "Pago parcial registrado", message: "Recibimos un pago parcial. Nuestro equipo te informará cómo continuar." };
-  if (order.order_status === "cancelled") return { tone: "warning", title: "La reserva venció", message: "La reserva ya no está activa. Puedes iniciar una nueva compra desde la tienda." };
-  if (pollingExhausted) return { tone: "pending", title: "Seguimos esperando la confirmación", message: "La confirmación puede tardar unos minutos. Puedes volver a consultar el estado en unos momentos." };
-  if (awaitingConfirmation) return { tone: "pending", title: "Estamos confirmando tu pago", message: "No realices otro intento mientras confirmamos el resultado." };
-  if (order.can_retry_payment) return { tone: "warning", title: "Puedes intentar el pago nuevamente", message: "Tu pedido sigue reservado y está habilitado para un nuevo intento de pago." };
-  return { tone: "pending", title: "Pago pendiente", message: "Todavía no tenemos una confirmación final del pago." };
-};
-
 const paymentLabel = (order: PublicOrder) => {
   if (order.payment_status === "paid") return "Confirmado";
   if (order.payment_status === "refunded") return "Devuelto";
   if (order.payment_status === "partial") return "Parcial";
+  if (order.payment_attempt_status === "DECLINED") return "Rechazado";
+  if (order.payment_attempt_status === "VOIDED") return "Anulado";
+  if (["ERROR", "UNKNOWN"].includes(order.payment_attempt_status ?? "")) return "Sin confirmar";
   return "Pendiente";
 };
 
@@ -92,7 +85,7 @@ export const PaymentReturnPage = () => {
     }
   }, [consumeLines, order, token]);
 
-  const awaitingPayment = startedPayment && order?.payment_status !== "paid" && order?.payment_status !== "partial" && order?.payment_status !== "refunded" && order?.order_status !== "cancelled";
+  const awaitingPayment = (startedPayment || order?.payment_attempt_status === "PENDING") && (!order || !terminalPaymentAttempt(order)) && order?.payment_status !== "paid" && order?.payment_status !== "partial" && order?.payment_status !== "refunded" && order?.order_status !== "cancelled";
   const polling = awaitingPayment && polls < MAX_POLLS;
   const pollingExhausted = awaitingPayment && polls >= MAX_POLLS;
 

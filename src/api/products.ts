@@ -72,7 +72,7 @@ type MessageResponse = {
 };
 
 export class ProductApiError extends Error {
-  constructor(message: string, public errors: Record<string, string[]> = {}) {
+  constructor(message: string, public errors: Record<string, string[]> = {}, public status = 0) {
     super(message);
     this.name = "ProductApiError";
   }
@@ -123,7 +123,8 @@ const handleJsonResponse = async <T>(response: Response): Promise<T> => {
       validationMessage ||
         result?.message ||
         "No se pudo completar la solicitud.",
-      result?.errors ?? {}
+      result?.errors ?? {},
+      response.status
     );
   }
 

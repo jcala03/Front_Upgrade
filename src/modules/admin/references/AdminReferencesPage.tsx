@@ -33,6 +33,7 @@ import type {
   VehicleVersionMultimediaSystemSyncItem,
 } from "../../../types/vehicle";
 import "./AdminReferencesPage.css";
+import { hasPermission } from "../../../utils/authStorage";
 
 export type AdminReferencesScope =
   | "all"
@@ -936,7 +937,9 @@ export const AdminReferencesPage = ({
 
   const handleDelete = async (id: number, label: string) => {
     const shouldDelete = window.confirm(
-      `¿Seguro que quieres eliminar "${label}"?`
+      activeTab === "multimedia_systems"
+        ? `¿Seguro que quieres eliminar definitivamente "${label}"? Se quitarán sus asociaciones con generaciones.`
+        : `¿Seguro que quieres desactivar "${label}"? Sus relaciones históricas se conservarán.`
     );
 
     if (!shouldDelete) {
@@ -951,25 +954,25 @@ export const AdminReferencesPage = ({
       if (activeTab === "product_brands") {
         await deleteProductBrand(id);
         setMessage(
-          "Marca de artículo eliminada correctamente."
+          "Marca de artículo desactivada correctamente."
         );
       }
 
       if (activeTab === "vehicle_brands") {
         await deleteVehicleBrand(id);
         setMessage(
-          "Marca de vehículo eliminada correctamente."
+          "Marca de vehículo desactivada correctamente."
         );
       }
 
       if (activeTab === "vehicle_models") {
         await deleteVehicleModel(id);
-        setMessage("Modelo eliminado correctamente.");
+        setMessage("Modelo desactivado correctamente.");
       }
 
       if (activeTab === "vehicle_versions") {
         await deleteVehicleVersion(id);
-        setMessage("Generación eliminada correctamente.");
+        setMessage("Generación desactivada correctamente.");
       }
 
       if (activeTab === "multimedia_systems") {
@@ -1021,17 +1024,19 @@ export const AdminReferencesPage = ({
 
   const renderActions = (id: number, label: string) => (
     <div className="references-actions">
-      <button type="button" onClick={() => openEditModal(id)}>
+      <button type="button" disabled={!hasPermission("products.update")} onClick={() => openEditModal(id)}>
         Editar
       </button>
 
       <button
         className="is-danger"
         type="button"
-        disabled={deletingId === id}
+        disabled={deletingId === id || !hasPermission("products.delete")}
         onClick={() => handleDelete(id, label)}
       >
-        {deletingId === id ? "Eliminando..." : "Eliminar"}
+        {activeTab === "multimedia_systems"
+          ? deletingId === id ? "Eliminando..." : "Eliminar"
+          : deletingId === id ? "Desactivando..." : "Desactivar"}
       </button>
     </div>
   );
@@ -1844,7 +1849,7 @@ export const AdminReferencesPage = ({
             <p>{pageContent.description}</p>
           </div>
 
-          <button type="button" onClick={openCreateModal}>
+          <button type="button" disabled={!hasPermission("products.create")} onClick={openCreateModal}>
             {activeTabInfo.createLabel}
           </button>
         </section>
@@ -1927,7 +1932,7 @@ export const AdminReferencesPage = ({
               }
             />
 
-            <button type="button" onClick={openCreateModal}>
+            <button type="button" disabled={!hasPermission("products.create")} onClick={openCreateModal}>
               {activeTabInfo.createLabel}
             </button>
           </div>
@@ -1959,7 +1964,7 @@ export const AdminReferencesPage = ({
               No hay registros para esta configuración.
             </p>
 
-            <button type="button" onClick={openCreateModal}>
+            <button type="button" disabled={!hasPermission("products.create")} onClick={openCreateModal}>
               {activeTabInfo.createLabel}
             </button>
           </div>

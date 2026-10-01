@@ -7,38 +7,42 @@ import { Transformation } from "./components/sections/Transformation";
 import { SplashScreen } from "./components/ui/SplashScreen";
 import { CartProvider } from "./context/CartContext";
 import { useSplash } from "./hooks/useSplash";
-import { AdminInventoryPage } from "./modules/admin/inventory";
-import { AdminDashboardPage } from "./modules/admin/dashboard";
-import { AdminCustomersPage } from "./modules/admin/customers";
-import { AdminAppointmentsPage } from "./modules/admin/appointments";
-import { AdminNotificationsPage } from "./modules/admin/notifications";
-import { AdminOrdersPage } from "./modules/admin/orders";
-import { AdminQuotationsPage } from "./modules/admin/quotations";
-import { AdminReportsPage } from "./modules/admin/reports";
-import { AdminProductsPage } from "./modules/admin/products/AdminProductsPage";
-import { AdminSettingsPage, ProfilePage } from "./modules/admin/settings";
-import { AdminServicesPage } from "./modules/admin/services";
-import { AdminEmployeesPage } from "./modules/admin/employees";
-import { AdminBranchesPage } from "./modules/admin/branches";
-import { AdminCategoriesPage } from "./modules/admin/categories";
-import { AdminReferencesPage } from "./modules/admin/references";
-import { LoginPage } from "./modules/crm/auth/LoginPage";
-import { CrmLayout } from "./modules/crm/layout";
-import { UserHomePage } from "./modules/crm/home";
 import {
   CrmRouteFallback,
   lazyNamed,
   matchesCrmRoute,
   type CrmRouteDefinition,
 } from "./modules/crm/routing";
-import { CartPage } from "./pages/Cart";
-import { CheckoutPage } from "./pages/Checkout";
-import { OrderConfirmationPage } from "./pages/OrderConfirmation";
-import { PaymentReturnPage } from "./pages/PaymentReturn";
 import { ProductDetailPage } from "./pages/ProductDetail";
 import { ShopPage } from "./pages/Shop";
 import { getAuthUser, hasPermission } from "./utils/authStorage";
-import { Suspense, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { publicBootstrap, updatePublicSeo } from "./seo/client";
+import { PublicNotFound } from "./pages/PublicNotFound";
+
+const AdminInventoryPage = lazy(() => import("./modules/admin/inventory").then(module => ({ default: module.AdminInventoryPage })));
+const AdminDashboardPage = lazyNamed(() => import("./modules/admin/dashboard"), "AdminDashboardPage");
+const AdminCustomersPage = lazy(() => import("./modules/admin/customers").then(module => ({ default: module.AdminCustomersPage })));
+const AdminAppointmentsPage = lazyNamed(() => import("./modules/admin/appointments"), "AdminAppointmentsPage");
+const AdminNotificationsPage = lazyNamed(() => import("./modules/admin/notifications"), "AdminNotificationsPage");
+const AdminOrdersPage = lazyNamed(() => import("./modules/admin/orders"), "AdminOrdersPage");
+const AdminQuotationsPage = lazyNamed(() => import("./modules/admin/quotations"), "AdminQuotationsPage");
+const AdminReportsPage = lazyNamed(() => import("./modules/admin/reports"), "AdminReportsPage");
+const AdminProductsPage = lazyNamed(() => import("./modules/admin/products/AdminProductsPage"), "AdminProductsPage");
+const AdminSettingsPage = lazyNamed(() => import("./modules/admin/settings"), "AdminSettingsPage");
+const ProfilePage = lazyNamed(() => import("./modules/admin/settings"), "ProfilePage");
+const AdminServicesPage = lazyNamed(() => import("./modules/admin/services"), "AdminServicesPage");
+const AdminEmployeesPage = lazy(() => import("./modules/admin/employees").then(module => ({ default: module.AdminEmployeesPage })));
+const AdminBranchesPage = lazyNamed(() => import("./modules/admin/branches"), "AdminBranchesPage");
+const AdminCategoriesPage = lazyNamed(() => import("./modules/admin/categories"), "AdminCategoriesPage");
+const AdminReferencesPage = lazy(() => import("./modules/admin/references").then(module => ({ default: module.AdminReferencesPage })));
+const LoginPage = lazyNamed(() => import("./modules/crm/auth/LoginPage"), "LoginPage");
+const UserHomePage = lazy(() => import("./modules/crm/home").then(module => ({ default: module.UserHomePage })));
+const CartPage = lazyNamed(() => import("./pages/Cart"), "CartPage");
+const CheckoutPage = lazyNamed(() => import("./pages/Checkout"), "CheckoutPage");
+const OrderConfirmationPage = lazyNamed(() => import("./pages/OrderConfirmation"), "OrderConfirmationPage");
+const PaymentReturnPage = lazyNamed(() => import("./pages/PaymentReturn"), "PaymentReturnPage");
+const CrmLayout = lazy(() => import("./modules/crm/layout").then(module => ({ default: module.CrmLayout })));
 
 const LazyAdminSchedulesPage = lazyNamed(
   () => import("./modules/admin/schedules"),
@@ -268,7 +272,11 @@ const PrivatePage = ({ children, title, description, permission, adminOnly = fal
 
 const AppContent = () => {
   const { isSplashVisible, completeSplash } = useSplash();
-  const pathname = window.location.pathname.replace(/\/$/, "") || "/";
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  useEffect(() => {
+    updatePublicSeo(pathname, publicBootstrap()?.product);
+  }, [pathname]);
 
   useEffect(() => {
     const isPrivateRoute = pathname === "/crm" || pathname.startsWith("/crm/") || pathname === "/admin" || pathname.startsWith("/admin/");
@@ -355,7 +363,7 @@ const AppContent = () => {
       pathname === "/crm/references" ||
       pathname === "/admin/references"
     ) {
-      document.title = "Referencias | Upgrade La 79";
+      document.title = "Marcas y vehículos | Upgrade La 79";
     } else if (["/crm/products", "/crm/catalog", "/admin/products"].includes(pathname)) {
       document.title = "Catálogo | Upgrade La 79";
     } else if (pathname === "/crm/settings" || pathname === "/admin/settings") {
@@ -447,7 +455,7 @@ const AppContent = () => {
     const referenceScope = pathname.includes("brands") ? "product_brands" : pathname.includes("compatibility") ? "vehicle_compatibility" : "all";
     return (
       <PrivatePage
-        title={isCategory ? "Categorías" : "Referencias"}
+        title={isCategory ? "Categorías" : "Marcas y vehículos"}
         description="Administra datos auxiliares del catálogo y la compatibilidad vehicular."
         permission="products.view"
       >
@@ -654,8 +662,10 @@ const AppContent = () => {
     );
   }
 
-  if (pathname.startsWith("/tienda/")) {
-    const slug = pathname.replace("/tienda/", "").split("/")[0];
+  if (/^\/tienda\/[^/]+$/.test(pathname)) {
+    let slug: string;
+    try { slug = decodeURIComponent(pathname.slice("/tienda/".length)); }
+    catch { return <Layout><PublicNotFound /></Layout>; }
 
     return (
       <Layout>
@@ -707,9 +717,11 @@ const AppContent = () => {
     );
   }
 
+  if (pathname !== "/") return <Layout><PublicNotFound /></Layout>;
+
   return (
     <>
-      {isSplashVisible ? <SplashScreen onComplete={completeSplash} /> : null}
+      {isSplashVisible && !publicBootstrap() ? <SplashScreen onComplete={completeSplash} /> : null}
 
       <Layout>
         <main>
@@ -727,7 +739,7 @@ const AppContent = () => {
 const App = () => {
   return (
     <CartProvider>
-      <AppContent />
+      <Suspense fallback={<CrmRouteFallback />}><AppContent /></Suspense>
     </CartProvider>
   );
 };

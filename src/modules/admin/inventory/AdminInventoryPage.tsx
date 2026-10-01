@@ -61,6 +61,7 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
   const [enteringInventory, setEnteringInventory] = useState(false);
   const [inventoryContinuation, setInventoryContinuation] = useState<AdminProduct | null>(null);
   const [creatingProduct, setCreatingProduct] = useState(false);
+  const [productSaving, setProductSaving] = useState(false);
   const [dialogBusy, setDialogBusy] = useState(false);
   const requestId = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => { const current = ++requestId.current; setLoading(true); setError(""); try { const result = await getInventoryStocks({ branch_id: branchId ? Number(branchId) : undefined, search: submittedSearch || undefined, low_stock: criticalOnly || undefined, page, per_page: 25 }, signal); if (current === requestId.current) { setStocks(result.data); setPages(Math.max(1, result.last_page)); setTotal(result.total); } } catch (cause) { if (!(cause instanceof DOMException && cause.name === "AbortError") && current === requestId.current) setError(errorMessage(cause, "No se pudieron cargar las existencias.")); } finally { if (current === requestId.current) setLoading(false); } }, [branchId, criticalOnly, page, submittedSearch]);
@@ -268,10 +269,11 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
   open={creatingProduct}
   titleId="product-create-title"
   onClose={() => setCreatingProduct(false)}
-  busy={false}
+  busy={productSaving}
 >
   {creatingProduct ? (
     <CreateProductForm
+      onBusyChange={setProductSaving}
       onClose={() => setCreatingProduct(false)}
       onSaved={(successMessage, savedProduct, continueToInventory) => {
         setCreatingProduct(false);
@@ -528,10 +530,14 @@ const InventoryEntryForm = ({ branches, initialProduct, onBusyChange, onClose, o
 
 
 
-const CreateProductForm = ({
+export const CreateProductForm = ({
   onClose,
   onSaved,
+  product = null,
+  onBusyChange,
 }: {
+  product?: AdminProduct | null;
+  onBusyChange?: (busy: boolean) => void;
   onClose: () => void;
   onSaved: (message: string, savedProduct: AdminProduct, continueToInventory: boolean) => void;
 }) => {
@@ -636,7 +642,8 @@ const CreateProductForm = ({
 
   return (
     <ProductForm
-      product={null}
+      product={product}
+      onBusyChange={onBusyChange}
       {...catalogs}
       onCancel={onClose}
       onSaved={(message, savedProduct, continueToInventory) => {
@@ -699,7 +706,7 @@ const MovementsView = ({ branches }: { branches: Branch[] }) => { const [movemen
 <strong className={movement.quantity_delta < 0 ? "is-negative" : "is-positive"}>{movement.quantity_delta > 0 ? "+" : ""}{movement.quantity_delta}</strong>
 </td>
 <td data-label="Existencia">{movement.stock_before} → {movement.stock_after}</td>
-<td data-label="Motivo / referencia"><strong>{movement.reason ?? "—"}</strong>{movement.reference_type && movement.reference_id ? <small>{movement.reference_type} #{movement.reference_id}</small> : null}</td>
+<td data-label="Motivo / referencia"><strong>{movement.reason ?? "—"}</strong>{movement.reference_type && movement.reference_id ? <small>{({ InventoryTransfer: "Transferencia", Order: "Orden", Payment: "Pago" } as Record<string, string>)[movement.reference_type.split("\\").pop() ?? ""] ?? "Referencia"} #{movement.reference_id}</small> : null}</td>
 <td data-label="Operador">{movement.creator?.name ?? "Sistema"}</td>
 </tr>; })}</tbody>
 </table>

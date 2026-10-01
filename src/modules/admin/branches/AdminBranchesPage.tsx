@@ -10,14 +10,15 @@ import "./AdminBranchesPage.css";
 
 type BranchFormState = {
   code: string;
+  slug: string;
   name: string;
   city: string;
 };
 
-const emptyForm: BranchFormState = { code: "", name: "", city: "" };
+const emptyForm: BranchFormState = { code: "", slug: "", name: "", city: "" };
 
 const branchForm = (branch: Branch | null): BranchFormState => branch
-  ? { code: branch.code, name: branch.name, city: branch.city }
+  ? { code: branch.code, slug: branch.slug, name: branch.name, city: branch.city }
   : { ...emptyForm };
 
 export const AdminBranchesPage = () => {
@@ -141,7 +142,7 @@ const BranchForm = ({ branch, onBusy, onClose, onSaved }: { branch: Branch | nul
     const name = form.name.trim();
     const city = form.city.trim();
     const code = form.code.trim().toUpperCase();
-    if (!name || !city || (creating && !code)) {
+    if (!name || !city || (creating && (!code || !form.slug.trim()))) {
       setError("Completa los campos obligatorios.");
       return;
     }
@@ -150,7 +151,7 @@ const BranchForm = ({ branch, onBusy, onClose, onSaved }: { branch: Branch | nul
     onBusy(true);
     try {
       const saved = creating
-        ? await createBranch({ code, name, city } satisfies CreateBranchPayload)
+        ? await createBranch({ code, slug: form.slug.trim(), name, city } satisfies CreateBranchPayload)
         : await updateBranch(branch.id, { name, city } satisfies UpdateBranchPayload);
       onSaved(saved, creating);
     } catch (cause) {
@@ -167,6 +168,7 @@ const BranchForm = ({ branch, onBusy, onClose, onSaved }: { branch: Branch | nul
     <label><span>Código *</span><input autoFocus={creating} required={creating} readOnly={!creating} maxLength={20} autoCapitalize="characters" value={form.code} disabled={saving} aria-invalid={Boolean(fieldError("code"))} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))} />{fieldError("code") ? <small className="branch-field-error">{fieldError("code")}</small> : null}{!creating ? <small>El código es inmutable.</small> : null}</label>
     <label><span>Nombre *</span><input autoFocus={!creating} required maxLength={160} value={form.name} disabled={saving} aria-invalid={Boolean(fieldError("name"))} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />{fieldError("name") ? <small className="branch-field-error">{fieldError("name")}</small> : null}</label>
     <label className="is-wide"><span>Ciudad *</span><input required maxLength={160} value={form.city} disabled={saving} aria-invalid={Boolean(fieldError("city"))} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} />{fieldError("city") ? <small className="branch-field-error">{fieldError("city")}</small> : null}</label>
+    {creating ? <label className="is-wide"><span>Identificador público *</span><input required maxLength={120} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={form.slug} disabled={saving} aria-invalid={Boolean(fieldError("slug"))} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} /><small>Identifica la sede al recoger pedidos. Usa letras, números y guiones, por ejemplo: sede-norte.</small>{fieldError("slug") ? <small className="branch-field-error">{fieldError("slug")}</small> : null}</label> : null}
     {error ? <p className="branch-form__error is-wide" role="alert">{error}</p> : null}
   </div><footer><button type="button" disabled={saving} onClick={onClose}>Cancelar</button><button className="is-primary" type="submit" disabled={saving}>{saving ? "Guardando..." : creating ? "Crear sede" : "Guardar cambios"}</button></footer></form>;
 };

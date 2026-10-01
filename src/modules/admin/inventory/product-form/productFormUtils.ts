@@ -1,4 +1,5 @@
 import type { ProductCategoryField } from "../../../../types/productCategory";
+import type { ImageDraft } from "./ProductImagesEditor";
 import type {
   AdminProduct,
   ProductCompatibilityType,
@@ -45,6 +46,7 @@ export const emptyProductForm: ProductFormState = {
 };
 
 export const emptyVariant = (index: number): ProductVariantDraft => ({
+  main_image: null,
   name: "",
   name_is_custom: false,
   sku: "",
@@ -128,12 +130,14 @@ export const buildProductFormData = ({
   technicalSpecs,
   generalCompatibilities,
   variants,
+  images,
 }: {
   form: ProductFormState;
   productFields: ProductCategoryField[];
   technicalSpecs: ProductTechnicalSpecs;
   generalCompatibilities: VariantCompatibilityDraft[];
   variants: ProductVariantDraft[];
+  images: ImageDraft[];
 }) => {
   const formData = new FormData();
   const generalRows = validCompatibilities(generalCompatibilities);
@@ -169,7 +173,12 @@ export const buildProductFormData = ({
   formData.append("is_visible", form.is_visible ? "1" : "0");
   formData.append("is_featured", form.is_featured ? "1" : "0");
 
-  if (form.image) formData.append("image", form.image);
+  let uploadIndex = 0;
+  formData.append("gallery", JSON.stringify(images.map((image) => {
+    if (image.file) { formData.append("images[]", image.file); return { upload_index: uploadIndex++ }; }
+    return { id: image.id };
+  })));
+  if (images.length) formData.append("primary_image_index", String(images.findIndex((image) => image.primary)));
 
   productFields.forEach((field) => {
     const value = technicalSpecs[field.field_key];
@@ -237,7 +246,7 @@ export const buildProductFormData = ({
     formData.append(`variants[${index}][extra_charges]`, String(toInteger(variant.extra_charges)));
     formData.append(`variants[${index}][pricing_mode]`, variant.pricing_mode);
     formData.append(`variants[${index}][target_profit_percent]`, variant.target_profit_percent);
-    formData.append(`variants[${index}][main_image]`, "");
+    if (variant.main_image) formData.append(`variants[${index}][main_image]`, variant.main_image);
     formData.append(`variants[${index}][is_default]`, variant.is_default ? "1" : "0");
     formData.append(`variants[${index}][is_active]`, variant.is_active ? "1" : "0");
     formData.append(`variants[${index}][is_visible]`, variant.is_visible ? "1" : "0");

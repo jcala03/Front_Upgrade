@@ -20,6 +20,7 @@ const orderStatusLabel = (order: PublicOrder) => {
 };
 
 const confirmationCopy = (order: PublicOrder) => {
+  if (order.payment_status === "unpaid" && order.order_status !== "cancelled" && order.payment_attempt_status === "DECLINED") return { tone: "warning", eyebrow: "Pago rechazado", title: "El pago fue rechazado", message: "Tu orden sigue registrada. Consulta el estado del pago para saber si puedes reintentar en esta misma orden." };
   if (order.payment_status === "refunded") return { tone: "warning", eyebrow: "Pago devuelto", title: "El pago fue devuelto", message: "La devolución está registrada. Si necesitas más información, comunícate con nuestro equipo." };
   if (order.order_status === "cancelled") return { tone: "warning", eyebrow: "Orden cancelada", title: "Esta orden ya no está activa", message: "La reserva venció o fue cancelada. Puedes iniciar una nueva compra cuando quieras." };
   if (order.payment_status === "paid") return { tone: "success", eyebrow: "Pago confirmado", title: "Tu pago fue confirmado", message: "Recibimos el pago. Tu pedido sigue su proceso y te informaremos los siguientes pasos." };

@@ -47,6 +47,8 @@ const productHasVariants = (product: Product) =>
   Number(product.variants_count ?? 0) > 0;
 
 const readCart = (): CartItem[] => {
+  // HTML público en servidor: nunca leer ni serializar el carrito de una sesión.
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
   const rawCart = localStorage.getItem(CART_KEY);
 
   if (!rawCart) {

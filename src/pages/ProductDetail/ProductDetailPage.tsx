@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, Minus, Plus, ShoppingBag } from "lucide-react";
-import { getProductBySlug } from "../../api/products";
+import { getProductBySlug, ProductApiError } from "../../api/products";
 import { useCart } from "../../context/CartContext";
 import type { Product, ProductVariant } from "../../types/product";
 import "./ProductDetailPage.css";
+import { publicBootstrap, updatePublicSeo } from "../../seo/client";
+import { productDescription, productFacts } from "../../seo/model";
 
 type ProductDetailPageProps = {
   slug: string;
+  initialProduct?: Product;
 };
 
 const API_BASE_URL =
@@ -33,15 +36,16 @@ const formatPrice = (value: number) => {
   }).format(value);
 };
 
-export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
+export const ProductDetailPage = ({ slug, initialProduct = publicBootstrap()?.product }: ProductDetailPageProps) => {
   const { addItem, items, totalItems } = useCart();
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<Product | null>(initialProduct ?? null);
+  const [quantity, setQuantity] = useState(initialProduct ? initialProduct.has_variants || initialProduct.stock <= 0 ? 0 : 1 : 1);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    "loading"
+    initialProduct ? "ready" : "loading"
   );
   const [wasAdded, setWasAdded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -51,25 +55,33 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
 
   const imageUrl = useMemo(() => {
     const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId);
-    return getImageUrl(selectedVariant?.image_url ?? product?.image_url);
+    return getImageUrl(selectedImageUrl ?? selectedVariant?.image_url ?? product?.image_url);
+  }, [product, selectedVariantId, selectedImageUrl]);
+  const gallery = useMemo(() => {
+    const variantImage = product?.variants?.find((variant) => variant.id === selectedVariantId)?.image_url;
+    const urls = [...(variantImage ? [variantImage] : []), ...(product?.images?.map((image) => image.image_url) ?? [])];
+    return Array.from(new Set(urls));
   }, [product, selectedVariantId]);
 
   useEffect(() => {
     isAddingRef.current = false;
     setIsAdding(false);
-    setStatus("loading");
+    if (!initialProduct || initialProduct.slug !== slug) setStatus("loading");
 
     getProductBySlug(slug)
       .then((productData) => {
         setProduct(productData);
+        setSelectedImageUrl(null);
         setSelectedVariantId(null);
         setSelectionError("");
         setQuantity(productData.has_variants ? 0 : productData.stock > 0 ? 1 : 0);
         setStatus("ready");
+        updatePublicSeo(`/tienda/${encodeURIComponent(productData.slug)}`, productData);
       })
-      .catch(() => {
+      .catch((error) => {
         setProduct(null);
         setStatus("error");
+        updatePublicSeo(`/tienda/${encodeURIComponent(slug)}`, undefined, error instanceof ProductApiError && error.status === 404 ? 404 : 503);
       });
   }, [slug]);
 
@@ -100,6 +112,7 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
   }, [isAdding, totalItems]);
 
   const selectVariant = (variant: ProductVariant | null) => {
+    setSelectedImageUrl(null);
     setSelectedVariantId(variant?.id ?? null);
     setSelectionError("");
     setQuantity(variant && variant.stock > 0 ? 1 : 0);
@@ -218,7 +231,10 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
           {imageUrl ? (
             <motion.img
               src={imageUrl}
-              alt={product.name}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              alt={`${product.name}${selectedVariant ? ` — ${selectedVariant.name}` : ""}`}
               animate={
                 wasAdded
                   ? {
@@ -232,6 +248,9 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
           ) : (
             <span>Sin imagen</span>
           )}
+          {gallery.length > 1 ? <div className="product-detail__thumbnails" role="group" aria-label="Galería del producto">
+            {gallery.map((url, index) => <button key={url} type="button" aria-label={`Ver imagen ${index + 1} de ${product.name}`} aria-pressed={getImageUrl(url) === imageUrl} onClick={() => setSelectedImageUrl(url)}><img src={getImageUrl(url)} alt={`${product.name}, vista ${index + 1}`} loading="lazy" decoding="async" /></button>)}
+          </div> : null}
         </div>
 
         <div className="product-detail__content">
@@ -266,8 +285,7 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
           </strong>
 
           <p className="product-detail__description">
-            {product.description ??
-              "Producto seleccionado para elevar la estética y presencia de tu vehículo."}
+            {productDescription(product)}
           </p>
 
           {hasVariants ? (
@@ -374,6 +392,10 @@ export const ProductDetailPage = ({ slug }: ProductDetailPageProps) => {
                 : null}
             Productos en carrito: <strong>{totalItems}</strong>
           </small>
+          {productFacts(product).length > 0 ? <section className="product-detail__facts" aria-label="Información del producto">
+            <h2>Especificaciones y compatibilidad</h2>
+            <dl>{productFacts(product).map(([name, value], index) => <div key={`${name}-${index}`}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
+          </section> : null}
         </div>
       </section>
     </main>

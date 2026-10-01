@@ -49,6 +49,7 @@ export type VariantCompatibilityDraft = {
 };
 
 export type ProductVariantDraft = {
+  main_image: string | null;
   id?: number;
   name: string;
   name_is_custom: boolean;
@@ -83,6 +84,7 @@ export type ProductFormCatalogs = {
 };
 
 export type ProductFormProps = ProductFormCatalogs & {
+  onBusyChange?: (busy: boolean) => void;
   product: AdminProduct | null;
   onCancel: () => void;
   onSaved: (message: string, savedProduct: AdminProduct, continueToInventory: boolean) => Promise<void> | void;

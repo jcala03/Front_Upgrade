@@ -238,6 +238,7 @@ export type Product = {
 
   main_image: string | null;
   image_url: string | null;
+  images?: ProductImage[];
 
   is_visible: boolean;
   is_featured: boolean;
@@ -254,6 +255,8 @@ export type Product = {
   created_at: string;
   updated_at: string;
 };
+
+export type ProductImage = { id: number; image_url: string; is_primary: boolean; sort_order: number };
 
 /** Contrato del catálogo administrativo, separado del stock público. */
 export type AdminProduct = Omit<

@@ -460,7 +460,7 @@ const AppointmentFormDialog = ({ mode, appointment, canCheckAvailability, onClos
     ]).then(([customerResult, serviceResult]) => {
       if (!active) return;
       if (customerResult.status === "fulfilled") setCustomers(customerResult.value.data);
-      if (serviceResult.status === "fulfilled") setServices(serviceResult.value.data);
+      if (serviceResult.status === "fulfilled") setServices(serviceResult.value.data.filter((service) => service.category?.is_active === true || service.id === appointment?.service_id));
     }).finally(() => {
       if (active) setLoadingOptions(false);
     });

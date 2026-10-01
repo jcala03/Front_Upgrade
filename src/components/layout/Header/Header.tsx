@@ -17,7 +17,7 @@ import "./Header.css";
 const SCROLL_DIRECTION_TOLERANCE = 10;
 const TOP_VISIBILITY_THRESHOLD = 24;
 
-export const Header = () => {
+export const Header = ({ pathname = "/" }: { pathname?: string }) => {
   const { totalItems } = useCart();
   const lastScrollYRef = useRef(0);
   const isHiddenRef = useRef(false);
@@ -127,12 +127,12 @@ export const Header = () => {
           href="/"
           aria-label="Volver al inicio de UP GRADE 79"
         >
-          <img src={logo} alt="UP GRADE 79" />
+          <img src={logo} alt="UP GRADE 79" width={150} height={150} decoding="async" />
         </a>
 
         <nav className="site-header__nav" aria-label="Navegación principal">
           {navigation.map((item) => (
-            <a key={item.href} href={item.href}>
+            <a key={item.href} href={pathname === "/" ? item.href : `/${item.href}`}>
               {item.label}
             </a>
           ))}

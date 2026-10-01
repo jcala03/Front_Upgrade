@@ -152,6 +152,13 @@ const personalItems: NavigationItem[] = [
 
 const catalogItems: NavigationItem[] = [
   {
+    label: "Marcas y vehículos",
+    href: "/crm/references",
+    icon: Tags,
+    matches: ["/crm/references", "/admin/references", "/crm/settings/brands", "/crm/settings/product-brands", "/crm/settings/compatibility"],
+    permission: "products.view",
+  },
+  {
     label: "Catálogo publicado",
     href: "/crm/catalog",
     icon: Store,

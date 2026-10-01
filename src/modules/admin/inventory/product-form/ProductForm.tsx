@@ -24,6 +24,7 @@ import {
   toDecimal,
 } from "./productFormUtils";
 import "./ProductForm.css";
+import { ProductImagesEditor, type ImageDraft } from "./ProductImagesEditor";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -42,6 +43,7 @@ export const ProductForm = ({
   vehicleMultimediaSystems,
   onCancel,
   onSaved,
+  onBusyChange,
 }: ProductFormProps) => {
   const initialCategory = categories.find((category) => category.id === product?.category_id);
   const initialVariantFields = initialCategory?.fields.filter(
@@ -54,6 +56,7 @@ export const ProductForm = ({
   const [technicalSpecs, setTechnicalSpecs] = useState<ProductTechnicalSpecs>(
     product?.technical_specs ?? {}
   );
+  const [images, setImages] = useState<ImageDraft[]>(() => (product?.images ?? []).map((image) => ({ key: String(image.id), id: image.id, url: image.image_url, primary: image.is_primary })));
   const [generalCompatibilities, setGeneralCompatibilities] = useState<VariantCompatibilityDraft[]>(() =>
     product?.vehicle_compatibilities?.length
       ? product.vehicle_compatibilities.map((row) => ({
@@ -92,6 +95,7 @@ export const ProductForm = ({
 
       return {
         ...emptyVariant(index),
+        main_image: variant.main_image,
         id: variant.id,
         name: variant.name,
         name_is_custom: Boolean(variant.name),
@@ -337,6 +341,7 @@ export const ProductForm = ({
   const validate = () => {
     const nextErrors: ProductFormErrors = {};
     if (!form.name.trim()) nextErrors.name = "El nombre es obligatorio.";
+    if (form.is_visible && (!images.length || images.filter((image) => image.primary).length !== 1)) nextErrors.gallery = "Para publicar necesitas al menos una imagen y exactamente una principal.";
     if (!form.category_id) nextErrors.category_id = "Selecciona una categoría.";
     if (!form.compatibility_type) {
       nextErrors.compatibility = "Indica si el producto es universal o específico.";
@@ -395,6 +400,7 @@ export const ProductForm = ({
     const requestedAction = submitIntent.current;
     try {
       setIsSaving(true);
+      onBusyChange?.(true);
       const normalizedVariants = variants.map((variant) => ({
         ...variant,
         name: variant.name.trim() || suggestVariantName(variantFields, variant.specs),
@@ -405,6 +411,7 @@ export const ProductForm = ({
         technicalSpecs,
         generalCompatibilities,
         variants: normalizedVariants,
+        images,
       });
       const savedProduct = product
         ? await updateProduct(product.id, payload)
@@ -417,7 +424,7 @@ export const ProductForm = ({
     } catch (error) {
       if (error instanceof ProductApiError && Object.keys(error.errors).length) {
         const apiErrors = Object.fromEntries(
-          Object.entries(error.errors).map(([key, messages]) => [key, messages[0] ?? "Valor inválido."])
+          Object.entries(error.errors).map(([key, messages]) => [key.startsWith("images.") || key.startsWith("gallery.") || key === "primary_image_index" ? "gallery" : key, messages[0] ?? "Valor inválido."])
         );
         setErrors(apiErrors);
         revealAndFocusError(apiErrors);
@@ -426,14 +433,15 @@ export const ProductForm = ({
     } finally {
       submitLock.current = false;
       setIsSaving(false);
+      onBusyChange?.(false);
     }
   };
 
   return (
     <form className="smart-product-form" onSubmit={handleSubmit} noValidate>
       <header className="smart-product-form__header">
-        <div><span>{product ? "Editar producto" : "Nuevo producto"}</span><h2>{product?.name ?? "Crear artículo"}</h2><p>Información comercial, compatibilidad y versiones en una sola pantalla.</p></div>
-        <button type="button" onClick={onCancel} aria-label="Cerrar formulario">×</button>
+        <div><span>{product ? "Editar producto" : "Nuevo producto"}</span><h2 id="product-create-title">{product?.name ?? "Crear artículo"}</h2><p>Información comercial, compatibilidad y versiones en una sola pantalla.</p></div>
+        <button type="button" disabled={isSaving} onClick={onCancel} aria-label="Cerrar formulario">×</button>
       </header>
 
       <div className="smart-product-form__body">
@@ -445,8 +453,9 @@ export const ProductForm = ({
             <label className="smart-product-form__field"><span>Marca del producto</span><select value={form.product_brand_id} onChange={(event) => updateForm("product_brand_id", event.target.value)}><option value="">Sin marca</option>{productBrands.filter((brand) => brand.is_active).map((brand) => <option value={brand.id} key={brand.id}>{brand.name}</option>)}</select></label>
             <label className="smart-product-form__field"><span>SKU / referencia</span><input data-error-key="sku" value={form.sku} aria-invalid={Boolean(errors.sku)} onChange={(event) => updateForm("sku", event.target.value)} />{errors.sku ? <small className="smart-product-form__field-error">{errors.sku}</small> : null}</label>
           </div>
-          <button className="smart-product-form__disclosure" type="button" aria-expanded={showOptionalContent} aria-controls="product-optional-content" onClick={() => setShowOptionalContent((open) => !open)}>{showOptionalContent ? "Ocultar descripción e imagen" : "Agregar descripción o imagen"}</button>
-          {showOptionalContent ? <div id="product-optional-content" className="smart-product-form__grid smart-product-form__revealed"><label className="smart-product-form__field smart-product-form__wide"><span>Descripción</span><textarea rows={3} value={form.description} onChange={(event) => updateForm("description", event.target.value)} /></label><label className="smart-product-form__field smart-product-form__wide"><span>Imagen principal</span><input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(event) => updateForm("image", event.target.files?.[0] ?? null)} />{product?.image_url && !form.image ? <small>Se conservará la imagen actual.</small> : null}</label></div> : null}
+          <button className="smart-product-form__disclosure" type="button" aria-expanded={showOptionalContent} aria-controls="product-optional-content" onClick={() => setShowOptionalContent((open) => !open)}>{showOptionalContent ? "Ocultar descripción" : "Agregar descripción"}</button>
+          {showOptionalContent ? <div id="product-optional-content" className="smart-product-form__grid smart-product-form__revealed"><label className="smart-product-form__field smart-product-form__wide"><span>Descripción</span><textarea rows={3} value={form.description} onChange={(event) => updateForm("description", event.target.value)} /></label></div> : null}
+          <ProductImagesEditor images={images} onChange={(next) => { setImages(next); setErrors((current) => ({ ...current, gallery: "" })); }} published={form.is_visible} disabled={isSaving} error={errors.gallery} />
         </section>
 
         {productFields.length ? <section className="smart-product-form__section" aria-labelledby="product-details-title"><div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>02</span><div><h3 id="product-details-title">Detalles de {selectedCategory?.name}</h3><p>{hasRequiredProductFields ? "Completa los datos obligatorios de esta categoría." : "Datos opcionales definidos para esta categoría."}</p></div>{!hasRequiredProductFields ? <button className="smart-product-form__disclosure is-inline" type="button" aria-expanded={showCategoryDetails} aria-controls="product-category-details" onClick={() => setShowCategoryDetails((open) => !open)}>{showCategoryDetails ? "Ocultar" : "Completar detalles"}</button> : null}</div>{hasRequiredProductFields || showCategoryDetails ? <div id="product-category-details"><ProductDynamicFields fields={productFields} values={technicalSpecs} errors={errors} errorPrefix="productSpecs" onChange={(field, value) => setTechnicalSpecs((current) => ({ ...current, [field.field_key]: value }))} /></div> : null}</section> : null}

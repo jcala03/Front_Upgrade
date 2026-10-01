@@ -8,6 +8,8 @@ import type { AdminProduct, ProductCommissionPayload } from "../../../types/prod
 import { formatCurrency as formatCop } from "../../../utils/formatCurrency";
 import { hasPermission } from "../../../utils/authStorage";
 import "./AdminProductsPage.css";
+import { CreateProductForm } from "../inventory/AdminInventoryPage";
+import { CrmDialog } from "../../../components/crm/Dialog";
 
 type StoreFilter =
   | "all"
@@ -126,6 +128,8 @@ const getPublicationIssues = (product: AdminProduct) => {
 };
 
 export const AdminProductsPage = () => {
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
+  const [editorBusy, setEditorBusy] = useState(false);
   const canUpdateProducts = hasPermission("products.update");
   const canViewInventory = hasPermission("inventory.view");
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -639,6 +643,7 @@ export const AdminProductsPage = () => {
                       </td>
 
                       <td data-label="Acciones">
+                        {canUpdateProducts ? <button className="store-product-configure" type="button" disabled={isSaving} onClick={() => setEditingProduct(product)}>Editar producto e imágenes</button> : null}
                         {canUpdateProducts ? <button
                           className="store-product-configure"
                           type="button"
@@ -670,6 +675,9 @@ export const AdminProductsPage = () => {
         )}
       </section>
 
+      <CrmDialog open={Boolean(editingProduct)} titleId="product-create-title" busy={editorBusy} onClose={() => setEditingProduct(null)}>
+        {editingProduct ? <CreateProductForm product={editingProduct} onBusyChange={setEditorBusy} onClose={() => setEditingProduct(null)} onSaved={(_, saved) => { setProducts((current) => current.map((item) => item.id === saved.id ? saved : item)); setEditingProduct(null); }} /> : null}
+      </CrmDialog>
       {selectedProduct && publicationDraft ? (
         <div
           className="store-publication-modal"

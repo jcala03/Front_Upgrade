@@ -4,14 +4,14 @@ import { navigation } from "../../../data/navigation";
 import { Marquee } from "../../ui/Marquee";
 import "./Footer.css";
 
-export const Footer = () => {
+export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
   return (
     <footer className="footer">
       <Marquee text="BODY KITS · FACE LIFT · RS STYLE · AMG STYLE · M STYLE · UP GRADE 79 · AUTOMOTIVE UPGRADING" />
 
       <div className="footer__inner container-wide">
         <div className="footer__brand">
-          <a className="footer__logo" href="#projects" aria-label="Volver al inicio">
+          <a className="footer__logo" href="/" aria-label="Volver al inicio">
             <span>UP GRADE</span>
             <strong>79</strong>
           </a>
@@ -33,7 +33,7 @@ export const Footer = () => {
           <div>
             <span>Navegación</span>
             {navigation.map((item) => (
-              <a key={item.href} href={item.href}>
+              <a key={item.href} href={pathname === "/" ? item.href : `/${item.href}`}>
                 {item.label}
               </a>
             ))}

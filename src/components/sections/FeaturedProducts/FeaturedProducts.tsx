@@ -11,13 +11,14 @@ import audiLogo from "../../../assets/brands/audi.webp";
 import bmwLogo from "../../../assets/brands/bmw.png";
 import mercedesBenzLogo from "../../../assets/brands/mercedes-benz.webp";
 import miniLogo from "../../../assets/brands/mini.png";
-import porscheLogo from "../../../assets/brands/porsche.png";
+import porscheLogo from "../../../assets/brands/porsche-lossless.webp";
 import volkswagenLogo from "../../../assets/brands/volkswagen.webp";
 import volvoLogo from "../../../assets/brands/volvo.png";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
 import type { Product } from "../../../types/product";
 import { getProductImageUrl } from "../../../utils/getProductImageUrl";
 import "./FeaturedProducts.css";
+import { publicBootstrap } from "../../../seo/client";
 
 const EUROPEAN_BRANDS = [
   { name: "BMW", logo: bmwLogo, modifier: "bmw" },
@@ -140,7 +141,7 @@ const BrandList = ({ hidden = false }: { hidden?: boolean }) => (
           src={brand.logo}
           alt={hidden ? "" : brand.name}
           draggable="false"
-          loading="eager"
+          loading="lazy"
           decoding="async"
         />
       </li>
@@ -148,10 +149,10 @@ const BrandList = ({ hidden = false }: { hidden?: boolean }) => (
   </ul>
 );
 
-export const FeaturedProducts = () => {
+export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products }: { initialProducts?: Product[] } = {}) => {
   const sectionRef = useRef<HTMLElement>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
+  const [isLoading, setIsLoading] = useState(!initialProducts);
   const [hasEntered, setHasEntered] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 

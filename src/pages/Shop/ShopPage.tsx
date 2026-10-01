@@ -19,6 +19,7 @@ import type {
   VehicleVersion,
 } from "../../types/vehicle";
 import "./ShopPage.css";
+import { publicBootstrap } from "../../seo/client";
 
 type SpecsFilterState = Record<string, string>;
 
@@ -125,8 +126,8 @@ const getFieldInputType = (field: ProductCategoryField) => {
   return "text";
 };
 
-export const ShopPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+export const ShopPage = ({ initialProducts = publicBootstrap()?.products }: { initialProducts?: Product[] } = {}) => {
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [productBrands, setProductBrands] = useState<ProductBrand[]>([]);
   const [vehicleBrands, setVehicleBrands] = useState<VehicleBrand[]>([]);
@@ -146,7 +147,7 @@ export const ShopPage = () => {
   const [specFilters, setSpecFilters] = useState<SpecsFilterState>({});
 
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(!initialProducts);
   const [error, setError] = useState("");
 
   const selectedCategory = useMemo(() => {
@@ -625,7 +626,7 @@ export const ShopPage = () => {
             </div>
           ) : products.length > 0 ? (
             <div className="shop-products-grid">
-              {products.map((product) => {
+              {products.map((product, index) => {
                 const image = getProductImage(product);
 
                 return (
@@ -635,7 +636,7 @@ export const ShopPage = () => {
                       href={`/tienda/${product.slug}`}
                     >
                       {image ? (
-                        <img src={image} alt={product.name} />
+                        <img src={image} alt={product.name} loading={index < 2 ? "eager" : "lazy"} decoding="async" />
                       ) : (
                         <span>{product.name.charAt(0)}</span>
                       )}

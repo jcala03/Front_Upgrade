@@ -22,6 +22,7 @@ export type BranchPaginator = {
 
 export type CreateBranchPayload = {
   code: string;
+  slug: string;
   name: string;
   city: string;
 };
