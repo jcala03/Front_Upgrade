@@ -16,7 +16,15 @@ export function publicSeoPlugin(mode) {
         if (pathname.startsWith('/@') || pathname.startsWith('/src/') || pathname.startsWith('/node_modules/') || pathname.startsWith('/assets/') || pathname.startsWith('/.vite/') || pathname.startsWith('/__') || /\.(?:js|ts|tsx|css|png|svg|webp|jpg|mp4|woff2?)(?:$)/.test(pathname)) return next();
         try {
           const renderer = await server.ssrLoadModule('/src/seo/entry-server.tsx');
-          const template = await server.transformIndexHtml(pathname, await readFile(resolve('index.html'), 'utf8'));
+          let template = await server.transformIndexHtml(pathname, await readFile(resolve('index.html'), 'utf8'));
+          // Vite SSR does not emit imported component CSS in development. Home
+          // must be styled before the client module graph has finished loading.
+          // Production already includes the CSS emitted by the normal build.
+          if ((pathname.replace(/\/+$/, '') || '/') === '/') {
+            template = template.replace('</head>', '<link rel="stylesheet" href="/src/styles/home-initial.css?direct"></head>');
+          } else if (!/^\/(?:crm|admin|login)(?:\/|$)/.test(pathname)) {
+            template = template.replace('</head>', '<link rel="stylesheet" href="/src/styles/storefront-initial.css?direct"></head>');
+          }
           const result = await renderer.renderRequest(req.url || '/', template, options);
           res.writeHead(result.status, result.headers); res.end(req.method === 'HEAD' ? undefined : result.body);
         } catch (error) { server.ssrFixStacktrace(error); next(error); }
@@ -33,5 +41,5 @@ export function publicSeoPlugin(mode) {
       });
     },
   };
-  return { siteUrl, plugin };
+  return { siteUrl, apiBase: options.apiBase, plugin };
 }

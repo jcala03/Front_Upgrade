@@ -11,9 +11,10 @@ import {
 } from "react";
 import { brand } from "../../../data/brand";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
+import { PUBLIC_BOOKING_TIMES, bogotaToday, selectablePublicDate, allowedPreferredTime } from "./publicBooking";
 import "./Contact.css";
 
-const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"] as const;
+const WEEKDAYS = ["L", "M", "X", "J", "V", "S"] as const;
 const MAX_MONTH_OFFSET = 2;
 
 type FieldName = "name" | "phone" | "vehicle" | "date" | "time";
@@ -71,7 +72,7 @@ const buildWhatsAppUrl = (message: string) => {
 
 export const Contact = () => {
   const sectionRef = useRef<HTMLElement>(null);
-  const today = useMemo(() => atStartOfDay(new Date()), []);
+  const today = useMemo(() => atStartOfDay(bogotaToday()), []);
   const firstAllowedMonth = useMemo(() => atStartOfMonth(today), [today]);
   const lastAllowedMonth = useMemo(
     () => addMonths(firstAllowedMonth, MAX_MONTH_OFFSET),
@@ -92,14 +93,15 @@ export const Contact = () => {
     const year = viewMonth.getFullYear();
     const month = viewMonth.getMonth();
     const totalDays = new Date(year, month + 1, 0).getDate();
-    const leadingEmptyDays = (new Date(year, month, 1).getDay() + 6) % 7;
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const leadingEmptyDays = firstWeekday === 0 ? 0 : firstWeekday - 1;
 
     return {
       leadingEmptyDays,
       days: Array.from(
         { length: totalDays },
         (_, index) => new Date(year, month, index + 1),
-      ),
+      ).filter(date => date.getDay() !== 0),
     };
   }, [viewMonth]);
 
@@ -154,11 +156,12 @@ export const Contact = () => {
   };
 
   const selectDate = (date: Date) => {
-    if (date < today) {
+    if (!selectablePublicDate(date, today)) {
       return;
     }
 
     setSelectedDate(date);
+    setPreferredTime("");
     clearError("date");
   };
 
@@ -180,10 +183,11 @@ export const Contact = () => {
     if (!vehicle.trim()) nextErrors.vehicle = "Indica qué vehículo traerás.";
     if (!selectedDate) {
       nextErrors.date = "Selecciona una fecha para tu visita.";
-    } else if (selectedDate < today) {
-      nextErrors.date = "La fecha seleccionada ya pasó.";
+    } else if (!selectablePublicDate(selectedDate, bogotaToday())) {
+      nextErrors.date = "Elige una fecha de lunes a sábado que no haya pasado.";
     }
     if (!preferredTime) nextErrors.time = "Indica una hora preferida.";
+    else if (selectedDate && !allowedPreferredTime(selectedDate, preferredTime)) nextErrors.time = "Elige un horario futuro entre 09:00 y 18:00.";
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -274,7 +278,7 @@ export const Contact = () => {
               <span>01 / 03</span>
               <div>
                 <p id="contact-calendar-title">Selecciona una fecha</p>
-                <small>Solicitudes para los próximos tres meses.</small>
+                <small>Lunes a sábado · 09:00–18:00 · hora de Colombia.</small>
               </div>
             </div>
 
@@ -330,7 +334,7 @@ export const Contact = () => {
                         isSelected ? " is-selected" : ""
                       }`}
                       key={date.getDate()}
-                      disabled={isPast}
+                      disabled={isPast || !selectablePublicDate(date, today)}
                       onClick={() => selectDate(date)}
                       aria-label={formatDate(date)}
                       aria-pressed={isSelected}
@@ -367,19 +371,20 @@ export const Contact = () => {
                 <span>02 / 03</span>
                 <div>
                   <label htmlFor="contact-time">Horario preferido</label>
-                  <small>Horario sujeto a confirmación.</small>
+                  <small>Es una preferencia, no una reserva. El taller confirma la disponibilidad.</small>
                 </div>
               </div>
-              <input
+              <select
                 id="contact-time"
-                type="time"
-                step="1800"
                 value={preferredTime}
-                onChange={changeField("time", setPreferredTime)}
+                onChange={event => { setPreferredTime(event.target.value); clearError("time"); }}
                 required
                 aria-invalid={Boolean(errors.time)}
                 aria-describedby={errors.time ? "contact-time-error" : undefined}
-              />
+              >
+                <option value="">Selecciona un horario</option>
+                {PUBLIC_BOOKING_TIMES.map(time => <option key={time} value={time} disabled={!allowedPreferredTime(selectedDate, time)}>{formatTime(time)}</option>)}
+              </select>
               {errors.time ? (
                 <p className="contact__error" id="contact-time-error" role="alert">
                   {errors.time}

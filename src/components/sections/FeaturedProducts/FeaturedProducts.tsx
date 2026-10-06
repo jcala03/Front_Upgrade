@@ -149,27 +149,41 @@ const BrandList = ({ hidden = false }: { hidden?: boolean }) => (
   </ul>
 );
 
-export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products }: { initialProducts?: Product[] } = {}) => {
+export const FeaturedProducts = ({
+  initialProducts = publicBootstrap()?.products,
+  initialError = publicBootstrap()?.homeCatalogUnavailable ?? false,
+}: { initialProducts?: Product[]; initialError?: boolean } = {}) => {
   const sectionRef = useRef<HTMLElement>(null);
   const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
-  const [isLoading, setIsLoading] = useState(!initialProducts);
-  const [hasEntered, setHasEntered] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialProducts && !initialError);
+  const [hasError, setHasError] = useState(initialError);
+  const [retryCount, setRetryCount] = useState(0);
+  // The server-rendered preview is visible without JS. Only opt into the reveal
+  // animation after the browser can observe and finish it.
+  const [isRevealPending, setIsRevealPending] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const featuredProducts = useMemo(() => products.slice(0, 6), [products]);
 
   useEffect(() => {
+    // The preview (including an explicit error/empty state) was resolved by SSR.
+    // Do not replace it with a second load or duplicate its GET in StrictMode.
+    // The error action remains an explicit, single-request retry.
+    if (retryCount === 0 && (initialProducts !== undefined || initialError)) return;
     let isMounted = true;
 
     getProducts()
       .then((result) => {
+        if (!Array.isArray(result)) throw new Error("Respuesta de catálogo inválida");
         if (isMounted) {
           setProducts(result);
+          setHasError(false);
         }
       })
       .catch(() => {
         if (isMounted) {
           setProducts([]);
+          setHasError(true);
         }
       })
       .finally(() => {
@@ -181,7 +195,7 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [retryCount]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -194,8 +208,8 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
       prefersReducedMotion ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    if (reduceMotion || !("IntersectionObserver" in window)) {
-      setHasEntered(true);
+    if (reduceMotion || publicBootstrap()?.path === "/" || !("IntersectionObserver" in window)) {
+      setIsRevealPending(false);
       return;
     }
 
@@ -205,7 +219,7 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
           return;
         }
 
-        setHasEntered(true);
+        setIsRevealPending(false);
         observer.disconnect();
       },
       {
@@ -214,6 +228,7 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
       },
     );
 
+    setIsRevealPending(true);
     observer.observe(section);
 
     return () => observer.disconnect();
@@ -222,7 +237,7 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
   return (
     <section
       ref={sectionRef}
-      className={`featured-products${hasEntered ? " is-visible" : ""}`}
+      className={`featured-products${isRevealPending ? "" : " is-visible"}`}
       id="productos"
       aria-labelledby="featured-products-title"
     >
@@ -288,6 +303,24 @@ export const FeaturedProducts = ({ initialProducts = publicBootstrap()?.products
                 <div className="featured-product-card__skeleton-line is-short" />
               </article>
             ))}
+          </div>
+        ) : hasError ? (
+          <div className="featured-products__empty featured-products__error">
+            <p role="status">
+              No pudimos cargar los productos destacados. Puedes seguir explorando
+              la Home o intentar de nuevo.
+            </p>
+            <button
+              type="button"
+              className="featured-products__retry"
+              disabled={isLoading}
+              onClick={() => {
+                setIsLoading(true);
+                setRetryCount((count) => count + 1);
+              }}
+            >
+              Reintentar productos
+            </button>
           </div>
         ) : featuredProducts.length > 0 ? (
           <div className="featured-products__grid">

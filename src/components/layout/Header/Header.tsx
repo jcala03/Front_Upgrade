@@ -19,9 +19,14 @@ const TOP_VISIBILITY_THRESHOLD = 24;
 
 export const Header = ({ pathname = "/" }: { pathname?: string }) => {
   const { totalItems } = useCart();
+  const [hasMounted, setHasMounted] = useState(false);
+  // Public SSR never includes private cart data. Its first hydrated render must
+  // match that HTML; restore the badge afterwards without touching cart storage.
+  const visibleTotalItems = !hasMounted ? 0 : totalItems;
+  useEffect(() => setHasMounted(true), []);
   const lastScrollYRef = useRef(0);
   const isHiddenRef = useRef(false);
-  const [isPastHero, setIsPastHero] = useState(false);
+  const [isPastHero, setIsPastHero] = useState(pathname !== "/");
   const [isHidden, setIsHidden] = useState(false);
   const [hasFocusWithin, setHasFocusWithin] = useState(false);
 
@@ -38,7 +43,7 @@ export const Header = ({ pathname = "/" }: { pathname?: string }) => {
     const hero = document.querySelector<HTMLElement>(".hero");
 
     if (!hero) {
-      setIsPastHero(window.scrollY > window.innerHeight);
+      setIsPastHero(true);
       return;
     }
 
@@ -143,23 +148,23 @@ export const Header = ({ pathname = "/" }: { pathname?: string }) => {
             className="site-header__cart"
             href="/carrito"
             aria-label={
-              totalItems > 0
-                ? `Ver carrito con ${totalItems} productos`
+              visibleTotalItems > 0
+                ? `Ver carrito con ${visibleTotalItems} productos`
                 : "Ver carrito"
             }
           >
             <ShoppingBag size={17} strokeWidth={1.8} aria-hidden="true" />
 
             <AnimatePresence mode="popLayout">
-              {totalItems > 0 ? (
+              {visibleTotalItems > 0 ? (
                 <motion.span
-                  key={totalItems}
+                  key={visibleTotalItems}
                   initial={{ scale: 0.55, opacity: 0, y: 4 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 1.3, opacity: 0, y: -4 }}
                   transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  {totalItems}
+                  {visibleTotalItems}
                 </motion.span>
               ) : null}
             </AnimatePresence>

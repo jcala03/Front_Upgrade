@@ -10,10 +10,13 @@ const errors: Record<string, string> = {
   STALE_STOCK: "La disponibilidad cambió durante el checkout.",
   ORDER_NOT_PENDING: "Este pedido ya no puede modificarse desde el checkout.",
   LANDED_COST_UNAVAILABLE: "No pudimos calcular todos los impuestos y aranceles para este destino. Todavía no es posible continuar al pago.",
+  PROVIDER_UNAVAILABLE: "No pudimos obtener tarifas de envío en este momento. Intenta nuevamente.",
 };
 
-const errorMessage = (cause: unknown, fallback: string) =>
+export const shippingQuoteErrorMessage = (cause: unknown, fallback: string) =>
   cause instanceof PublicCheckoutError ? errors[cause.code ?? ""] ?? fallback : "No pudimos conectar. Intenta nuevamente.";
+
+export const shippingQuoteActionLabel = (status: string) => status === "error" ? "Reintentar envío" : "Calcular envío";
 
 const money = (amount: number, currency: string) => {
   try {
@@ -66,7 +69,7 @@ export function CheckoutShippingQuotes({ token, disabled, onOrder, onBusy, onLoc
     } catch (cause) {
       if (cause instanceof PublicCheckoutError && cause.code === "ORDER_NOT_PENDING") onLocked();
       setStatus("error");
-      setMessage(errorMessage(cause, "No pudimos calcular el envío. Intenta nuevamente."));
+      setMessage(shippingQuoteErrorMessage(cause, "No pudimos calcular el envío. Intenta nuevamente."));
     } finally {
       requestLock.current = false;
       onBusy(false);
@@ -87,7 +90,7 @@ export function CheckoutShippingQuotes({ token, disabled, onOrder, onBusy, onLoc
       const code = cause instanceof PublicCheckoutError ? cause.code : undefined;
       if (code === "ORDER_NOT_PENDING") onLocked();
       if (code === "LANDED_COST_UNAVAILABLE") onIssue(code);
-      setMessage(errorMessage(cause, "No pudimos aplicar esta tarifa. Intenta nuevamente."));
+      setMessage(shippingQuoteErrorMessage(cause, "No pudimos aplicar esta tarifa. Intenta nuevamente."));
       if (code === "QUOTE_EXPIRED" || code === "INVALID_QUOTE") {
         setQuotes([]);
         setSelected("");
@@ -107,7 +110,7 @@ export function CheckoutShippingQuotes({ token, disabled, onOrder, onBusy, onLoc
       <p>Las tarifas y su disponibilidad son confirmadas por nuestro sistema.</p>
     </div>
 
-    {(status === "idle" || status === "empty" || status === "error") && <button type="button" disabled={disabled} onClick={calculate}>Calcular envío</button>}
+    {(status === "idle" || status === "empty" || status === "error") && <button type="button" disabled={disabled} onClick={calculate}>{shippingQuoteActionLabel(status)}</button>}
     {status === "loading" && <p role="status">Calculando opciones de envío…</p>}
 
     {status === "loaded" && <>

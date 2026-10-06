@@ -1,2 +1,2 @@
 import type { Plugin } from 'vite';
-export function publicSeoPlugin(mode: string): { siteUrl: string; plugin: Plugin };
+export function publicSeoPlugin(mode: string): { siteUrl: string; apiBase: string; plugin: Plugin };

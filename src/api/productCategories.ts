@@ -3,6 +3,7 @@ import type {
   ProductCategoryPayload,
 } from "../types/productCategory";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
+import { PUBLIC_API_BASE_URL } from "./publicTransport";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -74,7 +75,7 @@ const handleJsonResponse = async <T>(response: Response): Promise<T> => {
 };
 
 export const getProductCategories = async (): Promise<ProductCategory[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/product-categories`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/product-categories`, {
     method: "GET",
     headers: {
       Accept: "application/json",

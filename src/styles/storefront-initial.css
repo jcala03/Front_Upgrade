@@ -1,0 +1,10 @@
+/* Render-blocking development SSR styles, imported from the actual components.
+   No duplicate theme and no artificial loading layer. Production uses Vite CSS. */
+@import "../index.css";
+@import "../components/layout/Header/Header.css";
+@import "../components/layout/Footer/Footer.css";
+@import "../components/ui/Marquee/Marquee.css";
+@import "../pages/Shop/ShopPage.css";
+@import "../pages/ProductDetail/ProductDetailPage.css";
+@import "../pages/Cart/CartPage.css";
+@import "../pages/Checkout/CheckoutPage.css";

@@ -10,6 +10,7 @@ import type {
   VehicleVersionPayload,
 } from "../types/vehicle";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
+import { PUBLIC_API_BASE_URL } from "./publicTransport";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -126,7 +127,7 @@ const buildQuery = (filters?: QueryFilters) => {
 */
 
 export const getVehicleBrands = async (): Promise<VehicleBrand[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/vehicle-brands`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/vehicle-brands`, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -149,7 +150,7 @@ export const getVehicleModels = async (
 ): Promise<VehicleModel[]> => {
   const query = buildQuery(filters);
 
-  const response = await fetch(`${API_BASE_URL}/api/vehicle-models${query}`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/vehicle-models${query}`, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -172,7 +173,7 @@ export const getVehicleVersions = async (
 ): Promise<VehicleVersion[]> => {
   const query = buildQuery(filters);
 
-  const response = await fetch(`${API_BASE_URL}/api/vehicle-versions${query}`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/vehicle-versions${query}`, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -196,7 +197,7 @@ export const getVehicleMultimediaSystems = async (
   const query = buildQuery(filters);
 
   const response = await fetch(
-    `${API_BASE_URL}/api/vehicle-multimedia-systems${query}`,
+    `${PUBLIC_API_BASE_URL}/api/vehicle-multimedia-systems${query}`,
     {
       method: "GET",
       headers: {

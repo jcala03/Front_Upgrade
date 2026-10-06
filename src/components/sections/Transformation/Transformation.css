@@ -72,6 +72,9 @@
   width: 100%;
   aspect-ratio: 16 / 5.84;
   margin-top: clamp(28px, 4vw, 58px);
+  /* Keep the desktop caption above the entire vehicle, including long titles. */
+  box-sizing: content-box;
+  padding-bottom: 160px;
 }
 
 .transformation__scene {
@@ -147,6 +150,16 @@
   transform-origin: center;
 }
 
+.transformation__vehicle-system {
+  top: calc(3% + 160px);
+  bottom: calc(3% - 160px);
+}
+
+.transformation__base {
+  top: 160px;
+  bottom: -160px;
+}
+
 .transformation__vehicle {
   position: absolute;
   inset: 0;
@@ -155,6 +168,17 @@
   max-width: none;
   object-fit: contain;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms ease-in-out;
+}
+
+.transformation__vehicle.is-active { opacity: 1; }
+
+.transformation__asset-note {
+  margin: 16px 0 0;
+  color: #a3a3a3;
+  font-size: .8rem;
+  line-height: 1.5;
 }
 
 .transformation__hotspots {
@@ -162,6 +186,12 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transformation__vehicle {
+    transition: none;
+  }
 }
 
 .transformation__hotspot {
@@ -249,7 +279,7 @@
 
 .transformation__connector {
   position: absolute;
-  inset: 3%;
+  inset: calc(3% + 160px) 3% calc(3% - 160px);
   z-index: 3;
   width: 94%;
   height: 94%;
@@ -387,19 +417,13 @@
   }
 }
 
-@media (max-width: 760px) {
-  .section.transformation {
-    padding-bottom: 16px;
-  }
-
-  .transformation__title {
-    font-size: clamp(2.8rem, 12vw, 4.25rem);
-    line-height: 0.95;
-  }
-
+/* Tablet needs the same separated image/caption layout as a phone. Keep all
+   five hotspots available on tablet; only the phone hides inactive hotspots. */
+@media (max-width: 1080px) {
   .transformation__scene-frame {
     aspect-ratio: auto;
     margin-top: 28px;
+    padding-bottom: 0;
   }
 
   .transformation__scene {
@@ -446,25 +470,6 @@
     aspect-ratio: 16 / 9;
   }
 
-  .transformation__hotspot {
-    top: var(--hotspot-y-mobile);
-    left: var(--hotspot-x-mobile);
-    width: 48px;
-    height: 48px;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .transformation__hotspot.is-active {
-    visibility: visible;
-  }
-
-  .transformation.is-interactive .transformation__hotspot.is-active {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
   .transformation__connector {
     display: none;
   }
@@ -474,7 +479,8 @@
     top: auto;
     right: auto;
     width: 100%;
-    margin-top: calc((100% * 9 / 16) + 16px);
+    margin-top: calc((100% * 9 / 16) * 0.74 + 16px);
+    min-height: 320px;
   }
 
   .transformation__detail-meta {
@@ -492,6 +498,40 @@
   .transformation__navigation {
     justify-content: space-between;
     margin-top: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .section.transformation {
+    padding-bottom: 16px;
+  }
+
+  .transformation__title {
+    font-size: clamp(2.8rem, 12vw, 4.25rem);
+    line-height: 0.95;
+  }
+
+  .transformation__detail {
+    min-height: 280px;
+  }
+
+  .transformation__hotspot {
+    top: var(--hotspot-y-mobile);
+    left: var(--hotspot-x-mobile);
+    width: 48px;
+    height: 48px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .transformation__hotspot.is-active {
+    visibility: visible;
+  }
+
+  .transformation.is-interactive .transformation__hotspot.is-active {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 

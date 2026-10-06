@@ -1,0 +1,12 @@
+/* Home's development SSR stylesheet. Reuse the component styles; no separate
+   visual rules, no client-JS dependency, and no changes to other routes. */
+@import "../index.css";
+@import "../components/ui/Button/Button.css";
+@import "../components/layout/Header/Header.css";
+@import "../components/layout/Footer/Footer.css";
+@import "../components/ui/Marquee/Marquee.css";
+@import "../components/sections/Hero/Hero.css";
+@import "../components/sections/Transformation/Transformation.css";
+@import "../components/sections/FeaturedProducts/FeaturedProducts.css";
+@import "../components/sections/Atelier/Atelier.css";
+@import "../components/sections/Contact/Contact.css";

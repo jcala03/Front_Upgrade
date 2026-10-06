@@ -275,7 +275,8 @@ const AppContent = () => {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
 
   useEffect(() => {
-    updatePublicSeo(pathname, publicBootstrap()?.product);
+    const initialStatus = Number(document.getElementById("root")?.dataset.publicStatus ?? 200);
+    updatePublicSeo(pathname, publicBootstrap()?.product, initialStatus);
   }, [pathname]);
 
   useEffect(() => {
@@ -655,6 +656,8 @@ const AppContent = () => {
   }
 
   if (pathname === "/tienda") {
+    const initialStatus = Number(document.getElementById("root")?.dataset.publicStatus ?? 200);
+    if (initialStatus >= 400) return <Layout><PublicNotFound unavailable={initialStatus === 503} /></Layout>;
     return (
       <Layout>
         <ShopPage />
@@ -663,6 +666,8 @@ const AppContent = () => {
   }
 
   if (/^\/tienda\/[^/]+$/.test(pathname)) {
+    const initialStatus = Number(document.getElementById("root")?.dataset.publicStatus ?? 200);
+    if (initialStatus >= 400) return <Layout><PublicNotFound unavailable={initialStatus === 503} /></Layout>;
     let slug: string;
     try { slug = decodeURIComponent(pathname.slice("/tienda/".length)); }
     catch { return <Layout><PublicNotFound /></Layout>; }

@@ -85,9 +85,10 @@ export const CartPage = () => {
                         </a>
                       </h2>
 
-                      {item.variant ? <small>{item.variant.display_name || item.variant.name} · {item.variant.sku ?? "Sin SKU"}</small> : null}
+                      {item.variant ? <small>{item.variant.display_name || item.variant.name}{item.variant.sku ? ` · ${item.variant.sku}` : ""}</small> : null}
 
                       <strong>{formatPrice(cartItemPrice(item))}</strong>
+                      <p className="cart-item__subtotal">Subtotal · {formatPrice(cartItemPrice(item) * item.quantity)}</p>
                     </div>
 
                     <div className="cart-item__actions">
@@ -141,8 +142,7 @@ export const CartPage = () => {
             </div>
 
             <div className="cart-summary__note">
-              El envío, instalación o mano de obra se confirma directamente con
-              el equipo de UP GRADE 79.
+              El envío y los cargos aplicables se muestran antes del pago.
             </div>
 
             <a className="cart-summary__checkout" href="/checkout">

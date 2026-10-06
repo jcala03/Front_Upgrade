@@ -61,10 +61,47 @@ test('rutas desconocidas y producto privado son HTTP 404, nunca Home soft-404', 
 });
 test('errores públicos devuelven 503 recuperable sin indexar ni inventar catálogo vacío', async () => {
   await withApi(async () => { throw new Error('upstream'); }, async () => {
-    for (const path of ['/', '/tienda', '/tienda/producto-qa', '/sitemap.xml']) {
+    for (const path of ['/tienda', '/tienda/producto-qa', '/sitemap.xml']) {
       const result = await renderRequest(path, template, options);
       assert.equal(result.status, 503); assert.equal(result.headers['X-Robots-Tag'], 'noindex, nofollow'); assert.equal(result.headers['Retry-After'], '60');
       assert.ok(!result.body.includes('rel="canonical"')); assert.ok(!result.body.includes('application/ld+json'));
     }
+  });
+});
+
+test('fallo del preview no sustituye Home ni se confunde con un catálogo vacío', async () => {
+  for (const handler of [
+    async () => { throw new Error('upstream'); },
+    async () => new Response('{}', { status: 503 }),
+    async () => new Response(JSON.stringify({ data: null })),
+  ]) {
+    await withApi(handler, async () => {
+      const result = await renderRequest('/', template, options);
+      assert.equal(result.status, 200);
+      for (const content of ['Tu carro.', 'Frente y ópticas', 'productos destacados', 'Reintentar productos', 'homeCatalogUnavailable'])
+        assert.ok(result.body.includes(content), content);
+      assert.ok(!result.body.includes('Catálogo temporalmente no disponible'));
+      assert.ok(!result.body.includes('No hay productos destacados disponibles'));
+      assert.ok(result.body.includes('public-bootstrap'));
+      assert.equal((result.body.match(/<h1\b/g) || []).length, 1);
+    });
+  }
+});
+
+test('Home distingue vacío legítimo y conserva cinco hotspots sin simular fotografías pendientes', async () => {
+  await withApi(async () => new Response(JSON.stringify({ data: [] })), async () => {
+    const result = await renderRequest('/', template, options);
+    assert.equal(result.status, 200);
+    assert.ok(result.body.includes('No hay productos destacados disponibles'));
+    assert.ok(!result.body.includes('homeCatalogUnavailable'));
+    assert.equal((result.body.match(/class="transformation__hotspot /g) || []).length, 5);
+    assert.equal((result.body.match(/class="transformation__vehicle is-active"/g) || []).length, 1);
+    assert.ok(result.body.includes('data-active-visual="front"'));
+    assert.ok(!result.body.includes('data-treatment='));
+    assert.ok(result.body.includes('imagen base de referencia'));
+    assert.ok(result.body.includes('fotografías de cada modificación están pendientes'));
+    assert.ok(result.body.includes('<!--$-->'), 'Home includes the client Suspense hydration boundary');
+    for (const title of ['Frente y ópticas', 'Rin delantero y postura', 'Línea lateral', 'Silueta superior', 'Rin trasero y cierre'])
+      assert.ok(result.body.includes(title));
   });
 });

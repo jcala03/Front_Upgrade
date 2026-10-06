@@ -6,7 +6,7 @@ export type Seo = {
   robots: string; image: string | null; type: "website" | "product";
   structuredData: Record<string, unknown>[];
 };
-export type PublicBootstrap = { path: string; product?: Product; products?: Product[]; seo: Seo };
+export type PublicBootstrap = { path: string; query?: string; product?: Product; products?: Product[]; homeCatalogUnavailable?: boolean; seo: Seo };
 
 export function siteOrigin(value: string) {
   const url = new URL(value);

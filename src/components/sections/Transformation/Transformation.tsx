@@ -1,7 +1,9 @@
 import { useRef, useState, type CSSProperties } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import transformationBmw from "../../../assets/images/transformation-bmw-desktop.webp";
+import { TransformationVehicle } from "./TransformationVehicle";
+import { transformationAssetsRequired } from "../../../data/transformationVisuals";
+import { publicBootstrap } from "../../../seo/client";
 import {
   transformationHotspots,
   type TransformationHotspot,
@@ -130,7 +132,7 @@ export const Transformation = () => {
         }
       };
 
-      if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      if (reducedMotion || publicBootstrap()?.path === "/" || typeof IntersectionObserver === "undefined") {
         showImmediately();
 
         return () => {
@@ -462,31 +464,11 @@ export const Transformation = () => {
         return;
       }
 
-      const offsetX = activeHotspot.vehicleOffsetX ?? 0;
-      const offsetY = activeHotspot.vehicleOffsetY ?? 0;
       const duration = window.matchMedia("(max-width: 760px)").matches
         ? 0.26
         : 0.32;
 
-      gsap.to(vehicleSystem, {
-        x: offsetX,
-        y: offsetY,
-        duration,
-        ease: "power3.out",
-        overwrite: "auto",
-      });
-      gsap.to(atmosphere, {
-        x: -offsetX * 0.18,
-        duration,
-        ease: "power3.out",
-        overwrite: "auto",
-      });
-      gsap.to(base, {
-        x: offsetX * 0.24,
-        duration,
-        ease: "power3.out",
-        overwrite: "auto",
-      });
+      // Keep every photograph and hotspot in exactly the same frame.
       gsap.fromTo(
         detail,
         { opacity: 0, y: 9 },
@@ -552,6 +534,10 @@ export const Transformation = () => {
           </p>
         </header>
 
+        {transformationAssetsRequired ? <p className="transformation__asset-note">
+          Imagen de referencia; las fotografías de cada modificación están pendientes.
+        </p> : null}
+
         <div className="transformation__scene-frame">
           <div className="transformation__scene">
           <div
@@ -572,17 +558,9 @@ export const Transformation = () => {
           <div
             ref={vehicleSystemRef}
             className="transformation__vehicle-system"
+            data-active-visual={activeHotspot.id}
           >
-            <img
-              className="transformation__vehicle"
-              src={transformationBmw}
-              alt="BMW blanco completo visto de perfil lateral"
-              width={3840}
-              height={2160}
-              loading="eager"
-              decoding="async"
-              fetchPriority="low"
-            />
+            <TransformationVehicle activeId={activeHotspot.id} title={activeHotspot.title} />
 
             <div
               className="transformation__hotspots"

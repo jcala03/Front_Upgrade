@@ -1,7 +1,7 @@
 import type { CreateOrderPayload, PublicOrder, PublicShippingAddress, PublicShippingQuote, PublicWompiCheckout } from "../types/order";
+import { PUBLIC_API_BASE_URL } from "./publicTransport";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = PUBLIC_API_BASE_URL;
 
 type OrderResponse = {
   message: string;

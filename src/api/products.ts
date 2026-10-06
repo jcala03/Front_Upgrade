@@ -1,5 +1,6 @@
 import type { AdminProduct, Product, ProductCommissionPayload, ProductPayload } from "../types/product";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
+import { PUBLIC_API_BASE_URL } from "./publicTransport";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -214,11 +215,13 @@ const getWriteRequestBody = (payload: ProductWritePayload): BodyInit => {
 */
 
 export const getProducts = async (
-  filters?: PublicProductFilters
+  filters?: PublicProductFilters,
+  signal?: AbortSignal,
 ): Promise<Product[]> => {
   const query = buildQuery(filters);
 
-  const response = await fetch(`${API_BASE_URL}/api/products${query}`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/products${query}`, {
+    signal,
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -230,8 +233,9 @@ export const getProducts = async (
   return result.data;
 };
 
-export const getProductBySlug = async (slug: string): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/api/products/${slug}`, {
+export const getProductBySlug = async (slug: string, signal?: AbortSignal): Promise<Product> => {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/products/${encodeURIComponent(slug)}`, {
+    signal,
     method: "GET",
     headers: {
       Accept: "application/json",

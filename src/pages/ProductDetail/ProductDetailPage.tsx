@@ -1,112 +1,142 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { getProductBySlug, ProductApiError } from "../../api/products";
 import { useCart } from "../../context/CartContext";
 import type { Product, ProductVariant } from "../../types/product";
-import "./ProductDetailPage.css";
 import { publicBootstrap, updatePublicSeo } from "../../seo/client";
-import { productDescription, productFacts } from "../../seo/model";
+import { productDescription } from "../../seo/model";
+import { getProductImageUrl } from "../../utils/getProductImageUrl";
+import {
+  productCompatibility,
+  productGallery,
+  specificationFacts,
+} from "./productPresentation";
+import "./ProductDetailPage.css";
 
-type ProductDetailPageProps = {
-  slug: string;
-  initialProduct?: Product;
-};
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-
-const getImageUrl = (imageUrl?: string | null) => {
-  if (!imageUrl) {
-    return "";
-  }
-
-  if (imageUrl.startsWith("http")) {
-    return imageUrl;
-  }
-
-  return `${API_BASE_URL}${imageUrl}`;
-};
-
-const formatPrice = (value: number) => {
-  return new Intl.NumberFormat("es-CO", {
+type ProductDetailPageProps = { slug: string; initialProduct?: Product };
+const formatPrice = (value: number) =>
+  new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency: "COP",
     maximumFractionDigits: 0,
   }).format(value);
-};
 
-export const ProductDetailPage = ({ slug, initialProduct = publicBootstrap()?.product }: ProductDetailPageProps) => {
+export const ProductDetailPage = ({
+  slug,
+  initialProduct = publicBootstrap()?.product,
+}: ProductDetailPageProps) => {
   const { addItem, items, totalItems } = useCart();
-
-  const [product, setProduct] = useState<Product | null>(initialProduct ?? null);
-  const [quantity, setQuantity] = useState(initialProduct ? initialProduct.has_variants || initialProduct.stock <= 0 ? 0 : 1 : 1);
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const matchingInitial =
+    initialProduct?.slug === slug ? initialProduct : undefined;
+  const [product, setProduct] = useState<Product | null>(
+    matchingInitial ?? null
+  );
+  const [quantity, setQuantity] = useState(
+    matchingInitial
+      ? matchingInitial.has_variants || matchingInitial.stock <= 0
+        ? 0
+        : 1
+      : 1
+  );
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    null
+  );
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    initialProduct ? "ready" : "loading"
+    matchingInitial ? "ready" : "loading"
   );
+  const [notFound, setNotFound] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [wasAdded, setWasAdded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [pulseKey, setPulseKey] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const isAddingRef = useRef(false);
   const addStartTotalRef = useRef(totalItems);
-
-  const imageUrl = useMemo(() => {
-    const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId);
-    return getImageUrl(selectedImageUrl ?? selectedVariant?.image_url ?? product?.image_url);
-  }, [product, selectedVariantId, selectedImageUrl]);
-  const gallery = useMemo(() => {
-    const variantImage = product?.variants?.find((variant) => variant.id === selectedVariantId)?.image_url;
-    const urls = [...(variantImage ? [variantImage] : []), ...(product?.images?.map((image) => image.image_url) ?? [])];
-    return Array.from(new Set(urls));
-  }, [product, selectedVariantId]);
+  const toastTimeout = useRef<number | null>(null);
+  useEffect(() => {
+    setMounted(true);
+    return () => {
+      if (toastTimeout.current !== null)
+        window.clearTimeout(toastTimeout.current);
+    };
+  }, []);
 
   useEffect(() => {
-    isAddingRef.current = false;
-    setIsAdding(false);
-    if (!initialProduct || initialProduct.slug !== slug) setStatus("loading");
-
-    getProductBySlug(slug)
-      .then((productData) => {
-        setProduct(productData);
+    if (matchingInitial && retry === 0) return;
+    const controller = new AbortController();
+    setStatus("loading");
+    setNotFound(false);
+    getProductBySlug(slug, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setProduct(data);
         setSelectedImageUrl(null);
         setSelectedVariantId(null);
         setSelectionError("");
-        setQuantity(productData.has_variants ? 0 : productData.stock > 0 ? 1 : 0);
+        setQuantity(data.has_variants ? 0 : data.stock > 0 ? 1 : 0);
         setStatus("ready");
-        updatePublicSeo(`/tienda/${encodeURIComponent(productData.slug)}`, productData);
+        updatePublicSeo(`/tienda/${encodeURIComponent(data.slug)}`, data);
       })
       .catch((error) => {
-        setProduct(null);
+        if (controller.signal.aborted) return;
+        const missing =
+          error instanceof ProductApiError && error.status === 404;
+        console.error("[storefront] product request failed", error);
+        setNotFound(missing);
         setStatus("error");
-        updatePublicSeo(`/tienda/${encodeURIComponent(slug)}`, undefined, error instanceof ProductApiError && error.status === 404 ? 404 : 503);
+        updatePublicSeo(
+          `/tienda/${encodeURIComponent(slug)}`,
+          undefined,
+          missing ? 404 : 503
+        );
       });
-  }, [slug]);
+    return () => controller.abort();
+  }, [slug, retry]);
 
-  const publicVariants = useMemo(
-    () => product?.variants?.filter((variant) => variant.is_active && variant.is_visible) ?? [],
+  const variants = useMemo(
+    () => product?.variants?.filter((v) => v.is_active && v.is_visible) ?? [],
     [product]
   );
-  const hasVariants = Boolean(product?.has_variants) || publicVariants.length > 0;
-  const selectedVariant = publicVariants.find((variant) => variant.id === selectedVariantId) ?? null;
-  const availableStock = Number(selectedVariant?.stock ?? (hasVariants ? product?.total_variant_stock : product?.stock) ?? 0);
-  const effectivePrice = selectedVariant?.price ?? (hasVariants ? product?.lowest_variant_price : product?.price) ?? 0;
-  const cartQuantity = product
-    ? items.find(
-        (item) =>
-          item.product.id === product.id &&
-          (item.variant?.id ?? null) === (selectedVariant?.id ?? null)
-      )?.quantity ?? 0
-    : 0;
+  const hasVariants = Boolean(product?.has_variants) || variants.length > 0;
+  const selectedVariant =
+    variants.find((v) => v.id === selectedVariantId) ?? null;
+  const availableStock = Number(
+    selectedVariant?.stock ??
+      (hasVariants ? product?.total_variant_stock : product?.stock) ??
+      0
+  );
+  const effectivePrice = Number(
+    selectedVariant?.price ??
+      (hasVariants ? product?.lowest_variant_price : product?.price) ??
+      0
+  );
+  // Session-dependent information is restored only AFTER the public SSR tree is
+  // hydrated. Cart storage, variant identity and checkout stock validation stay intact.
+  const cartQuantity =
+    mounted && product
+      ? items.find(
+          (i) =>
+            i.product.id === product.id &&
+            (i.variant?.id ?? null) === (selectedVariant?.id ?? null)
+        )?.quantity ?? 0
+      : 0;
   const remainingStock = Math.max(availableStock - cartQuantity, 0);
+  const visibleTotal = mounted ? totalItems : 0;
+  const gallery = product ? productGallery(product, selectedVariant) : [];
+  const imageUrl = getProductImageUrl(
+    selectedImageUrl ??
+      selectedVariant?.image_url ??
+      product?.image_url ??
+      gallery[0]
+  );
+  const compatibility = product
+    ? productCompatibility(product, selectedVariant)
+    : [];
+  const facts = product ? specificationFacts(product, selectedVariant) : [];
 
   useEffect(() => {
-    if (!isAdding || totalItems === addStartTotalRef.current) {
-      return;
-    }
-
+    if (!isAdding || totalItems === addStartTotalRef.current) return;
     isAddingRef.current = false;
     setIsAdding(false);
   }, [isAdding, totalItems]);
@@ -115,288 +145,319 @@ export const ProductDetailPage = ({ slug, initialProduct = publicBootstrap()?.pr
     setSelectedImageUrl(null);
     setSelectedVariantId(variant?.id ?? null);
     setSelectionError("");
-    setQuantity(variant && variant.stock > 0 ? 1 : 0);
+    setWasAdded(false);
+    const inCart =
+      items.find(
+        (i) => i.product.id === product?.id && i.variant?.id === variant?.id
+      )?.quantity ?? 0;
+    setQuantity(variant && variant.stock > inCart ? 1 : 0);
   };
-
-  const increaseQuantity = () => {
-    if (!product || (hasVariants && !selectedVariant)) return;
-
-    setQuantity((currentQuantity) =>
-      Math.min(currentQuantity + 1, availableStock)
-    );
-  };
-
-  const decreaseQuantity = () => {
-    setQuantity((currentQuantity) => Math.max(currentQuantity - 1, 1));
-  };
-
-  const handleAddToCart = () => {
+  const handleAdd = () => {
     if (!product || isAddingRef.current) return;
     if (hasVariants && !selectedVariant) {
       setSelectionError("Selecciona una versión antes de agregar el producto.");
       return;
     }
-    if (availableStock <= 0 || remainingStock <= 0 || quantity <= 0) {
-      return;
-    }
-
+    if (remainingStock <= 0 || quantity <= 0) return;
     isAddingRef.current = true;
     addStartTotalRef.current = totalItems;
     setIsAdding(true);
-    addItem(product, quantity, selectedVariant);
+    addItem(product, Math.min(quantity, remainingStock), selectedVariant);
     setWasAdded(true);
-    setPulseKey((currentKey) => currentKey + 1);
-
-    window.setTimeout(() => {
-      setWasAdded(false);
-    }, 1800);
+    if (toastTimeout.current !== null)
+      window.clearTimeout(toastTimeout.current);
+    toastTimeout.current = window.setTimeout(() => setWasAdded(false), 2400);
   };
 
-  if (status === "loading") {
+  if (status === "loading")
     return (
       <main className="product-detail-page">
-        <section className="product-detail-state">
-          <span>Cargando producto</span>
-          <h1>Preparando upgrade</h1>
-          <p>Estamos consultando la información del producto.</p>
+        <a className="product-detail__back" href="/tienda">
+          <ArrowLeft size={16} aria-hidden="true" />
+          Volver a la tienda
+        </a>
+        <section
+          className="product-detail product-detail-skeleton"
+          aria-busy="true"
+          aria-label="Cargando información del producto"
+        >
+          <div className="product-detail-skeleton__image" />
+          <div>
+            <span />
+            <span />
+            <span />
+            <p role="status">Consultando producto…</p>
+          </div>
         </section>
       </main>
     );
-  }
-
-  if (status === "error" || !product) {
+  if (status === "error" || !product)
     return (
       <main className="product-detail-page">
         <section className="product-detail-state">
-          <span>Producto no encontrado</span>
-          <h1>No disponible</h1>
+          <span>
+            {notFound ? "Producto no disponible" : "Conexión interrumpida"}
+          </span>
+          <h1>
+            {notFound
+              ? "Este producto ya no está disponible."
+              : "No pudimos cargar este producto."}
+          </h1>
           <p>
-            No encontramos un producto activo con el slug{" "}
-            <strong>{slug}</strong>.
+            {notFound
+              ? "Explora la tienda para encontrar otras opciones."
+              : "Comprueba tu conexión y vuelve a intentarlo."}
           </p>
-          <a href="/tienda">Volver a tienda</a>
+          {!notFound ? (
+            <button type="button" onClick={() => setRetry((n) => n + 1)}>
+              Reintentar
+            </button>
+          ) : null}
+          <a href="/tienda">Volver a la tienda</a>
         </section>
       </main>
     );
-  }
 
   return (
     <main className="product-detail-page">
-      <AnimatePresence>
-        {wasAdded ? (
-          <motion.div
-            className="product-added-toast"
-            initial={{ opacity: 0, y: 24, scale: 0.92, filter: "blur(12px)" }}
-            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -18, scale: 0.96, filter: "blur(10px)" }}
-            transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <motion.div
-              className="product-added-toast__glow"
-              initial={{ opacity: 0, scaleX: 0 }}
-              animate={{ opacity: 1, scaleX: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
-              aria-hidden="true"
-            />
-
-            <div className="product-added-toast__image">
-              {imageUrl ? <img src={imageUrl} alt="" /> : <ShoppingBag size={20} />}
-            </div>
-
-            <div className="product-added-toast__content">
-              <span>Agregado al carrito</span>
-              <strong>{product.name}</strong>
-              {selectedVariant ? <small>{selectedVariant.display_name || selectedVariant.name}</small> : null}
-              <p>
-                {quantity} unidad{quantity > 1 ? "es" : ""} añadida
-                {quantity > 1 ? "s" : ""}
-              </p>
-            </div>
-
-            <motion.div
-              className="product-added-toast__check"
-              initial={{ scale: 0, rotate: -18 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.12, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <Check size={18} strokeWidth={2.2} />
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      <section className="product-detail">
-        <div className="product-detail__media">
-          {imageUrl ? (
-            <motion.img
-              src={imageUrl}
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-              alt={`${product.name}${selectedVariant ? ` — ${selectedVariant.name}` : ""}`}
-              animate={
-                wasAdded
-                  ? {
-                      scale: [1, 1.035, 1],
-                      y: [0, -8, 0],
-                    }
-                  : undefined
-              }
-              transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
-            />
-          ) : (
-            <span>Sin imagen</span>
-          )}
-          {gallery.length > 1 ? <div className="product-detail__thumbnails" role="group" aria-label="Galería del producto">
-            {gallery.map((url, index) => <button key={url} type="button" aria-label={`Ver imagen ${index + 1} de ${product.name}`} aria-pressed={getImageUrl(url) === imageUrl} onClick={() => setSelectedImageUrl(url)}><img src={getImageUrl(url)} alt={`${product.name}, vista ${index + 1}`} loading="lazy" decoding="async" /></button>)}
-          </div> : null}
-        </div>
-
-        <div className="product-detail__content">
-          <a className="product-detail__back" href="/tienda">
-            <ArrowLeft size={16} strokeWidth={1.8} />
-            Volver a tienda
-          </a>
-
-          <div className="product-detail__cart-pill">
-            <ShoppingBag size={16} strokeWidth={1.8} />
-            <span>Carrito</span>
-
-            <AnimatePresence mode="popLayout">
-              <motion.strong
-                key={pulseKey}
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 1.2, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {totalItems}
-              </motion.strong>
-            </AnimatePresence>
+      <nav
+        className="product-detail__breadcrumb"
+        aria-label="Ruta del producto"
+      >
+        <a href="/">Inicio</a>
+        <span>/</span>
+        <a href="/tienda">Tienda</a>
+        <span>/</span>
+        <span>
+          {product.product_category?.name ?? product.category ?? "Artículos"}
+        </span>
+      </nav>
+      {wasAdded ? (
+        <div className="product-added-toast" role="status">
+          <Check size={20} aria-hidden="true" />
+          <div>
+            <strong>Agregado al carrito</strong>
+            <span>
+              {product.name}
+              {selectedVariant ? ` · ${selectedVariant.name}` : ""}
+            </span>
           </div>
-
-          <span className="product-detail__eyebrow">UP GRADE 79 Store</span>
-
+          <a href="/carrito">Ver carrito</a>
+        </div>
+      ) : null}
+      <section className="product-detail">
+        <div className="product-detail__gallery">
+          <div className="product-detail__media">
+            {imageUrl ? (
+              <img
+                key={imageUrl}
+                src={imageUrl}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                alt={`${product.name}${
+                  selectedVariant ? ` — ${selectedVariant.name}` : ""
+                }`}
+              />
+            ) : (
+              <span>Fotografía no disponible</span>
+            )}
+          </div>
+          {gallery.length > 1 ? (
+            <div
+              className="product-detail__thumbnails"
+              role="group"
+              aria-label="Galería del producto"
+            >
+              {gallery.map((url, index) => (
+                <button
+                  key={url}
+                  type="button"
+                  aria-label={`Ver imagen ${index + 1} de ${product.name}`}
+                  aria-pressed={getProductImageUrl(url) === imageUrl}
+                  onClick={() => setSelectedImageUrl(url)}
+                >
+                  <img
+                    src={getProductImageUrl(url)}
+                    alt={`${product.name}, vista ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="product-detail__content">
+          <span className="product-detail__eyebrow">
+            {product.product_brand?.name ?? "UP GRADE 79 — STORE"}
+          </span>
           <h1>{product.name}</h1>
-
+          {selectedVariant?.sku || product.sku ? (
+            <span className="product-detail__sku">
+              Ref. {selectedVariant?.sku ?? product.sku}
+            </span>
+          ) : null}
           <strong className="product-detail__price">
-            {hasVariants && !selectedVariant ? "Desde " : ""}{formatPrice(effectivePrice)}
+            {hasVariants && !selectedVariant ? "Desde " : ""}
+            {formatPrice(effectivePrice)}
           </strong>
-
-          <p className="product-detail__description">
-            {productDescription(product)}
-          </p>
-
+          <section
+            className="product-detail__compatibility"
+            aria-label="Compatibilidad del producto"
+          >
+            <h2>Compatible con</h2>
+            {compatibility.map((label) => (
+              <p key={label}>{label}</p>
+            ))}
+            <small>
+              Confirma conexiones, medidas e instalación con el taller.
+            </small>
+          </section>
           {hasVariants ? (
             <label className="product-detail__variant">
-              <span>Versión</span>
+              <span>Versión del producto</span>
               <select
+                disabled={!mounted}
+                aria-label="Versión del producto"
                 value={selectedVariantId ?? ""}
-                onChange={(event) => selectVariant(publicVariants.find((variant) => variant.id === Number(event.target.value)) ?? null)}
+                onChange={(e) =>
+                  selectVariant(
+                    variants.find((v) => v.id === Number(e.target.value)) ??
+                      null
+                  )
+                }
                 aria-invalid={Boolean(selectionError)}
-                aria-describedby={selectionError ? "product-variant-error" : undefined}
+                aria-describedby={
+                  selectionError
+                    ? "product-variant-error"
+                    : "product-variant-help"
+                }
               >
                 <option value="">Selecciona una versión</option>
-                {publicVariants.map((variant) => (
-                  <option key={variant.id} value={variant.id} disabled={variant.stock <= 0}>
-                    {variant.display_name || variant.name} · {formatPrice(variant.price)} · {variant.stock > 0 ? `${variant.stock} disponibles en nuestra red` : "Agotada"}
+                {variants.map((v) => (
+                  <option key={v.id} value={v.id} disabled={v.stock <= 0}>
+                    {v.display_name || v.name} · {formatPrice(v.price)}
+                    {v.stock <= 0 ? " · Agotada" : ""}
                   </option>
                 ))}
               </select>
-              {selectionError ? <small id="product-variant-error" role="alert">{selectionError}</small> : null}
+              <small id="product-variant-help">
+                La versión determina el precio y la disponibilidad.
+              </small>
+              {selectionError ? (
+                <small id="product-variant-error" role="alert">
+                  {selectionError}
+                </small>
+              ) : null}
             </label>
           ) : null}
-
           <div className="product-detail__stock">
-            {hasVariants && !selectedVariant ? (
-              <span>{availableStock > 0 ? `${availableStock} unidades disponibles en nuestra red entre versiones` : "Producto agotado"}</span>
-            ) : availableStock > 0 ? (
-              <span>{availableStock} unidades disponibles en nuestra red{selectedVariant?.sku ? ` · SKU ${selectedVariant.sku}` : ""}</span>
-            ) : (
-              <span>{selectedVariant ? "Versión agotada" : "Producto agotado"}</span>
-            )}
+            {hasVariants && !selectedVariant
+              ? availableStock > 0
+                ? `${availableStock} disponibles en nuestra red entre versiones`
+                : "Producto agotado"
+              : availableStock > 0
+              ? `${availableStock} disponibles en nuestra red`
+              : selectedVariant
+              ? "Versión agotada"
+              : "Producto agotado"}
           </div>
-
           <div className="product-detail__buy-box">
-            <div className="product-detail__quantity">
+            <div
+              className="product-detail__quantity"
+              role="group"
+              aria-label="Cantidad"
+            >
               <button
                 type="button"
-                onClick={decreaseQuantity}
-                disabled={quantity <= 1 || availableStock <= 0}
+                onClick={() => setQuantity((q) => Math.max(q - 1, 1))}
+                disabled={
+                  !mounted || quantity <= 1 || (hasVariants && !selectedVariant)
+                }
                 aria-label="Reducir cantidad"
               >
-                <Minus size={16} strokeWidth={1.8} />
+                <Minus size={17} aria-hidden="true" />
               </button>
-
-              <span>{quantity}</span>
-
+              <output aria-live="polite" aria-label="Cantidad seleccionada">
+                {quantity}
+              </output>
               <button
                 type="button"
-                onClick={increaseQuantity}
-                disabled={quantity >= availableStock || availableStock <= 0 || (hasVariants && !selectedVariant)}
+                onClick={() =>
+                  setQuantity((q) => Math.min(q + 1, remainingStock))
+                }
+                disabled={
+                  !mounted ||
+                  quantity >= remainingStock ||
+                  (hasVariants && !selectedVariant)
+                }
                 aria-label="Aumentar cantidad"
               >
-                <Plus size={16} strokeWidth={1.8} />
+                <Plus size={17} aria-hidden="true" />
               </button>
             </div>
-
-            <motion.button
+            <button
               className="product-detail__button"
               type="button"
               disabled={
+                !mounted ||
                 isAdding ||
-                availableStock <= 0 ||
                 remainingStock <= 0 ||
                 (hasVariants && !selectedVariant)
               }
-              onClick={handleAddToCart}
-              whileTap={{ scale: 0.97 }}
-              animate={
-                wasAdded
-                  ? {
-                      boxShadow: [
-                        "0 22px 62px rgba(0, 149, 212, 0.22)",
-                        "0 28px 90px rgba(0, 149, 212, 0.46)",
-                        "0 22px 62px rgba(0, 149, 212, 0.22)",
-                      ],
-                    }
-                  : undefined
-              }
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              onClick={handleAdd}
             >
-              <span>
-                {isAdding
-                  ? "Agregando…"
-                  : remainingStock <= 0 && availableStock > 0
-                    ? "Stock máximo en carrito"
-                    : wasAdded
-                      ? "Agregado"
-                      : hasVariants && !selectedVariant
-                        ? "Selecciona una versión"
-                        : "Agregar al carrito"}
-              </span>
-            </motion.button>
+              <ShoppingBag size={18} aria-hidden="true" />
+              {isAdding
+                ? "Agregando…"
+                : remainingStock <= 0 && availableStock > 0
+                ? "Stock máximo en carrito"
+                : availableStock <= 0
+                ? "Agotado"
+                : hasVariants && !selectedVariant
+                ? "Selecciona una versión"
+                : "Agregar al carrito"}
+            </button>
           </div>
-
-          <small
-            className="product-detail__note"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {isAdding
-              ? "Agregando producto al carrito…"
-              : wasAdded
-                ? "Producto agregado. "
-                : null}
-            Productos en carrito: <strong>{totalItems}</strong>
-          </small>
-          {productFacts(product).length > 0 ? <section className="product-detail__facts" aria-label="Información del producto">
-            <h2>Especificaciones y compatibilidad</h2>
-            <dl>{productFacts(product).map(([name, value], index) => <div key={`${name}-${index}`}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
-          </section> : null}
+          <p className="product-detail__note" role="status" aria-live="polite">
+            {wasAdded ? "Producto agregado. " : ""}
+            {visibleTotal > 0
+              ? `${visibleTotal} productos en tu carrito.`
+              : "La disponibilidad se verifica nuevamente antes de confirmar tu compra."}
+          </p>
+          <a className="product-detail__cart-link" href="/carrito">
+            Ver carrito <span aria-hidden="true">→</span>
+          </a>
         </div>
+      </section>
+      <section className="product-detail__information">
+        <section aria-labelledby="product-description-title">
+          <h2 id="product-description-title">El producto</h2>
+          <p>{productDescription(product)}</p>
+        </section>
+        {facts.length > 0 ? (
+          <section aria-labelledby="product-specifications-title">
+            <h2 id="product-specifications-title">Especificaciones</h2>
+            <dl>
+              {facts.map(([name, value]) => (
+                <div key={name}>
+                  <dt>{name}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+        <section className="product-detail__purchase-info">
+          <h2>Antes de comprar</h2>
+          <p>
+            Precios en pesos colombianos. El envío y los cargos aplicables se
+            muestran en checkout antes del pago. La instalación se coordina con
+            el taller.
+          </p>
+          <a href="/tienda">Continuar explorando</a>
+        </section>
       </section>
     </main>
   );

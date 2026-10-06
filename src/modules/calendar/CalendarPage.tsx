@@ -159,7 +159,7 @@ const EventBadge = ({ event }: { event: CalendarEvent }) => <StatusBadge label={
 
 const EventCard = ({ event, branches, compact = false, onOpen }: { event: CalendarEvent; branches: Branch[]; compact?: boolean; onOpen: () => void }) => {
   const branch = branchLabel(event, branches);
-  return <button type="button" className={`calendar-event-card calendar-event-card--${event.type}`} onClick={onOpen} aria-label={`Ver ${typeInfo[event.type].label.toLowerCase()}: ${event.title}`}>
+  return <button type="button" className={`calendar-event-card calendar-event-card--${event.type}`} onClick={onOpen} title={`${event.title} · ${localTimeLabel(event)}`} aria-label={`Ver ${typeInfo[event.type].label.toLowerCase()}: ${event.title}, ${localTimeLabel(event)}`}>
     <span className="calendar-event-card__time">{localTimeLabel(event)}</span>
     <span className="calendar-event-card__title">{event.title}</span>
     <span className="calendar-event-card__badges"><EventBadge event={event} />{event.status ? <StatusBadge label={statusLabel(event.status)} tone={statusTone(event.status)} /> : null}</span>

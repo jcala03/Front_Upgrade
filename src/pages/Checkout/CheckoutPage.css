@@ -691,3 +691,10 @@
     height: 58px;
   }
 }
+
+/* Storefront R2 visual alignment only; fulfillment and payment states unchanged. */
+.checkout-page { background: #08090a; }
+.checkout-hero h1, .checkout-empty h1 { font-size: clamp(2.6rem, 4.7vw, 5rem); font-weight: 450; letter-spacing: -.02em; line-height: 1.1; }
+.checkout-form, .checkout-summary { background: #111318; border-color: #33373d; border-radius: 2px; box-shadow: none; }
+.checkout-form__heading h2 { font-weight: 450; letter-spacing: -.01em; line-height: 1.2; }
+.checkout-page :where(a, button, input, select):focus-visible { outline: 2px solid #75cff4; outline-offset: 4px; }

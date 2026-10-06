@@ -365,7 +365,7 @@
 .contact__weekdays,
 .contact__days {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .contact__weekdays {
@@ -504,6 +504,7 @@
 .contact__days > button:focus-visible,
 .contact__calendar-toolbar button:focus-visible,
 .contact input:focus-visible,
+.contact select:focus-visible,
 .contact textarea:focus-visible,
 .contact__submit:focus-visible,
 .contact__secondary a:focus-visible {
@@ -529,6 +530,7 @@
 }
 
 .contact input,
+.contact select,
 .contact textarea {
   min-height: 50px;
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -549,17 +551,20 @@
 }
 
 .contact input:hover,
+.contact select:hover,
 .contact textarea:hover {
   border-color: rgba(148, 163, 184, 0.4);
 }
 
 .contact input:focus,
+.contact select:focus,
 .contact textarea:focus {
   border-color: #0095d4;
   background: #0b1016;
 }
 
 .contact input[aria-invalid="true"],
+.contact select[aria-invalid="true"],
 .contact textarea[aria-invalid="true"] {
   border-color: #f87171;
 }
@@ -932,3 +937,5 @@
     transform: none;
   }
 }
+
+.contact__time-section > select { width: min(100%, 320px); min-height: 54px; padding-inline: 12px; }
