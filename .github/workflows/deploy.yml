@@ -21,6 +21,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Audit API domain references
+        run: |
+          echo "=== Referencias al dominio antiguo ==="
+          git grep -n "crmupgradecol.com" -- src || true
+
+          echo "=== Variables VITE_API_BASE_URL ==="
+          git grep -n "VITE_API_BASE_URL" -- src vite.config.ts || true
+
+          echo "=== Archivos de entorno ==="
+          find . -maxdepth 2 -name '.env*' -print
+
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
