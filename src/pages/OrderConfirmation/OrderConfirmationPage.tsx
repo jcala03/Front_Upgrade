@@ -102,7 +102,7 @@ export const OrderConfirmationPage = () => {
         <div className="order-confirmation-actions">
           {terminal ? <a href="/tienda" onClick={() => startNewPurchase(persisted.public_token)}>Iniciar nueva compra</a> : order.can_retry_payment ? <a href="/checkout/payment/return">Reintentar pago</a> : <a href="/checkout">Volver al checkout</a>}
           <button type="button" onClick={() => setRetry((value) => value + 1)} disabled={loading}><RefreshCw size={16} />{loading ? "Consultando" : "Actualizar estado"}</button>
-          <a className="order-confirmation-actions__primary" href={`https://wa.me/573236293543?text=Hola%20UP%20GRADE%2079%2C%20quiero%20consultar%20la%20orden%20${encodeURIComponent(order.order_number)}.`} target="_blank" rel="noreferrer">Contactar por WhatsApp</a>
+          <a className="order-confirmation-actions__primary" href={`https://wa.me/57302 3887034?text=Hola%20UP%20GRADE%2079%2C%20quiero%20consultar%20la%20orden%20${encodeURIComponent(order.order_number)}.`} target="_blank" rel="noreferrer">Contactar por WhatsApp</a>
         </div>
       </article>
     </section>
