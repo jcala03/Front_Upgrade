@@ -32,14 +32,20 @@ jobs:
 
       - name: Build production
         env:
-          VITE_API_BASE_URL=https://upgradecolombia.com
-          PUBLIC_SITE_URL=https://upgradecolombia.com
+          VITE_API_BASE_URL: https://upgradecolombia.com
+          PUBLIC_SITE_URL: https://upgradecolombia.com
         run: npm run build
 
       - name: Verify build output
         run: |
           test -f dist/index.html
           test -d dist/assets
+
+      - name: Remove server-managed files from artifact
+        run: |
+          rm -f dist/.htaccess
+          rm -f dist/laravel-api.php
+          rm -f dist/laravel-api.php.bak
 
       - name: Deploy to Hostinger
         uses: appleboy/scp-action@v0.1.7
