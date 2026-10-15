@@ -42,11 +42,38 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+
+      - name: Check environment configuration
+        run: |
+          echo "=== Dominios configurados ==="
+          grep -nE '^(VITE_API_BASE_URL|PUBLIC_SITE_URL)=' .env.production || true
+
+          echo "=== Configuración de Vite ==="
+          grep -nE 'loadEnv|defineConfig|envDir|VITE_API_BASE_URL' vite.config.ts || true
+
+
+
+
+
       - name: Build production
+              
         env:
           VITE_API_BASE_URL: https://upgradecolombia.com
           PUBLIC_SITE_URL: https://upgradecolombia.com
         run: npm run build
+
+      - name: Verify compiled API configuration
+        run: |
+          echo "=== Referencias al dominio antiguo en el build ==="
+          if grep -Rl 'https://crmupgradecol.com' dist/assets --include='*.js'; then
+            echo "ERROR: El build todavía contiene el dominio antiguo."
+            exit 1
+          fi
+
+          echo "=== Referencias al dominio correcto ==="
+          grep -Rl 'https://upgradecolombia.com' dist/assets --include='*.js' | head -n 10
+
+          echo "=== Configuración verificada ==="
 
       - name: Verify build output
         run: |
