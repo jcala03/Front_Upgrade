@@ -1,0 +1,55 @@
+name: Deploy Upgrade La 79 Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upgrade79-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production
+        env:
+          VITE_API_BASE_URL: https://crmupgradecol.com
+          PUBLIC_SITE_URL: https://upgradecolombia.com
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+
+      - name: Deploy to Hostinger
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: 65002
+          source: "dist/*"
+          target: "/home/${{ secrets.HOSTINGER_USERNAME }}/domains/upgradecolombia.com/public_html"
+          strip_components: 1
+          overwrite: true
+          rm: false
