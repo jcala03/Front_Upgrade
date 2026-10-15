@@ -2,8 +2,9 @@ import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { cartItemKey, cartItemPrice, cartItemStock, useCart } from "../../context/CartContext";
 import "./CartPage.css";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.DEV
+  ? ""
+  : (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 const getImageUrl = (imageUrl?: string | null) => {
   if (!imageUrl) {

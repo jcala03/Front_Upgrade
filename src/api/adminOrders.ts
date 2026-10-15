@@ -7,7 +7,7 @@ import type {
 } from "../types/order";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 
 type OrdersResponse = { data: Order[] };
 type OrderResponse = { message?: string; data: Order };

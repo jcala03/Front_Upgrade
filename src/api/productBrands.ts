@@ -2,8 +2,9 @@ import type { ProductBrand, ProductBrandPayload } from "../types/productBrand";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 import { PUBLIC_API_BASE_URL } from "./publicTransport";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.DEV
+  ? ""
+  : (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 type ProductBrandsResponse = {
   data: ProductBrand[];

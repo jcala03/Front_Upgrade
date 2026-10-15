@@ -2,7 +2,7 @@ import type { AdminUser, CreateUserPayload, UpdateUserPayload, UserFilters, User
 import { SettingsApiError } from "./settings";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 const cookie = (name: string) => decodeURIComponent(document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))?.split("=")[1] ?? "");
 
 const request = async <T,>(path: string, init: RequestInit = {}, write = false, signal?: AbortSignal): Promise<T> => {

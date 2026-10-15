@@ -2,7 +2,7 @@ import type { Order } from "../types/order";
 import type { Customer, CustomerPayload, CustomerVehicle, CustomerVehiclePayload, LaravelPaginator } from "../types/customer";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 
 export class CustomersApiError extends Error {
   constructor(message: string, public status: number, public errors: Record<string, string[]> = {}) {

@@ -8,8 +8,9 @@ export class AuthApiError extends Error {
   }
 }
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.DEV
+  ? ""
+  : (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 const getCookie = (name: string): string => {
   const value = document.cookie

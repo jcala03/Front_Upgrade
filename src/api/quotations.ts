@@ -1,7 +1,7 @@
 import type { Quotation, QuotationFilters, QuotationPaginator, QuotationPayload, QuotationStatus } from "../types/quotation";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 export class QuotationsApiError extends Error {
   constructor(message: string, public status: number, public errors: Record<string, string[]> = {}) { super(message); this.name = "QuotationsApiError"; }
 }

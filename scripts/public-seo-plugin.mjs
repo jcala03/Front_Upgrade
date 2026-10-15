@@ -4,6 +4,15 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { siteOrigin } from '../src/seo/model.ts';
 
+function isBackendRoute(pathname) {
+  return (
+    pathname === '/api' ||
+    pathname.startsWith('/api/') ||
+    pathname === '/sanctum' ||
+    pathname.startsWith('/sanctum/')
+  );
+}
+
 export function publicSeoPlugin(mode) {
   const env = loadEnv(mode, process.cwd(), '');
   const siteUrl = siteOrigin(
@@ -24,6 +33,11 @@ export function publicSeoPlugin(mode) {
           req.url || '/',
           'http://localhost'
         ).pathname;
+
+        // Las rutas del backend deben pasar al proxy de Vite.
+        if (isBackendRoute(pathname)) {
+          return next();
+        }
 
         if (
           pathname.startsWith('/@') ||
@@ -48,9 +62,6 @@ export function publicSeoPlugin(mode) {
             await readFile(resolve('index.html'), 'utf8')
           );
 
-          // Vite SSR does not emit imported component CSS in development.
-          // Home must be styled before the client module graph has finished loading.
-          // Production already includes the CSS emitted by the normal build.
           if ((pathname.replace(/\/+$/, '') || '/') === '/') {
             template = template.replace(
               '</head>',
@@ -80,11 +91,15 @@ export function publicSeoPlugin(mode) {
 
     configurePreviewServer(server) {
       server.middlewares.use(async (req, res, next) => {
+        const pathname = new URL(
+          req.url || '/',
+          'http://localhost'
+        ).pathname;
+
+        // No interpretar endpoints de Laravel como páginas SEO.
         if (
-          new URL(
-            req.url || '/',
-            'http://localhost'
-          ).pathname.startsWith('/assets/')
+          isBackendRoute(pathname) ||
+          pathname.startsWith('/assets/')
         ) {
           return next();
         }
