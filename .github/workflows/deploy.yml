@@ -21,18 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Audit API domain references
-        run: |
-          echo "=== Referencias al dominio antiguo ==="
-          git grep -n "crmupgradecol.com" -- src || true
-
-          echo "=== Variables VITE_API_BASE_URL ==="
-          git grep -n "VITE_API_BASE_URL" -- src vite.config.ts || true
-
-          echo "=== Archivos de entorno ==="
-          find . -maxdepth 2 -name '.env*' -print
-
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,49 +30,58 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-
-      - name: Check environment configuration
+      - name: Audit API configuration
         run: |
-          echo "=== Dominios configurados ==="
+          echo "=== Referencias antiguas en src ==="
+          if git grep -n "crmupgradecol.com" -- src; then
+            echo "ERROR: Referencias antiguas en el codigo."
+            exit 1
+          fi
+
+          echo "=== Variables de produccion ==="
           grep -nE '^(VITE_API_BASE_URL|PUBLIC_SITE_URL)=' .env.production || true
 
-          echo "=== Configuración de Vite ==="
-          grep -nE 'loadEnv|defineConfig|envDir|VITE_API_BASE_URL' vite.config.ts || true
-
-
-
-
-
       - name: Build production
-              
         env:
           VITE_API_BASE_URL: https://upgradecolombia.com
           PUBLIC_SITE_URL: https://upgradecolombia.com
         run: npm run build
-
-      - name: Verify compiled API configuration
-        run: |
-          echo "=== Referencias al dominio antiguo en el build ==="
-          if grep -Rl 'https://crmupgradecol.com' dist/assets --include='*.js'; then
-            echo "ERROR: El build todavía contiene el dominio antiguo."
-            exit 1
-          fi
-
-          echo "=== Referencias al dominio correcto ==="
-          grep -Rl 'https://upgradecolombia.com' dist/assets --include='*.js' | head -n 10
-
-          echo "=== Configuración verificada ==="
 
       - name: Verify build output
         run: |
           test -f dist/index.html
           test -d dist/assets
 
-      - name: Remove server-managed files from artifact
+          echo "=== Commit ==="
+          git rev-parse --short HEAD
+
+          echo "=== JavaScript principal ==="
+          grep -oE 'src="/assets/[^"]+"' dist/index.html
+
+          echo "=== Comprobacion de dominio ==="
+          if grep -Rl 'https://crmupgradecol.com' dist/assets --include='*.js'; then
+            echo "ERROR: El build contiene el dominio antiguo."
+            exit 1
+          fi
+
+          echo "=== Dominio correcto ==="
+          grep -Rl 'https://upgradecolombia.com' dist/assets --include='*.js' | head -n 10
+
+      - name: Prepare deployment package
         run: |
-          rm -f dist/.htaccess
-          rm -f dist/laravel-api.php
-          rm -f dist/laravel-api.php.bak
+          mkdir -p deploy-package
+          cp -a dist/. deploy-package/
+
+          # Archivos administrados directamente en Hostinger
+          rm -f deploy-package/.htaccess
+          rm -f deploy-package/laravel-api.php
+          rm -f deploy-package/laravel-api.php.bak
+
+          test -f deploy-package/index.html
+          test -d deploy-package/assets
+
+          echo "=== Archivo que se publicara ==="
+          grep -oE 'src="/assets/[^"]+"' deploy-package/index.html
 
       - name: Deploy to Hostinger
         uses: appleboy/scp-action@v0.1.7
@@ -93,8 +90,50 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
           port: 65002
-          source: "dist/*"
+          source: "deploy-package/*"
           target: "/home/${{ secrets.HOSTINGER_USERNAME }}/domains/upgradecolombia.com/public_html"
           strip_components: 1
           overwrite: true
           rm: false
+
+      - name: Verify deployment on Hostinger
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: 65002
+          script: |
+            set -e
+
+            FRONT="$HOME/domains/upgradecolombia.com/public_html"
+
+            echo "=== JavaScript publicado ==="
+            grep -oE 'src="/assets/[^"]+"' "$FRONT/index.html"
+
+            echo "=== Archivos de Laravel ==="
+            test -f "$FRONT/laravel-api.php"
+            test -f "$FRONT/.htaccess"
+
+            echo "=== Comprobar archivo principal ==="
+            JS=$(grep -oE 'src="/assets/[^"]+\.js"' "$FRONT/index.html" | head -n 1 | cut -d '"' -f 2)
+            test -n "$JS"
+            test -f "$FRONT$JS"
+
+            echo "=== Comprobar dominio antiguo ==="
+            if grep -q 'https://crmupgradecol.com' "$FRONT$JS"; then
+              echo "ERROR: El JavaScript activo contiene el dominio antiguo."
+              exit 1
+            fi
+
+            echo "=== Comprobar API y frontend ==="
+            API_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H 'Accept: application/json' https://upgradecolombia.com/api/auth/me)
+            FRONT_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' https://upgradecolombia.com/)
+
+            echo "API: $API_STATUS"
+            echo "Frontend: $FRONT_STATUS"
+
+            test "$API_STATUS" = "401"
+            test "$FRONT_STATUS" = "200"
+
+            echo "DEPLOY VALIDADO CORRECTAMENTE"
