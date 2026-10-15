@@ -32,8 +32,8 @@ jobs:
 
       - name: Build production
         env:
-          VITE_API_BASE_URL: https://crmupgradecol.com
-          PUBLIC_SITE_URL: https://upgradecolombia.com
+          VITE_API_BASE_URL=https://upgradecolombia.com
+          PUBLIC_SITE_URL=https://upgradecolombia.com
         run: npm run build
 
       - name: Verify build output
