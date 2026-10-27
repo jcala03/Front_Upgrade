@@ -1,5 +1,6 @@
 import { AUTH_USER_EVENT, getAuthUser } from "../utils/authStorage";
 import { API_BASE_URL } from "../api/apiConfig";
+import { recordPushClientOpen } from "./diagnostics";
 
 export const PWA_UPDATE_EVENT = "pwa:update-ready";
 export const PWA_READY_EVENT = "pwa:ready";
@@ -36,6 +37,7 @@ export function registerPwa() {
     value.addEventListener("updatefound", () => value.installing?.addEventListener("statechange", announce));
     const ready = await navigator.serviceWorker.ready;
     registration = ready;
+    recordPushClientOpen(ready.active);
     window.dispatchEvent(new Event(PWA_READY_EVENT));
     const user = getAuthUser();
     if (pendingOwner !== undefined) await setDeviceOwner(pendingOwner);

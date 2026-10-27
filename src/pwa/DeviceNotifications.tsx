@@ -4,6 +4,7 @@ import { deviceSubscriptions, pushConfig, removeSubscription, saveSubscription }
 import { getAuthUser } from "../utils/authStorage";
 import { applicationServerKey, deviceStatus, endpointHash, support } from "./device";
 import { currentRegistration, PWA_READY_EVENT, setDeviceOwner } from "./register";
+import { PushDiagnostics } from "./PushDiagnostics";
 import "./pwa.css";
 
 type InstallPrompt = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -110,5 +111,6 @@ export function DeviceNotifications() {
     </div>
     {!installPrompt && !["ios-install", "loading"].includes(status) && <p className="pwa-help">Puedes instalar Upgrade La 79 desde el menú de tu navegador, si la opción está disponible.</p>}
     {error && <p className="pwa-error" role="alert">{error} <button type="button" onClick={() => { setError(""); void refresh().catch(() => setError("No se pudo consultar el estado. Revisa tu conexión.")); }}>Reintentar</button></p>}
+    <PushDiagnostics />
   </section>;
 }

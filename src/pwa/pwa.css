@@ -13,4 +13,11 @@
 .pwa-banner { margin: 0 0 1rem; padding: 1rem; border: 1px solid #5474a0; border-radius: .75rem; background: #132035; color: #e5efff; font: inherit; line-height: 1.5; overflow-wrap: anywhere; }
 .pwa-banner button, .pwa-error button { cursor: pointer; border: 1px solid #7b9dd4; border-radius: .4rem; background: #1e4f9a; color: white; padding: .5rem .75rem; margin: .25rem; font: inherit; }
 .pwa-banner button:focus-visible, .pwa-device button:focus-visible { outline: 3px solid #81bcff; outline-offset: 3px; }
+.pwa-diagnostics { min-width: 0; margin-top: 1.25rem; border-top: 1px solid #334155; padding-top: 1rem; }
+.pwa-diagnostics summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.pwa-diagnostics summary:focus-visible { outline: 3px solid #81bcff; outline-offset: 3px; }
+.pwa-diagnostics-list { display: grid; gap: .75rem; min-width: 0; list-style: none; margin: 1rem 0 0; padding: 0; }
+.pwa-diagnostics-list li { display: grid; gap: .3rem; min-width: 0; border: 1px solid #334155; border-radius: .5rem; padding: .75rem; }
+.pwa-diagnostics-list time, .pwa-diagnostics-list small { color: #94a3b8; font-size: .8rem; }
+.pwa-diagnostics-list code, .pwa-diagnostics-list time, .pwa-diagnostics-list small { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 600px) { .pwa-actions { flex-direction: column; } .pwa-actions button { width: 100%; } }

@@ -35,6 +35,18 @@ const user = { id: 6, name: 'Usuario QA', email: 'qa@example.test', role: 'user'
 let devices = [];
 const results = [];
 
+async function diagnosticMessage(page, type) {
+  return page.evaluate(async (type) => {
+    const active = (await navigator.serviceWorker.ready).active;
+    return new Promise((resolve, reject) => {
+      const channel = new MessageChannel();
+      const timeout = setTimeout(() => { channel.port1.close(); reject(new Error('Diagnostic message timed out')); }, 3000);
+      channel.port1.onmessage = (event) => { clearTimeout(timeout); channel.port1.close(); resolve(event.data); };
+      active.postMessage({ type }, [channel.port2]);
+    });
+  }, type);
+}
+
 async function prepare(context, state = 'compatible') {
   await context.addInitScript(({ user, publicKey, state }) => {
     sessionStorage.setItem('upgrade79_crm_user', JSON.stringify(user));
@@ -124,6 +136,23 @@ try {
   results.push({ check: 'Perfil refresca suscripción al terminar registro PWA, sin foco ni nuevo permiso', result: 'PASS' });
   const worker = context.serviceWorkers().find((item) => item.url().endsWith('/sw.js'));
   assert.ok(worker);
+  const startup = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
+  assert.equal(startup.ok, true);
+  assert.ok(startup.records.some((record) => record.stage === 'client_open' && record.path === '/crm/profile'));
+  assert.equal(await worker.evaluate(() => getOwner()), user.id);
+  await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_CLEAR');
+  await page.evaluate(() => history.replaceState(null, '', '/crm/profile?token=SECRET_QA#SECRET_QA'));
+  await Promise.all(Array.from({ length: 42 }, () => diagnosticMessage(page, 'PUSH_DIAGNOSTIC_CLIENT_OPEN')));
+  const ring = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
+  assert.equal(ring.records.length, 30);
+  assert.equal(new Set(ring.records.map((record) => record.id)).size, 30);
+  assert.equal(ring.records[0].id - ring.records.at(-1).id, 29);
+  assert.ok(ring.records.every((record) => record.path === '/crm/profile' && record.stage === 'client_open'));
+  assert.ok(!JSON.stringify(ring).includes('SECRET_QA'));
+  await page.evaluate(() => history.replaceState(null, '', '/crm/profile'));
+  assert.equal(await worker.evaluate(() => getOwner()), user.id);
+  results.push({ check: 'Diagnóstico real: client_open, IndexedDB circular de 30 bajo concurrencia, IDs únicos y sin query/hash', result: 'PASS' });
+  await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_CLEAR');
   await worker.evaluate(() => {
     self.__qaNotifications = [];
     const show = self.registration.showNotification.bind(self.registration);
@@ -153,6 +182,12 @@ try {
     }
   }, { user_id: user.id, notification_id: 999, title: 'Tarea asignada', body: 'Prueba local', url: '/crm/notifications', unread_count: 3 });
   await page.waitForURL('**/crm/notifications');
+  const delivered = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
+  for (const stage of ['push_event_received', 'payload_parsed', 'owner_loaded', 'owner_match', 'show_notification_start', 'show_notification_resolved', 'clients_notified']) {
+    assert.ok(delivered.records.some((record) => record.stage === stage), stage);
+  }
+  assert.ok(delivered.records.some((record) => record.stage === 'show_notification_resolved' && record.notification_id === 999));
+  results.push({ check: 'SW real persiste todas las etapas del Push sin cambiar showNotification ni clic', result: 'PASS' });
   results.push({ check: 'SW real llama showNotification y navega con clic sintético (no clic OS)', result: 'PASS' });
   await page.close();
   await worker.evaluate(async (payload) => {
@@ -165,6 +200,32 @@ try {
   page = await context.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${origin}/crm/profile`);
+  await page.locator('.pwa-diagnostics summary').click();
+  await page.getByRole('button', { name: 'Actualizar diagnóstico', exact: true }).click();
+  await page.locator('.pwa-diagnostics-list').getByText('show_notification_resolved #1000', { exact: true }).waitFor();
+  const background = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
+  const resolved = background.records.find((record) => record.stage === 'show_notification_resolved' && record.notification_id === 1000);
+  const opened = background.records.find((record) => record.stage === 'client_open');
+  assert.ok(resolved && opened && resolved.timestamp <= opened.timestamp);
+  for (const width of [1440, 768, 430, 390, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  }
+  await page.screenshot({ path: '/tmp/upgrade79-push-diagnostics-360.png', fullPage: true });
+  const panel = await page.locator('.pwa-diagnostics').innerText();
+  assert.ok(!/fcm\.googleapis|p256dh|SECRET_QA|Mensaje CRM/.test(panel));
+  await page.reload();
+  await page.locator('.pwa-diagnostics summary').click();
+  await page.getByRole('button', { name: 'Actualizar diagnóstico', exact: true }).click();
+  await page.locator('.pwa-diagnostics-list').getByText('show_notification_resolved #1000', { exact: true }).waitFor();
+  const listedTimes = await page.locator('.pwa-diagnostics-list time').allTextContents();
+  assert.deepEqual(listedTimes, [...listedTimes].sort().reverse());
+  await page.getByRole('button', { name: 'Limpiar diagnóstico', exact: true }).click();
+  await page.getByText('Sin registros diagnósticos.', { exact: true }).waitFor();
+  assert.deepEqual((await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET')).records, []);
+  assert.equal(await worker.evaluate(() => getOwner()), user.id);
+  assert.equal(devices[0].is_active, true);
+  results.push({ check: 'Perfil real: lectura, orden reciente, persistencia tras cierre/refresh, limpieza independiente del owner y responsive 1440–360', result: 'PASS' });
   await page.getByRole('button', { name: 'Desactivar notificaciones en este dispositivo' }).click();
   await page.getByText('Notificaciones desactivadas.', { exact: true }).waitFor();
   assert.equal(devices[0].is_active, false);
