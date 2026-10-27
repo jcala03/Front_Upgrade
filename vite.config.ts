@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { publicSeoPlugin } from "./scripts/public-seo-plugin.mjs";
 import { publicDevProxy } from "./scripts/public-dev-proxy.mjs";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const { siteUrl, apiBase, plugin } = publicSeoPlugin(mode);
 
   // Authentication, CRM requests and SSR must use the same configured backend.
@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), plugin],
+
+    // Public files belong at the document root. A second .htaccess in seo/
+    // would override the generated root rules for templates and snapshots.
+    build: { copyPublicDir: !isSsrBuild },
 
     server: {
       proxy: {

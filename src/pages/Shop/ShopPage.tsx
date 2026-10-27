@@ -151,7 +151,7 @@ export const ShopPage = ({
   useEffect(() => {
     // Initial SSR has already fetched this exact query. Do not clear/refetch it
     // during hydration, and do not replace usable cards with a whole-page loader.
-    if (initialSignature.current === signature && productsRetry === 0) {
+    if (initialSignature.current === signature && productsRetry === 0 && !publicBootstrap()?.prerendered) {
       setProductsLoading(false);
       setProductsError(false);
       return;

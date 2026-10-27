@@ -9,7 +9,7 @@ import { renderRequest, buildOptions } from '../dist/seo/entry-server.js';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = resolve(dist, 'assets');
-const template = await readFile(resolve(dist, 'index.html'), 'utf8');
+const template = await readFile(resolve(dist, 'seo/template.html'), 'utf8');
 if (!template.includes('<!--seo-head-->') || !template.includes('<div id="root"></div>')) throw new Error('Template SEO inválido: reconstruye dist completo.');
 const options = buildOptions;
 if (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.replace(/\/$/, '') !== buildOptions.siteUrl) throw new Error('PUBLIC_SITE_URL difiere del build: reconstruye con el mismo dominio.');

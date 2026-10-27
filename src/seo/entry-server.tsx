@@ -22,6 +22,8 @@ import { createSeo, indexableProduct, safeJson, seoHead, siteOrigin, sitemapXml,
 type Options = { siteUrl: string; apiBase: string };
 type Response = { status: number; body: string; headers: Record<string, string> };
 export const buildOptions = { siteUrl: __PUBLIC_SITE_URL__, apiBase: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000" };
+// The static build uses the same metadata/serialization as runtime SSR.
+export { seoHead, safeJson } from "./model";
 
 async function publicApi(path: string, options: Options) {
   // Contrato público únicamente. Nunca reenviar cookies, auth, tokens o query del visitante.
@@ -36,7 +38,11 @@ export async function renderRequest(requestUrl: string, template: string, option
   const url = new URL(requestUrl, "http://localhost");
   const path = url.pathname.replace(/\/+$/, "") || "/";
   const headers: Record<string, string> = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff" };
-  if (path === "/robots.txt") return { status: 200, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" }, body: `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n` };
+  if (path === "/robots.txt") {
+    const privateRoutes = ["crm", "admin", "api", "sanctum", "login", "carrito", "checkout", "orden-confirmada"];
+    const publicResources = ["products", "product-categories", "product-brands", "vehicle-brands", "vehicle-models", "vehicle-versions", "vehicle-multimedia-systems"];
+    return { status: 200, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" }, body: `User-agent: *\nAllow: /\n${privateRoutes.map(route => `Disallow: /${route}`).join("\n")}\n${publicResources.map(route => `Allow: /api/${route}`).join("\n")}\nSitemap: ${origin}/sitemap.xml\n` };
+  }
   if (path === "/sitemap.xml") {
     try {
       const products = await publicApi("?in_stock=0", options);

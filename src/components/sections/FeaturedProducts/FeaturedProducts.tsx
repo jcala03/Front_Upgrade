@@ -169,7 +169,7 @@ export const FeaturedProducts = ({
     // The preview (including an explicit error/empty state) was resolved by SSR.
     // Do not replace it with a second load or duplicate its GET in StrictMode.
     // The error action remains an explicit, single-request retry.
-    if (retryCount === 0 && (initialProducts !== undefined || initialError)) return;
+    if (retryCount === 0 && (initialProducts !== undefined || initialError) && !publicBootstrap()?.prerendered) return;
     let isMounted = true;
 
     getProducts()

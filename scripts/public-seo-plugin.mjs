@@ -116,7 +116,7 @@ export function publicSeoPlugin(mode) {
 
           const result = await renderer.renderRequest(
             req.url || '/',
-            await readFile(resolve('dist/index.html'), 'utf8'),
+            await readFile(resolve('dist/seo/template.html'), 'utf8'),
             renderer.buildOptions
           );
 

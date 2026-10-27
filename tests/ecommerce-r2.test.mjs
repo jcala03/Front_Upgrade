@@ -8,6 +8,8 @@ import { allowedPublicProxyRequest } from "../scripts/public-dev-proxy.mjs";
 import ts from "typescript";
 const vite = await createServer({
   configFile: false,
+  // SSR assertions do not need a concurrent scan of the browser application.
+  optimizeDeps: { noDiscovery: true, include: [] },
   define: {
     __PUBLIC_SITE_URL__: JSON.stringify("https://upgradecolombia.com"),
   },

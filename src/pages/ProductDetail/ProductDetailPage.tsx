@@ -67,9 +67,10 @@ export const ProductDetailPage = ({
   }, []);
 
   useEffect(() => {
-    if (matchingInitial && retry === 0) return;
+    // Static HTML hydrates first; refresh its build-time price/stock afterwards.
+    if (matchingInitial && retry === 0 && !publicBootstrap()?.prerendered) return;
     const controller = new AbortController();
-    setStatus("loading");
+    if (!(matchingInitial && retry === 0 && publicBootstrap()?.prerendered)) setStatus("loading");
     setNotFound(false);
     getProductBySlug(slug, controller.signal, vehicleQuery)
       .then((data) => {

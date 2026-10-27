@@ -52,6 +52,18 @@ jobs:
           test -f dist/index.html
           test -d dist/assets
           test -f dist/seo/entry-server.js
+          test -f dist/seo/template.html
+          test -f dist/seo/apache.conf
+          test -f dist/seo/.htaccess
+          test -f dist/seo/routes.json
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          grep -q '<title>' dist/index.html
+          grep -q '<h1' dist/index.html
+          if grep -q '<!--seo-head-->' dist/index.html; then
+            echo "ERROR: Home sigue siendo un template SSR sin procesar."
+            exit 1
+          fi
           test -f dist/sw.js
           test -f dist/manifest.webmanifest
           test -f dist/offline.html
@@ -80,6 +92,7 @@ jobs:
         run: |
           mkdir -p deploy-package
           cp -a dist/. deploy-package/
+          cp scripts/install-seo-routing.php deploy-package/seo/install-seo-routing.php
 
           # Archivos administrados directamente en Hostinger
           rm -f deploy-package/.htaccess
@@ -92,6 +105,9 @@ jobs:
           test -f deploy-package/manifest.webmanifest
           test -f deploy-package/offline.html
           test -d deploy-package/icons
+          test -f deploy-package/robots.txt
+          test -f deploy-package/sitemap.xml
+          test -f deploy-package/seo/apache.conf
 
           echo "=== Archivo que se publicara ==="
           grep -oE 'src="/assets/[^"]+"' deploy-package/index.html
@@ -127,6 +143,10 @@ jobs:
             echo "=== Archivos de Laravel ==="
             test -f "$FRONT/laravel-api.php"
             test -f "$FRONT/.htaccess"
+            # Install only a managed block; preserve the existing API bridge,
+            # domain redirects and Hostinger settings. Keeps a private backup.
+            php "$FRONT/seo/install-seo-routing.php" "$FRONT"
+            test -f "$FRONT/seo/.htaccess"
             test -f "$FRONT/sw.js"
             test -f "$FRONT/manifest.webmanifest"
             test -f "$FRONT/offline.html"
@@ -164,5 +184,27 @@ jobs:
 
             test "$API_STATUS" = "401"
             test "$FRONT_STATUS" = "200"
+
+            echo "=== Comprobar SEO publico real ==="
+            curl --fail --silent --show-error -D /tmp/upgrade79-robots-headers \
+              https://upgradecolombia.com/robots.txt -o /tmp/upgrade79-robots
+            grep -qi '^content-type: text/plain' /tmp/upgrade79-robots-headers
+            grep -q '^Sitemap: https://upgradecolombia.com/sitemap.xml' /tmp/upgrade79-robots
+            curl --fail --silent --show-error -D /tmp/upgrade79-sitemap-headers \
+              https://upgradecolombia.com/sitemap.xml -o /tmp/upgrade79-sitemap
+            grep -qiE '^content-type: (application|text)/xml' /tmp/upgrade79-sitemap-headers
+            grep -q '<urlset' /tmp/upgrade79-sitemap
+            curl --fail --silent --show-error https://upgradecolombia.com/ -o /tmp/upgrade79-home
+            grep -q '<title>' /tmp/upgrade79-home
+            grep -q '<h1' /tmp/upgrade79-home
+            grep -q 'rel="canonical" href="https://upgradecolombia.com/"' /tmp/upgrade79-home
+            if grep -q '<!--seo-head-->' /tmp/upgrade79-home; then
+              echo "ERROR: Produccion sirve el shell sin prerender."
+              exit 1
+            fi
+            MISSING_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' https://upgradecolombia.com/__seo-deploy-missing__)
+            test "$MISSING_STATUS" = "404"
+            WWW_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' https://www.upgradecolombia.com/tienda)
+            test "$WWW_STATUS" = "301"
 
             echo "DEPLOY VALIDADO CORRECTAMENTE"

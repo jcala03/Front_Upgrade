@@ -6,7 +6,7 @@ export type Seo = {
   robots: string; image: string | null; type: "website" | "product";
   structuredData: Record<string, unknown>[];
 };
-export type PublicBootstrap = { path: string; query?: string; product?: Product; products?: Product[]; homeCatalogUnavailable?: boolean; seo: Seo };
+export type PublicBootstrap = { path: string; query?: string; product?: Product; products?: Product[]; homeCatalogUnavailable?: boolean; prerendered?: boolean; seo: Seo };
 
 export function siteOrigin(value: string) {
   const url = new URL(value);
@@ -116,6 +116,6 @@ export function seoHead(seo: Seo) {
 
 export function sitemapXml(products: Product[], siteUrl: string) {
   const origin = siteOrigin(siteUrl);
-  const paths = ["/", "/tienda", ...products.filter(indexableProduct).map(productPath)];
+  const paths = ["/", "/tienda", "/politica-de-datos", ...products.filter(indexableProduct).map(productPath)];
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...new Set(paths)].map(path => `<url><loc>${escapeHtml(origin + path)}</loc></url>`).join("")}</urlset>`;
 }

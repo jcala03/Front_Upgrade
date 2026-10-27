@@ -1,6 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Standalone/static install. Existing Hostinger bridge rules are preserved
+    # separately when the deploy installs the generated SEO managed block.
+    RewriteRule ^(?:api|sanctum)(?:/|$) laravel-api.php [END,QSA]
+
     RewriteRule ^index\.html$ - [L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
