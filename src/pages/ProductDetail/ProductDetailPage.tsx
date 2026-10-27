@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { getProductBySlug, ProductApiError } from "../../api/products";
+import { vehicleSelectionQuery } from "../Shop/shopFilters";
 import { useCart } from "../../context/CartContext";
 import type { Product, ProductVariant } from "../../types/product";
 import { publicBootstrap, updatePublicSeo } from "../../seo/client";
@@ -13,7 +14,7 @@ import {
 } from "./productPresentation";
 import "./ProductDetailPage.css";
 
-type ProductDetailPageProps = { slug: string; initialProduct?: Product };
+type ProductDetailPageProps = { slug: string; initialProduct?: Product; query?: string };
 const formatPrice = (value: number) =>
   new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -24,8 +25,11 @@ const formatPrice = (value: number) =>
 export const ProductDetailPage = ({
   slug,
   initialProduct = publicBootstrap()?.product,
+  query = publicBootstrap()?.query ?? (typeof location === "undefined" ? "" : location.search),
 }: ProductDetailPageProps) => {
   const { addItem, items, totalItems } = useCart();
+  const vehicleQuery = vehicleSelectionQuery(query);
+  const backToShop = "/tienda" + (vehicleQuery ? "?" + vehicleQuery : "");
   const matchingInitial =
     initialProduct?.slug === slug ? initialProduct : undefined;
   const [product, setProduct] = useState<Product | null>(
@@ -67,7 +71,7 @@ export const ProductDetailPage = ({
     const controller = new AbortController();
     setStatus("loading");
     setNotFound(false);
-    getProductBySlug(slug, controller.signal)
+    getProductBySlug(slug, controller.signal, vehicleQuery)
       .then((data) => {
         if (controller.signal.aborted) return;
         setProduct(data);
@@ -92,7 +96,7 @@ export const ProductDetailPage = ({
         );
       });
     return () => controller.abort();
-  }, [slug, retry]);
+  }, [slug, retry, vehicleQuery]);
 
   const variants = useMemo(
     () => product?.variants?.filter((v) => v.is_active && v.is_visible) ?? [],
@@ -172,7 +176,7 @@ export const ProductDetailPage = ({
   if (status === "loading")
     return (
       <main className="product-detail-page">
-        <a className="product-detail__back" href="/tienda">
+        <a className="product-detail__back" href={backToShop}>
           <ArrowLeft size={16} aria-hidden="true" />
           Volver a la tienda
         </a>
@@ -213,7 +217,7 @@ export const ProductDetailPage = ({
               Reintentar
             </button>
           ) : null}
-          <a href="/tienda">Volver a la tienda</a>
+          <a href={backToShop}>Volver a la tienda</a>
         </section>
       </main>
     );
@@ -226,7 +230,7 @@ export const ProductDetailPage = ({
       >
         <a href="/">Inicio</a>
         <span>/</span>
-        <a href="/tienda">Tienda</a>
+        <a href={backToShop}>Tienda</a>
         <span>/</span>
         <span>
           {product.product_category?.name ?? product.category ?? "Artículos"}
@@ -456,7 +460,7 @@ export const ProductDetailPage = ({
             muestran en checkout antes del pago. La instalación se coordina con
             el taller.
           </p>
-          <a href="/tienda">Continuar explorando</a>
+          <a href={backToShop}>Continuar explorando</a>
         </section>
       </section>
     </main>

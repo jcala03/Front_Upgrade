@@ -1,6 +1,7 @@
 import { Instagram, MessageCircle, Play } from "lucide-react";
 import { brand } from "../../../data/brand";
 import { navigation } from "../../../data/navigation";
+import innovativeOnlineIndustriesLogo from "../../../assets/logos/innovative-online-industries.jpeg";
 import { Marquee } from "../../ui/Marquee";
 import "./Footer.css";
 
@@ -51,9 +52,28 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
         </div>
       </div>
 
+      {["/", "/politica-de-datos", "/terminos-y-condiciones"].includes(pathname) ? (
+        <nav className="footer__legal container-wide" aria-label="Información legal">
+          <a href="/politica-de-datos">Política de Tratamiento de Datos</a>
+          <a href="/terminos-y-condiciones">Términos y Condiciones</a>
+        </nav>
+      ) : null}
       <div className="footer__bottom container-wide">
         <span>{brand.name}</span>
         <span>2026 · Automotive Upgrading</span>
+      </div>
+
+      <div className="footer__credit container-wide">
+        <img
+          className="footer__credit-logo"
+          src={innovativeOnlineIndustriesLogo}
+          alt=""
+          width={1080}
+          height={462}
+          loading="lazy"
+          decoding="async"
+        />
+        <span>Powered by Innovative Online Industries</span>
       </div>
     </footer>
   );

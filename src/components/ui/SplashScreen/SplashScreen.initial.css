@@ -1,0 +1,65 @@
+/* Shared by the first-paint SSR cover and the animated React splash. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-splash, 9999);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.splash__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #05070a;
+}
+
+.splash__logo-wrap {
+  position: relative;
+  z-index: 3;
+  width: clamp(390px, 42vw, 640px);
+  opacity: 0;
+  transform-origin: center;
+}
+
+.splash__logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.splash--initial {
+  display: none;
+}
+
+.splash--initial .splash__logo-wrap {
+  opacity: 1;
+}
+
+html[data-home-splash="pending"] .splash--initial {
+  display: grid;
+}
+
+html[data-home-splash="pending"] #root {
+  visibility: hidden;
+}
+
+html[data-home-splash="pending"] body {
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .splash__logo-wrap {
+    width: clamp(300px, 82vw, 470px);
+  }
+}
+
+@media (max-width: 390px) {
+  .splash__logo-wrap {
+    width: 88vw;
+  }
+}

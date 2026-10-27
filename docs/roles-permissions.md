@@ -75,4 +75,4 @@ Esta matriz describe capacidades de negocio, no direcciones técnicas. **YES** =
 - **Pagada ≠ Completada:** dinero y atención se gestionan por separado.
 - **Datos personales ≠ globales:** resumen operativo agregado no habilita el detalle comercial de otro colaborador.
 
-Los permisos propios y rechazos de acceso se verificaron en el baseline aprobado; esta fase documenta ese alcance, no afirma una prueba exhaustiva nueva de todas las combinaciones. Procedimientos: [manual de usuario](user-manual.md#roles).
+Los permisos propios y rechazos de acceso se verificaron en el baseline aprobado; esta revisión del 17 de octubre de 2026 autenticó únicamente el perfil Administrador y no repitió la matriz de Usuario/colaborador ni todas las combinaciones. Procedimientos: [manual de usuario](user-manual.md#roles) y [observaciones de producción](user-manual.md#produccion-observada).

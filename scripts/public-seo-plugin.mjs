@@ -13,6 +13,10 @@ function isBackendRoute(pathname) {
   );
 }
 
+function isPwaAsset(pathname) {
+  return ['/manifest.webmanifest', '/sw.js', '/offline.html'].includes(pathname) || /^\/icons\/[a-z0-9-]+\.png$/.test(pathname);
+}
+
 export function publicSeoPlugin(mode) {
   const env = loadEnv(mode, process.cwd(), '');
   const siteUrl = siteOrigin(
@@ -35,7 +39,8 @@ export function publicSeoPlugin(mode) {
         ).pathname;
 
         // Las rutas del backend deben pasar al proxy de Vite.
-        if (isBackendRoute(pathname)) {
+        if (isBackendRoute(pathname) || isPwaAsset(pathname)) {
+          if (pathname === '/sw.js') res.setHeader('Cache-Control', 'no-cache');
           return next();
         }
 
@@ -98,7 +103,7 @@ export function publicSeoPlugin(mode) {
 
         // No interpretar endpoints de Laravel como páginas SEO.
         if (
-          isBackendRoute(pathname) ||
+          isBackendRoute(pathname) || isPwaAsset(pathname) ||
           pathname.startsWith('/assets/')
         ) {
           return next();

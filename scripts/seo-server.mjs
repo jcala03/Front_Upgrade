@@ -14,12 +14,25 @@ if (!template.includes('<!--seo-head-->') || !template.includes('<div id="root">
 const options = buildOptions;
 if (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.replace(/\/$/, '') !== buildOptions.siteUrl) throw new Error('PUBLIC_SITE_URL difiere del build: reconstruye con el mismo dominio.');
 if (process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL.replace(/\/$/, '') !== buildOptions.apiBase.replace(/\/$/, '')) throw new Error('VITE_API_BASE_URL difiere del build: SSR y SPA deben consultar el mismo catálogo.');
-const mime = { '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.mp4': 'video/mp4', '.woff2': 'font/woff2' };
+const mime = { '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.mp4': 'video/mp4', '.woff2': 'font/woff2' };
 
 http.createServer(async (req, res) => {
   try {
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { Allow: 'GET, HEAD', 'X-Robots-Tag': 'noindex, nofollow' }); return res.end(); }
     const pathname = new URL(req.url, 'http://localhost').pathname;
+    // These root-scoped PWA files are static, not routes for the public SSR renderer.
+    const pwaFiles = {
+      '/manifest.webmanifest': 'application/manifest+json; charset=utf-8',
+      '/sw.js': 'text/javascript; charset=utf-8',
+      '/offline.html': 'text/html; charset=utf-8',
+      '/icons/pwa-192.png': 'image/png', '/icons/pwa-512.png': 'image/png',
+      '/icons/pwa-maskable-512.png': 'image/png', '/icons/apple-touch-icon.png': 'image/png',
+    };
+    if (Object.hasOwn(pwaFiles, pathname)) {
+      const bytes = await readFile(resolve(dist, '.' + pathname));
+      res.writeHead(200, { 'Content-Type': pwaFiles[pathname], 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Length': bytes.length, ...(pathname === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {}) });
+      return res.end(req.method === 'HEAD' ? undefined : bytes);
+    }
     if (pathname.startsWith('/assets/')) {
       let file;
       try { file = resolve(dist, '.' + decodeURIComponent(pathname)); } catch { res.writeHead(400); return res.end(); }

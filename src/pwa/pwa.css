@@ -1,0 +1,16 @@
+.pwa-device { margin-top: 1.25rem; min-width: 0; }
+.pwa-device p { line-height: 1.6; overflow-wrap: anywhere; }
+.pwa-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.pwa-actions button {
+  display: inline-flex; gap: .5rem; align-items: center; justify-content: center;
+  white-space: normal; min-height: 48px; border: 0; border-radius: .6rem;
+  padding: .75rem 1rem; background: #7dd3fc; color: #061425; cursor: pointer; font: inherit;
+}
+.pwa-actions button:hover:not(:disabled) { background: #bae6fd; }
+.pwa-actions button:disabled { opacity: .65; cursor: wait; }
+.pwa-help { font-size: .85rem; color: #94a3b8; }
+.pwa-error { color: #fda4af; }
+.pwa-banner { margin: 0 0 1rem; padding: 1rem; border: 1px solid #5474a0; border-radius: .75rem; background: #132035; color: #e5efff; font: inherit; line-height: 1.5; overflow-wrap: anywhere; }
+.pwa-banner button, .pwa-error button { cursor: pointer; border: 1px solid #7b9dd4; border-radius: .4rem; background: #1e4f9a; color: white; padding: .5rem .75rem; margin: .25rem; font: inherit; }
+.pwa-banner button:focus-visible, .pwa-device button:focus-visible { outline: 3px solid #81bcff; outline-offset: 3px; }
+@media (max-width: 600px) { .pwa-actions { flex-direction: column; } .pwa-actions button { width: 100%; } }

@@ -1,11 +1,37 @@
-import { useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import logo from "../../../assets/logos/upgrade79-logo-hq.png";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
+import { finishInitialSplash, handoffInitialSplash, hasInitialSplash } from "./firstPaint";
 import "./SplashScreen.css";
 
 gsap.registerPlugin(useGSAP);
+
+// Keep the lifecycle hook in this registered React component module. Fast Refresh
+// can then compare its nested Hook signature before preserving AppContent state.
+export const useSplash = ({ deferUntilMounted = false }: { deferUntilMounted?: boolean } = {}) => {
+  const [isSplashVisible, setIsSplashVisible] = useState(!deferUntilMounted);
+  const isComplete = useRef(false);
+
+  // The Hook is unconditional; only the work inside it depends on hydration.
+  useEffect(() => {
+    if (deferUntilMounted && !isComplete.current) {
+      setIsSplashVisible(true);
+    }
+  }, [deferUntilMounted]);
+
+  const completeSplash = useCallback(() => {
+    if (isComplete.current) {
+      return;
+    }
+
+    isComplete.current = true;
+    setIsSplashVisible(false);
+  }, []);
+
+  return { isSplashVisible, completeSplash };
+};
 
 type SplashScreenProps = {
   onComplete: () => void;
@@ -52,6 +78,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
       const finish = () => {
         if (!cancelled) {
+          finishInitialSplash();
           onComplete();
         }
       };
@@ -60,6 +87,12 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         if (cancelled) {
           return;
         }
+
+        // The SSR cover stays in place through hydration and image decoding.
+        // Prepare the real overlay before revealing #root in the same frame.
+        const continuingFirstPaint = hasInitialSplash();
+        gsap.set(logoElement, { opacity: continuingFirstPaint ? 1 : 0, x: 0, rotation: 0 });
+        handoffInitialSplash();
 
         if (reducedMotion) {
           gsap.set(".splash__effects", { display: "none" });
@@ -87,22 +120,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
         const exitDistance = () => {
           const logoWidth = logoElement.getBoundingClientRect().width;
-          const screenWidth = window.screen?.width ?? 0;
-          const screenHeight = window.screen?.height ?? 0;
-          const defensiveViewport = Math.max(
-            window.innerWidth,
-            screenWidth,
-            screenHeight,
-          );
-
-          return defensiveViewport * 1.75 + logoWidth + 140;
+          // The logo is centered: move its whole box just past the actual
+          // viewport, independent of monitor size or phone orientation.
+          return (splashElement.clientWidth + logoWidth) / 2 + 48;
         };
 
-        gsap.set(logoElement, {
-          opacity: 0,
-          x: 0,
-          rotation: 0,
-        });
         gsap.set(".splash__track-reveal", {
           attr: { width: 0 },
         });
@@ -125,6 +147,12 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             defaults: { overwrite: "auto" },
             onComplete: finish,
           })
+          // A brief rev, then logo, tire marks and streak launch together.
+          // The SSR cover has already handed off before time zero.
+          .addLabel("burnout", 0.24)
+          .addLabel("launch", 0.4)
+          .addLabel("reveal", 1.08)
+          .addLabel("complete", 1.5)
           .to(logoElement, {
             opacity: 1,
             duration: 0.22,
@@ -134,94 +162,94 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           x: -7,
           duration: 0.09,
           ease: "power2.inOut",
-        }, 0.6)
+        }, 0.18)
         .to(logoElement, {
           x: -5.5,
           rotation: 0.16,
           duration: 0.035,
           ease: "none",
-        }, 0.69)
+        }, 0.27)
         .to(logoElement, {
           x: -7.5,
           rotation: -0.12,
           duration: 0.035,
           ease: "none",
-        }, 0.725)
+        }, 0.305)
         .to(logoElement, {
           x: -6,
           rotation: 0,
           duration: 0.035,
           ease: "none",
-        }, 0.76)
+        }, 0.34)
         .to(".splash__streak", {
           opacity: 0.52,
           scaleX: 1,
           x: 0,
-          duration: 0.34,
-          ease: "power3.in",
-        }, 0.7)
+          duration: 0.64,
+          ease: "power1.in",
+        }, "launch")
         .to(".splash__track-reveal--upper", {
           attr: { width: 960 },
-          duration: 0.38,
-          ease: "power3.inOut",
-        }, 0.78)
+          duration: 0.64,
+          ease: "power1.in",
+        }, "launch")
         .to(".splash__track-reveal--lower", {
           attr: { width: 940 },
-          duration: 0.4,
-          ease: "power3.inOut",
-        }, 0.805)
+          duration: 0.64,
+          ease: "power1.in",
+        }, "launch")
         .to(".splash__smoke-form--one", {
-          opacity: 0.2,
+          opacity: 0.52,
           scale: 1,
           x: -22,
           y: -12,
-          duration: 0.34,
+          duration: 0.32,
           ease: "power2.out",
-        }, 0.8)
+        }, "burnout")
         .to(".splash__smoke-form--two", {
-          opacity: 0.14,
+          opacity: 0.4,
           scale: 1.08,
           x: -38,
           y: -22,
-          duration: 0.38,
+          duration: 0.36,
           ease: "power2.out",
-        }, 0.84)
+        }, "burnout+=0.06")
         .to(".splash__smoke-form--three", {
-          opacity: 0.11,
+          opacity: 0.3,
           scale: 1.12,
           x: -50,
           y: -8,
-          duration: 0.4,
+          duration: 0.38,
           ease: "power2.out",
-        }, 0.88)
+        }, "burnout+=0.12")
         .to(logoElement, {
           x: exitDistance,
-          duration: 0.46,
-          ease: "expo.in",
-        }, 0.76)
+          duration: 0.64,
+          ease: "power1.in",
+        }, "launch")
         .to(backdropElement, {
           opacity: 0,
-          duration: 0.4,
+          duration: 0.42,
           ease: "power2.out",
-        }, 1)
+        }, "reveal")
         .to(".splash__streak", {
           opacity: 0,
           scaleX: 1.12,
-          duration: 0.38,
+          duration: 0.28,
           ease: "power2.out",
-        }, 1.08)
+        }, "reveal")
         .to(".splash__tracks", {
           opacity: 0,
-          duration: 0.54,
+          duration: 0.42,
           ease: "power2.out",
-        }, 1.1)
+        }, "reveal")
         .to(".splash__smoke", {
           opacity: 0,
           x: -28,
-          duration: 0.5,
+          duration: 0.42,
           ease: "power2.out",
-        }, 1.12)
-          .set(splashElement, { pointerEvents: "none" }, 1.4);
+        }, "reveal")
+          .set(splashElement, { pointerEvents: "none" }, "complete");
       };
 
       const waitForImage = async () => {

@@ -1,0 +1,278 @@
+/* Personal goals only. Reuse CRM dashboard tokens; admin goals stay unchanged. */
+.goals-page.goals-page--my {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  color: #f8fafc;
+  overflow-x: visible;
+  overflow-wrap: anywhere;
+}
+
+.goals-page.goals-page--my .goals-page__header,
+.goals-page.goals-page--my .goals-page__filter-shell,
+.goals-page.goals-page--my .goals-page__table-wrap,
+.goals-page.goals-page--my .goal-card,
+.goals-page.goals-page--my .goals-state {
+  min-width: 0;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.goals-page.goals-page--my .goals-page__header,
+.goals-page.goals-page--my .goals-page__table-wrap,
+.goals-page.goals-page--my .goal-card {
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+}
+
+.goals-page.goals-page--my .goals-page__header > div,
+.goals-page.goals-page--my .goals-page__content,
+.goals-page.goals-page--my .goals-page__cards,
+.goals-page.goals-page--my .goal-card header > div,
+.goals-page.goals-page--my .goal-dialog header > div,
+.goals-page.goals-page--my .goal-detail__grid > div {
+  min-width: 0;
+}
+
+.goals-page.goals-page--my .goals-page__header span,
+.goals-page.goals-page--my .goals-page__filter-heading h3,
+.goals-page.goals-page--my .goal-dialog header span {
+  color: #7dd3fc;
+}
+
+.goals-page.goals-page--my .goals-page__header h2,
+.goals-page.goals-page--my .goal-card h3,
+.goals-page.goals-page--my .goals-state strong,
+.goals-page.goals-page--my .goal-dialog h2,
+.goals-page.goals-page--my .goal-detail dd {
+  color: #f8fafc;
+}
+
+.goals-page.goals-page--my .goals-page__header h2 {
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+}
+
+.goals-page.goals-page--my .goals-page__header p,
+.goals-page.goals-page--my .goal-card p,
+.goals-page.goals-page--my .goal-card dd,
+.goals-page.goals-page--my .goals-state,
+.goals-page.goals-page--my .goal-detail section p,
+.goals-page.goals-page--my label > span {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.goals-page.goals-page--my .goal-card header > div:first-child > span,
+.goals-page.goals-page--my .goal-card dt,
+.goals-page.goals-page--my .goal-detail dt,
+.goals-page.goals-page--my td small,
+.goals-page.goals-page--my .goal-progress small,
+.goals-page.goals-page--my .goal-detail section h3 {
+  color: #94a3b8;
+}
+
+.goals-page.goals-page--my button {
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transform: none;
+  box-shadow: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.goals-page.goals-page--my button svg { flex: none; }
+
+.goals-page.goals-page--my button.is-primary {
+  border-color: rgba(125, 211, 252, 0.25);
+  background: rgba(56, 189, 248, 0.08);
+  color: #e0f2fe;
+}
+
+.goals-page.goals-page--my button.is-success {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.1);
+  color: #bbf7d0;
+}
+
+.goals-page.goals-page--my button.is-danger {
+  border-color: rgba(239, 68, 68, 0.26);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fecaca;
+}
+
+.goals-page.goals-page--my button:hover:not(:disabled):not(.crm-dialog__backdrop) {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: rgba(56, 189, 248, 0.14);
+  transform: none;
+  box-shadow: none;
+}
+
+.goals-page.goals-page--my button.is-success:hover:not(:disabled) {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.goals-page.goals-page--my button.is-danger:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.goals-page.goals-page--my button:focus-visible,
+.goals-page.goals-page--my input:focus-visible,
+.goals-page.goals-page--my select:focus-visible,
+.goals-page.goals-page--my textarea:focus-visible {
+  outline: 3px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+.goals-page.goals-page--my input,
+.goals-page.goals-page--my select,
+.goals-page.goals-page--my textarea {
+  min-height: 44px;
+  max-width: 100%;
+  border-color: rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.4);
+  color: #f8fafc;
+  color-scheme: dark;
+}
+
+.goals-page.goals-page--my input:focus,
+.goals-page.goals-page--my select:focus,
+.goals-page.goals-page--my textarea:focus,
+.goals-page.goals-page--my .goals-page__search > div:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+.goals-page.goals-page--my .goals-page__search > div {
+  min-width: 0;
+  border-color: rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.4);
+}
+
+.goals-page.goals-page--my .goals-page__search svg { flex: none; color: #7dd3fc; }
+.goals-page.goals-page--my .goals-page__search input { flex: 1 1 0; background: transparent; }
+
+.goals-page.goals-page--my .goals-page__filters {
+  grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)) auto;
+}
+.goals-page.goals-page--my .goals-page__mobile-filter { display: none; }
+
+/* Prefer the existing card representation whenever the CRM content column is
+   too narrow for the table; no data/actions are removed or duplicated. */
+.goals-page.goals-page--my .goals-page__table-wrap { overflow-x: visible; }
+.goals-page.goals-page--my table { min-width: 0; table-layout: fixed; }
+.goals-page.goals-page--my th,
+.goals-page.goals-page--my td {
+  border-color: rgba(255, 255, 255, 0.07);
+  padding: 0.85rem;
+}
+.goals-page.goals-page--my th {
+  background: rgba(2, 6, 23, 0.4);
+  color: #94a3b8;
+}
+.goals-page.goals-page--my th:first-child { width: 25%; }
+.goals-page.goals-page--my th:nth-child(3) { width: 22%; }
+.goals-page.goals-page--my th:last-child { width: 24%; }
+
+.goals-page.goals-page--my .goal-card { align-content: start; }
+.goals-page.goals-page--my .goal-card header { flex-wrap: wrap; }
+/* The legacy "goal-card header span" rule otherwise overrides StatusBadge.
+   Restore the existing shared component's typography and semantic text colors. */
+.goals-page.goals-page--my .goal-card header .crm-status-badge {
+  display: inline-flex;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+.goals-page.goals-page--my .goal-card header .crm-status-badge--info { color: #bae6fd; }
+.goals-page.goals-page--my .goal-card header .crm-status-badge--success { color: #bbf7d0; }
+.goals-page.goals-page--my .goal-card header .crm-status-badge--warning { color: #fde68a; }
+.goals-page.goals-page--my .goal-card header .crm-status-badge--danger { color: #fecaca; }
+.goals-page.goals-page--my .goal-card header .crm-status-badge > span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.goals-page.goals-page--my .goal-progress > div:first-child {
+  flex-wrap: wrap;
+  color: #f8fafc;
+}
+.goals-page.goals-page--my .goal-progress > div:first-child > * { min-width: 0; max-width: 100%; }
+.goals-page.goals-page--my .goal-progress__bar { background: rgba(148, 163, 184, 0.14); }
+.goals-page.goals-page--my .goal-progress__bar span { background: var(--color-accent); }
+
+.goals-page.goals-page--my .goals-state { border-style: dashed; }
+.goals-page.goals-page--my .goal-feedback {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.1);
+  color: #bbf7d0;
+}
+.goals-page.goals-page--my .goal-feedback.is-error,
+.goals-page.goals-page--my .goal-form__error,
+.goals-page.goals-page--my .goals-state.is-error {
+  border-color: rgba(239, 68, 68, 0.26);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fecaca;
+}
+.goals-page.goals-page--my .goals-state.is-error strong { color: inherit; }
+.goals-page.goals-page--my .goal-form small,
+.goals-page.goals-page--my .goals-page__subtle-error { color: #fecaca; }
+
+.goals-page.goals-page--my .goal-dialog .crm-dialog__panel {
+  max-width: 100%;
+  min-width: 0;
+  color: #f8fafc;
+}
+.goals-page.goals-page--my .goal-dialog .crm-dialog__backdrop {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: rgba(2, 6, 13, 0.78);
+  transform: none;
+  box-shadow: none;
+}
+.goals-page.goals-page--my .goal-dialog header > button { flex: none; }
+.goals-page.goals-page--my .goal-form,
+.goals-page.goals-page--my .goal-confirm,
+.goals-page.goals-page--my .goal-detail { min-width: 0; }
+.goals-page.goals-page--my .goal-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.goals-page.goals-page--my .goal-form__note,
+.goals-page.goals-page--my .goal-form__summary,
+.goals-page.goals-page--my .goal-detail__grid {
+  border: 1px solid var(--color-border-soft);
+  background: rgba(2, 6, 23, 0.4);
+  color: #cbd5e1;
+}
+.goals-page.goals-page--my .goal-dialog footer {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border-soft);
+  background: #080d13;
+}
+
+@media (max-width: 1300px) {
+  .goals-page.goals-page--my .goals-page__table-wrap { display: none; }
+  .goals-page.goals-page--my .goals-page__cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .goals-page.goals-page--my .goals-page__filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .goals-page.goals-page--my .goals-page__cards { grid-template-columns: minmax(0, 1fr); }
+  .goals-page.goals-page--my .goals-page__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .goals-page.goals-page--my .goals-page__mobile-filter { display: inline-flex; }
+  .goals-page.goals-page--my .goals-page__filters.is-open,
+  .goals-page.goals-page--my .goal-form__grid { grid-template-columns: minmax(0, 1fr); }
+  .goals-page.goals-page--my .goal-progress > div:first-child { gap: 0.35rem; }
+}

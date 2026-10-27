@@ -1,5 +1,6 @@
 import type { AuthUser, LoginResponse, MeResponse } from "../types/auth";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
+import { currentRegistration, setDeviceOwner, updateAppBadge } from "../pwa/register";
 
 export class AuthApiError extends Error {
   constructor(message: string, public status: number, public errors: Record<string, string[]> = {}) {
@@ -96,16 +97,25 @@ export const getMe = async (): Promise<MeResponse> => {
 };
 
 export const logout = async (): Promise<void> => {
-  await getCsrfCookie();
-
-  await fetch(`${API_BASE_URL}/api/auth/logout`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...csrfHeaders(),
-    },
-    credentials: "include",
-  });
+  const registration = currentRegistration() ?? ("serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration("/").catch(() => undefined) : undefined);
+  const subscription = await registration?.pushManager?.getSubscription().catch(() => null);
+  await setDeviceOwner(null);
+  await updateAppBadge(0);
+  try {
+    await getCsrfCookie();
+    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...csrfHeaders(),
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ push_endpoint: subscription?.endpoint ?? null }),
+    });
+  } finally {
+    await subscription?.unsubscribe().catch(() => {});
+  }
 };
 
 const authenticatedPatch = async <T,>(path: string, payload: object): Promise<T> => {

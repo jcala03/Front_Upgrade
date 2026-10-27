@@ -144,6 +144,7 @@ export const Header = ({ pathname = "/" }: { pathname?: string }) => {
         </nav>
 
         <div className="site-header__actions">
+          {pathname === "/" ? <a className="site-header__login" href="/login">Iniciar sesión</a> : null}
           <a
             className="site-header__cart"
             href="/carrito"

@@ -5,6 +5,7 @@ import { createServer } from "vite";
 import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import { allowedPublicProxyRequest } from "../scripts/public-dev-proxy.mjs";
+import ts from "typescript";
 const vite = await createServer({
   configFile: false,
   define: {
@@ -246,12 +247,38 @@ test("CRM vuelve a siete días sin clipping; preserva mejora accesible independi
     new URL("../src/modules/calendar/CalendarPage.tsx", import.meta.url),
     "utf8"
   );
-  assert.match(source, /length: 7/);
-  assert.match(source, /WeekView days=\{days\}/);
+  // Inspect JSX/expressions rather than spaces or line breaks in the source.
+  const file = ts.createSourceFile("CalendarPage.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  assert.equal(file.parseDiagnostics.length, 0);
+  const descendants = (root) => {
+    const nodes = [];
+    const visit = (node) => { nodes.push(node); ts.forEachChild(node, visit); };
+    visit(root);
+    return nodes;
+  };
+  const nodes = descendants(file);
+  const days = nodes.find((node) => ts.isVariableDeclaration(node) && node.name.getText(file) === "days");
+  assert.ok(days, "El calendario conserva su colección days");
+  assert.ok(descendants(days).some((node) => ts.isCallExpression(node)
+    && node.expression.getText(file) === "Array.from"
+    && node.arguments[0] && ts.isObjectLiteralExpression(node.arguments[0])
+    && node.arguments[0].properties.some((property) => ts.isPropertyAssignment(property)
+      && property.name.getText(file) === "length"
+      && ts.isNumericLiteral(property.initializer) && property.initializer.text === "7")), "days contiene los siete días");
+  for (const component of ["WeekView", "AgendaView"]) {
+    const view = nodes.find((node) => (ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node))
+      && node.tagName.getText(file) === component);
+    assert.ok(view, `${component} sigue presente`);
+    assert.ok(view.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute)
+      && attribute.name.getText(file) === "days"
+      && attribute.initializer && ts.isJsxExpression(attribute.initializer)
+      && attribute.initializer.expression && ts.isIdentifier(attribute.initializer.expression)
+      && attribute.initializer.expression.text === "days"), `${component} recibe la colección days completa`);
+  }
   assert.ok(!source.includes("calendarTimeSlice"));
   assert.ok(!source.includes("CALENDAR_VISIBLE_DAYS"));
-  assert.ok(source.includes("title={"));
-  assert.ok(source.includes("AgendaView days={days}"));
+  assert.ok(nodes.some((node) => ts.isJsxAttribute(node) && node.name.getText(file) === "title"
+    && node.initializer && ts.isJsxExpression(node.initializer)), "Conserva el título accesible");
 });
 test("SSR filtra con query validada, conserva selección, CSS del primer frame y frontera de hidratación", async () => {
   const original = globalThis.fetch;

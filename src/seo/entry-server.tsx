@@ -7,12 +7,16 @@ import { Transformation } from "../components/sections/Transformation";
 import { FeaturedProducts } from "../components/sections/FeaturedProducts";
 import { Atelier } from "../components/sections/Atelier";
 import { Contact } from "../components/sections/Contact";
+import { LegalPage } from "../pages/Legal/LegalPage";
 import { ShopPage } from "../pages/Shop";
 import { ProductDetailPage } from "../pages/ProductDetail";
 import { PublicNotFound } from "../pages/PublicNotFound";
+import { SplashFirstPaint, splashLogo } from "../components/ui/SplashScreen/SplashFirstPaint";
+import splashInitialCss from "../components/ui/SplashScreen/SplashScreen.initial.css?raw";
+import { splashBootScript } from "../components/ui/SplashScreen/firstPaint";
 import logo from "../assets/logos/upgrade79-logo.png";
 import type { Product } from "../types/product";
-import { parseShopFilters, serializeShopFilters, shopApiQuery } from "../pages/Shop/shopFilters";
+import { parseShopFilters, serializeShopFilters, shopApiQuery, vehicleSelectionQuery } from "../pages/Shop/shopFilters";
 import { createSeo, indexableProduct, safeJson, seoHead, siteOrigin, sitemapXml, type PublicBootstrap } from "./model";
 
 type Options = { siteUrl: string; apiBase: string };
@@ -51,9 +55,9 @@ export async function renderRequest(requestUrl: string, template: string, option
       if (!Array.isArray(data)) throw new Error("Respuesta inválida");
       products = data;
     } else if (/^\/tienda\/[^/]+$/.test(path)) {
-      product = await publicApi(`/${encodeURIComponent(decodeURIComponent(path.slice(8)))}`, options) ?? undefined;
+      product = await publicApi(`/${encodeURIComponent(decodeURIComponent(path.slice(8)))}${vehicleSelectionQuery(url.search) ? "?" + vehicleSelectionQuery(url.search) : ""}`, options) ?? undefined;
       if (!product || !indexableProduct(product)) { product = undefined; status = 404; }
-    } else if (!privateRoute) status = 404;
+    } else if (!privateRoute && path !== "/politica-de-datos" && path !== "/terminos-y-condiciones") status = 404;
   } catch (error) {
     // Home remains useful without its catalog preview. Keep failures local to that
     // section; catalog-dependent routes retain their existing HTTP error handling.
@@ -63,11 +67,15 @@ export async function renderRequest(requestUrl: string, template: string, option
   const seo = createSeo(path, origin, { product, query: url.search, status, image: new URL(logo, origin).href });
   headers["X-Robots-Tag"] = seo.robots;
   if (status === 503) headers["Retry-After"] = "60";
-  const bootstrap: PublicBootstrap = { path, seo, ...(path === "/tienda" ? { query: serializeShopFilters(parseShopFilters(url.search)) } : {}), ...(product ? { product } : {}), ...(products ? { products } : {}), ...(homeCatalogUnavailable ? { homeCatalogUnavailable: true } : {}) };
-  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact /></main> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} />}</Layout> : null;
+  const bootstrap: PublicBootstrap = { path, seo, ...((path === "/tienda" || product) ? { query: serializeShopFilters(parseShopFilters(url.search)) } : {}), ...(product ? { product } : {}), ...(products ? { products } : {}), ...(homeCatalogUnavailable ? { homeCatalogUnavailable: true } : {}) };
+  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact /></main> : path === "/politica-de-datos" || path === "/terminos-y-condiciones" ? <LegalPage terms={path === "/terminos-y-condiciones"} /> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} query={url.search} />}</Layout> : null;
   const content = privateRoute ? <main><p>Área privada. Cargando aplicación…</p></main> :
     <CartProvider><Suspense fallback={null}>{publicPage}</Suspense></CartProvider>;
   // Mismos componentes y datos públicos para humanos y crawlers, sin detectar User-Agent.
-  const body = template.replace("<!--seo-head-->", seoHead(seo)).replace('<div id="root"></div>', `<div id="root" data-public-status="${status}">${renderToString(content)}</div>${privateRoute || status >= 400 ? "" : `<script id="public-bootstrap" type="application/json">${safeJson(bootstrap)}</script>`}`);
+  // The cover is outside the hydration root. The initial React tree still
+  // matches the SSR tree, while critical head CSS protects the very first paint.
+  const initialSplash = path === "/" && status < 400;
+  const splashHead = initialSplash ? `<style id="splash-first-paint">${splashInitialCss}</style><link rel="preload" as="image" href="${splashLogo}"><script>${splashBootScript}</script>` : "";
+  const body = template.replace("<!--seo-head-->", seoHead(seo) + splashHead).replace('<div id="root"></div>', `${initialSplash ? renderToString(<SplashFirstPaint />) : ""}<div id="root" data-public-status="${status}">${renderToString(content)}</div>${privateRoute || status >= 400 ? "" : `<script id="public-bootstrap" type="application/json">${safeJson(bootstrap)}</script>`}`);
   return { status, headers, body };
 }

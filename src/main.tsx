@@ -3,6 +3,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 import App from "./App";
 import { publicBootstrap } from "./seo/client";
 import "./index.css";
+import { registerPwa } from "./pwa/register";
 
 const root = document.getElementById("root");
 
@@ -24,3 +25,5 @@ if (publicBootstrap() && root.hasChildNodes()) {
   // Private routes retain client rendering and never hydrate session data.
   createRoot(root).render(application);
 }
+
+registerPwa();

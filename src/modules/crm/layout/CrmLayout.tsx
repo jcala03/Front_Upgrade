@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BadgeDollarSign,
   Bell,
@@ -30,6 +30,8 @@ import {
 import logo from "../../../assets/logos/upgrade79-logo.png";
 import { logout } from "../../../api/auth";
 import { getUnreadNotificationCount, NOTIFICATION_COUNT_EVENT } from "../../../api/notifications";
+import { PUSH_RECEIVED_EVENT, updateAppBadge } from "../../../pwa/register";
+import { PwaStatus } from "../../../pwa/PwaStatus";
 import { AUTH_USER_EVENT, clearAuthSession, getAuthUser, hasPermission } from "../../../utils/authStorage";
 import type { AuthUser } from "../../../types/auth";
 import "./CrmLayout.css";
@@ -246,6 +248,13 @@ const userItems: NavigationItem[] = [
     permission: "business_overview.view",
   },
   {
+    label: "Inventario / Existencias",
+    href: "/crm/me/inventory",
+    icon: Boxes,
+    matches: ["/crm/me/inventory"],
+    permission: "inventory.view_own",
+  },
+  {
     label: "Mis cotizaciones",
     href: "/crm/me/quotations",
     icon: FileText,
@@ -299,6 +308,26 @@ const normalizePathname = (pathname: string) => {
 
 const compactNavigationQuery = "(max-width: 1080px)";
 const navigationFocusableSelector = "a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])";
+const sidebarScrollStoragePrefix = "upgrade79_crm_sidebar_scroll";
+
+const sidebarScrollStorageKey = (user: AuthUser | null) => [sidebarScrollStoragePrefix, user?.id ?? "anonymous", user?.role ?? "unknown"].join(":");
+
+const readSidebarScroll = (user: AuthUser | null) => {
+  try {
+    const value = Number(window.sessionStorage.getItem(sidebarScrollStorageKey(user)));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const saveSidebarScroll = (user: AuthUser | null, scrollTop: number) => {
+  try {
+    window.sessionStorage.setItem(sidebarScrollStorageKey(user), String(Math.max(0, scrollTop)));
+  } catch {
+    // Scroll persistence is an enhancement; unavailable storage must not affect navigation.
+  }
+};
 
 const isNavigationItemActive = (
   pathname: string,
@@ -322,7 +351,34 @@ export const CrmLayout = ({
   const [navigationOpen, setNavigationOpen] = useState(false);
   const unreadRequestId = useRef(0);
   const navigationRef = useRef<HTMLElement>(null);
+  const navigationScrollRef = useRef<HTMLElement>(null);
   const navigationButtonRef = useRef<HTMLButtonElement>(null);
+
+  const persistSidebarScroll = useCallback(() => {
+    if (navigationScrollRef.current) saveSidebarScroll(user, navigationScrollRef.current.scrollTop);
+  }, [user]);
+
+  const setNavigationScroller = useCallback((node: HTMLElement | null) => {
+    navigationScrollRef.current = node;
+    if (!node) return;
+    const restore = () => { node.scrollTop = Math.min(readSidebarScroll(getAuthUser()), Math.max(0, node.scrollHeight - node.clientHeight)); };
+    // Ref assignment occurs during commit, before the next paint. The frame retry
+    // covers a nav whose dimensions settle after fonts or lazy content resolve.
+    restore();
+    window.requestAnimationFrame(restore);
+  }, []);
+
+  useEffect(() => () => { persistSidebarScroll(); }, [persistSidebarScroll]);
+
+  useEffect(() => {
+    window.addEventListener("pagehide", persistSidebarScroll);
+
+    return () => {
+      window.removeEventListener("pagehide", persistSidebarScroll);
+    };
+  }, [persistSidebarScroll]);
+
+  useEffect(() => { void updateAppBadge(unreadCount); }, [unreadCount]);
 
   useEffect(() => {
     const updateUser = (event: Event) => setUser((event as CustomEvent<AuthUser | null>).detail);
@@ -355,12 +411,14 @@ export const CrmLayout = ({
     const interval = window.setInterval(() => { void refresh(); }, 60_000);
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener(NOTIFICATION_COUNT_EVENT, handleCount);
+    window.addEventListener(PUSH_RECEIVED_EVENT, handleVisibility);
     return () => {
       active = false;
       unreadRequestId.current += 1;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener(NOTIFICATION_COUNT_EVENT, handleCount);
+      window.removeEventListener(PUSH_RECEIVED_EVENT, handleVisibility);
     };
   }, [canViewNotifications]);
 
@@ -428,7 +486,7 @@ export const CrmLayout = ({
         aria-current={isActive ? "page" : undefined}
         aria-label={item.label}
         title={item.label}
-        onClick={() => { if (isCompactNavigation) setNavigationOpen(false); }}
+        onClick={() => { persistSidebarScroll(); if (isCompactNavigation) setNavigationOpen(false); }}
       >
         <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
         <span>{item.label}</span>
@@ -450,7 +508,7 @@ export const CrmLayout = ({
       <button className={`crm-layout__nav-backdrop${navigationOpen ? " is-open" : ""}`} type="button" aria-label="Cerrar menú" tabIndex={-1} onClick={() => setNavigationOpen(false)} />
       <aside ref={navigationRef} id="crm-navigation" className={`crm-layout__sidebar${navigationOpen ? " is-open" : ""}`} aria-label="Navegación del CRM" aria-hidden={isCompactNavigation && !navigationOpen ? true : undefined} role={isCompactNavigation ? "dialog" : undefined} aria-modal={isCompactNavigation && navigationOpen ? true : undefined}>
         <div className="crm-layout__sidebar-header">
-          <a className="crm-layout__brand" href={isStandardUser ? "/crm/me" : "/crm"} onClick={() => { if (isCompactNavigation) setNavigationOpen(false); }}>
+          <a className="crm-layout__brand" href={isStandardUser ? "/crm/me" : "/crm"} onClick={() => { persistSidebarScroll(); if (isCompactNavigation) setNavigationOpen(false); }}>
             <img src={logo} alt="UP GRADE 79" />
 
             <span>CRM interno</span>
@@ -458,11 +516,11 @@ export const CrmLayout = ({
           <button className="crm-layout__nav-close" type="button" aria-label="Cerrar menú" onClick={() => setNavigationOpen(false)}><X size={20} aria-hidden="true" /></button>
         </div>
 
-        {isStandardUser ? <nav className="crm-layout__nav crm-layout__user-nav" aria-label="Mi espacio">
+        {isStandardUser ? <nav ref={setNavigationScroller} className="crm-layout__nav crm-layout__user-nav" aria-label="Mi espacio" onScroll={persistSidebarScroll}>
           <span className="crm-layout__nav-label">Mi espacio</span>
           {userItems.map(renderNavigationItem)}
         </nav> : <>
-          <div className="crm-layout__admin-nav">
+          <div ref={setNavigationScroller} className="crm-layout__admin-nav" onScroll={persistSidebarScroll}>
             <nav className="crm-layout__nav" aria-label="Operación">
               <span className="crm-layout__nav-label">Operación</span>
               {operationItems.map(renderNavigationItem)}
@@ -536,7 +594,7 @@ export const CrmLayout = ({
           </div>
         </header>
 
-        <main className="crm-layout__content">{children}</main>
+        <main className="crm-layout__content"><PwaStatus />{children}</main>
       </div>
     </div>
   );

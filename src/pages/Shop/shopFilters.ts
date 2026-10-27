@@ -10,6 +10,7 @@ export type ShopFilters = {
   vehicle_brand_id: string;
   vehicle_model_id: string;
   vehicle_version_id: string;
+  vehicle_multimedia_system_id: string;
   year: string;
   min_price: string;
   max_price: string;
@@ -25,6 +26,7 @@ export const defaultShopFilters = (): ShopFilters => ({
   vehicle_brand_id: "",
   vehicle_model_id: "",
   vehicle_version_id: "",
+  vehicle_multimedia_system_id: "",
   year: "",
   min_price: "",
   max_price: "",
@@ -39,6 +41,7 @@ const ids = [
   "vehicle_brand_id",
   "vehicle_model_id",
   "vehicle_version_id",
+  "vehicle_multimedia_system_id",
 ] as const;
 const textFields = [
   "search",
@@ -88,6 +91,7 @@ export function parseShopFilters(query: string): ShopFilters {
   if (!filters.vehicle_brand_id)
     filters.vehicle_model_id = filters.vehicle_version_id = "";
   if (!filters.vehicle_model_id) filters.vehicle_version_id = "";
+  if (!filters.vehicle_version_id) filters.vehicle_multimedia_system_id = "";
   return filters;
 }
 
@@ -133,4 +137,13 @@ export function shopUrl(filters: ShopFilters, currentSearch = ""): string {
   for (const [key, value] of new URLSearchParams(currentSearch))
     if (/^(utm_.+|gclid|fbclid|msclkid)$/.test(key)) params.append(key, value);
   return `/tienda${params.size ? `?${params}` : ""}`;
+}
+
+export function vehicleSelectionQuery(query: string): string {
+  const filters = parseShopFilters(query);
+  const params = new URLSearchParams();
+  for (const key of ["vehicle_brand_id", "vehicle_model_id", "vehicle_version_id", "vehicle_multimedia_system_id", "year"] as const) {
+    if (filters[key]) params.set(key, filters[key]);
+  }
+  return params.toString();
 }

@@ -16,3 +16,5 @@ dist/
 .vscode/
 .DS_Store
 Thumbs.db
+# Local browser tooling
+.playwright-mcp/

@@ -39,6 +39,7 @@ export type ProductCategory = {
   slug: string;
   description: string | null;
   is_active: boolean;
+  requires_oem_compatibility?: boolean;
   fields: ProductCategoryField[];
   created_at: string;
   updated_at: string;
@@ -48,5 +49,6 @@ export type ProductCategoryPayload = {
   name: string;
   description: string | null;
   is_active: boolean;
+  requires_oem_compatibility?: boolean;
   fields: ProductCategoryFieldPayload[];
 };

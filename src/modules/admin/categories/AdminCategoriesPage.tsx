@@ -30,6 +30,7 @@ type CategoryFormState = {
   name: string;
   description: string;
   is_active: boolean;
+  requires_oem_compatibility: boolean;
 };
 
 type CategoryFieldDraft = {
@@ -51,6 +52,7 @@ const emptyCategoryForm: CategoryFormState = {
   name: "",
   description: "",
   is_active: true,
+  requires_oem_compatibility: false,
 };
 
 const buildEmptyField = (sortOrder = 1): CategoryFieldDraft => ({
@@ -263,6 +265,7 @@ export const AdminCategoriesPage = ({
       name: category.name,
       description: category.description ?? "",
       is_active: category.is_active,
+      requires_oem_compatibility: Boolean(category.requires_oem_compatibility),
     });
     setFields(nextFields);
     setShouldFocusFirstField(false);
@@ -382,6 +385,7 @@ export const AdminCategoriesPage = ({
       name: categoryForm.name.trim(),
       description: categoryForm.description.trim() || null,
       is_active: categoryForm.is_active,
+      requires_oem_compatibility: categoryForm.requires_oem_compatibility,
       fields: cleanFields,
     };
   };
@@ -769,6 +773,11 @@ export const AdminCategoriesPage = ({
                     />
 
                     <span>Categoría activa</span>
+                  </label>
+                  <label className="category-form__check">
+                    <input type="checkbox" checked={categoryForm.requires_oem_compatibility}
+                      onChange={event => updateCategoryForm("requires_oem_compatibility", event.target.checked)} />
+                    <span>Requiere compatibilidad OEM por variante (marca, modelo, generación y sistema original)</span>
                   </label>
                 </div>
 

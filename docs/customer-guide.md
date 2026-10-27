@@ -1,18 +1,21 @@
 # Guía del cliente — Upgrade La 79
 
-FINAL-PRODUCT-01C · 1 de octubre de 2026. La compra es como invitado: no necesitas cuenta CRM. El dominio upgradecolombia.com está previsto, todavía no desplegado. Utiliza el enlace de tienda que te proporcione el negocio cuando esté disponible.
+Edición revisada el 17 de octubre de 2026. La compra es como invitado: no necesitas cuenta CRM. La tienda pública está disponible en https://upgradecolombia.com/tienda. Consulta el manual de usuario para las observaciones de catálogo y disponibilidad de producción fechadas; las condiciones comerciales pueden cambiar.
 
 ## Encontrar el artículo adecuado
 
 1. Desde Inicio, pulsa **Explorar artículos** o **Tienda**.
-2. Busca artículo/marca y filtra Categoría y Marca producto.
-3. Para tu automóvil, usa Marca vehículo → Modelo → Versión / generación → Año con los datos reales.
-4. **Solo productos con stock** está activo inicialmente; quitarlo permite explorar agotados publicados. **Solo destacados** limita a promocionados. **Limpiar** retira restricciones.
-5. Abre el artículo; revisa fotos/miniaturas, descripción, especificaciones, compatibilidad y contenido ofrecido.
-6. Si tiene versiones, elige **Versión**. Cada versión puede tener precio/SKU/disponibilidad diferentes; “Desde” no es el precio de todas.
-7. Selecciona cantidad y **Agregar al carrito**. Espera el aviso antes de repetir.
+2. Busca por nombre o término; elige **Categoría** y, si corresponde, **Marca del vehículo → Modelo**.
+3. La tienda actual no muestra filtros por marca de producto, generación, año ni sistema multimedia OEM. Confirma esos detalles en la ficha o con el equipo antes de pagar.
+4. En **Disponibilidad**, **Incluir productos agotados** amplía los resultados y **Sólo destacados** limita a productos promocionados. **Precio** permite indicar **Desde (COP)** y **Hasta (COP)**; **Ordenar** organiza los resultados.
+5. Usa **Limpiar filtros** para retirar restricciones.
+6. Abre el artículo; revisa fotos/miniaturas, descripción, especificaciones, compatibilidad y contenido ofrecido.
+7. Si tiene versiones, elige **Versión**. Cada versión puede tener precio/SKU/disponibilidad diferentes; “Desde” no es el precio de todas.
+8. Selecciona cantidad y **Agregar al carrito**. Espera el aviso antes de repetir.
 
 Si no estás seguro de compatibilidad, equipo original o instalación incluida, consulta al equipo antes de pagar. Un filtro ayuda a descubrir; no inventa garantía de montaje.
+
+En la inspección del 17 de octubre de 2026 la tienda mostró 0 productos; por ello no se pudo abrir una ficha ni completar un carrito real.
 
 ## Revisar carrito
 

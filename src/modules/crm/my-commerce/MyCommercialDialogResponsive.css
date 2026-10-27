@@ -1,0 +1,216 @@
+/* Opt-in layout shared by NEW quotations and sales. Other CRM dialogs stay intact. */
+:is(.my-quotation-create-dialog, .my-sales-dialog) .crm-dialog__panel {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  width: min(880px, 100%);
+  flex-direction: column;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: inherit;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > header,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer {
+  min-width: 0;
+  flex: none;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > header > div,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer > div {
+  min-width: 0;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > header > button {
+  flex: 0 0 44px;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog__body {
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+/* Fieldsets otherwise retain their UA min-inline-size: min-content. */
+:is(.my-quotation-create-dialog, .my-sales-dialog) fieldset {
+  width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) legend,
+:is(.my-quotation-create-dialog, .my-sales-dialog) label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) input:not([type="radio"]),
+:is(.my-quotation-create-dialog, .my-sales-dialog) select,
+:is(.my-quotation-create-dialog, .my-sales-dialog) textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-item-discovery,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-form-grid {
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-search,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-customer-discovery,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-customer-results {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-search input {
+  flex: 1 1 0;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-customer-results {
+  /* Keep complete rows inside the existing vertically scrollable pickers. */
+  grid-auto-rows: max-content;
+  align-content: start;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-search:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results > header {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results button {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results button > span {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 12rem;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results button b {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-lines {
+  min-width: 0;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-lines article {
+  grid-template-columns: minmax(0, 1fr) 90px 110px auto;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-choice {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-choice label {
+  flex: 1 1 10rem;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-choice input {
+  flex: 0 0 17px;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-customer-results > button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-selected-customer,
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-selected-customer > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-selected-customer > button {
+  flex: none;
+}
+
+:is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer strong {
+  overflow-wrap: normal;
+}
+
+@media (max-width: 900px) {
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-item-discovery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-lines article {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-lines article > div,
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-lines article > button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-form-grid,
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-choice {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > header,
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer {
+    padding: 14px;
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer > div {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-commerce-dialog > footer button {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results button {
+    /* In the shared mobile column layout, wrap would create a second column. */
+    flex-wrap: nowrap;
+  }
+
+  :is(.my-quotation-create-dialog, .my-sales-dialog) .my-product-results button > span {
+    width: 100%;
+    flex: 0 1 auto;
+  }
+}

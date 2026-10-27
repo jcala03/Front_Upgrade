@@ -51,6 +51,15 @@ jobs:
         run: |
           test -f dist/index.html
           test -d dist/assets
+          test -f dist/seo/entry-server.js
+          test -f dist/sw.js
+          test -f dist/manifest.webmanifest
+          test -f dist/offline.html
+          test -f dist/icons/pwa-192.png
+          test -f dist/icons/pwa-512.png
+          test -f dist/icons/pwa-maskable-512.png
+          test -f dist/icons/apple-touch-icon.png
+          node --check dist/sw.js
 
           echo "=== Commit ==="
           git rev-parse --short HEAD
@@ -79,6 +88,10 @@ jobs:
 
           test -f deploy-package/index.html
           test -d deploy-package/assets
+          test -f deploy-package/sw.js
+          test -f deploy-package/manifest.webmanifest
+          test -f deploy-package/offline.html
+          test -d deploy-package/icons
 
           echo "=== Archivo que se publicara ==="
           grep -oE 'src="/assets/[^"]+"' deploy-package/index.html
@@ -114,6 +127,22 @@ jobs:
             echo "=== Archivos de Laravel ==="
             test -f "$FRONT/laravel-api.php"
             test -f "$FRONT/.htaccess"
+            test -f "$FRONT/sw.js"
+            test -f "$FRONT/manifest.webmanifest"
+            test -f "$FRONT/offline.html"
+            test -f "$FRONT/icons/pwa-192.png"
+            test -f "$FRONT/icons/pwa-512.png"
+
+            echo "=== Comprobar Service Worker publico ==="
+            # Fail if a rewrite sends SW requests to the SPA or login page.
+            curl --fail --silent --show-error --dump-header /tmp/upgrade79-sw-headers \
+              https://upgradecolombia.com/sw.js -o /tmp/upgrade79-sw-body
+            grep -qiE '^content-type:.*(javascript|ecmascript)' /tmp/upgrade79-sw-headers
+            grep -q "addEventListener('push'" /tmp/upgrade79-sw-body
+            if grep -qiE '^cache-control:.*immutable' /tmp/upgrade79-sw-headers; then
+              echo "ERROR: /sw.js no debe tener cache inmutable."
+              exit 1
+            fi
 
             echo "=== Comprobar archivo principal ==="
             JS=$(grep -oE 'src="/assets/[^"]+\.js"' "$FRONT/index.html" | head -n 1 | cut -d '"' -f 2)

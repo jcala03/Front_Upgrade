@@ -59,6 +59,12 @@ export function createSeo(path: string, origin: string, options: { product?: Pro
       { "@context": schema, "@type": "Organization", "@id": `${site}/#organization`, name: brand.name, url: `${site}/`, ...(options.image ? { logo: options.image } : {}), telephone: brand.phone, sameAs: [brand.instagramUrl] },
       { "@context": schema, "@type": "WebSite", "@id": `${site}/#website`, name: brand.name, url: `${site}/`, inLanguage: "es-CO" },
     ];
+  } else if (path === "/politica-de-datos" || path === "/terminos-y-condiciones") {
+    const terms = path === "/terminos-y-condiciones";
+    base.title = (terms ? "Términos y Condiciones" : "Política de Tratamiento de Datos Personales") + " | " + brand.name;
+    base.description = terms ? "Información sobre las condiciones comerciales y el canal de contacto de Upgrade La 79." : "Conoce cómo Upgrade La 79 utiliza tus datos de contacto y cómo ejercer tus derechos.";
+    base.canonical = site + path;
+    if (terms) base.robots = "noindex, follow";
   } else if (path === "/tienda") {
     base.title = `Tienda de artículos automotrices | ${brand.name}`;
     base.description = "Encuentra artículos para tu vehículo. Filtra por categoría, marca y compatibilidad; consulta precios en COP y disponibilidad en nuestra red.";

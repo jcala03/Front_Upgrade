@@ -1,0 +1,109 @@
+/* Sales-only containment: allow tracks/text to shrink, never hide overflow. */
+.my-sales {
+  grid-template-columns: minmax(0, 1fr);
+  overflow-wrap: anywhere;
+}
+
+.my-sales > *,
+.my-sales .my-commerce-heading > div,
+.my-sales .my-commerce-grid article,
+.my-sales .my-commerce-grid article > header > div,
+.my-sales .my-commerce-grid dl > div {
+  min-width: 0;
+}
+
+.my-sales .my-commerce-grid article > header {
+  flex-wrap: wrap;
+}
+
+.my-sales .my-commerce-grid dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.my-sales .my-commerce-filters label {
+  min-width: 0;
+  flex: 1 1 150px;
+}
+
+.my-sales .my-commerce-filters .is-grow {
+  flex: 2 1 220px;
+}
+
+.my-sales .my-commerce-filters input,
+.my-sales .my-commerce-filters select,
+.my-sales .my-commerce-search {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.my-sales .my-commerce-search input {
+  flex: 1 1 0;
+}
+
+.my-sales .my-commerce-heading > button {
+  flex-shrink: 0;
+}
+
+.my-sales .my-commerce-pagination {
+  flex-wrap: wrap;
+}
+
+.my-sales .my-commerce-grid article > button,
+.my-sales .my-commerce-pagination button {
+  min-height: 44px;
+}
+
+.my-sales-detail-dialog .crm-dialog__panel {
+  width: min(760px, 100%);
+}
+
+.my-sales-payment-dialog .crm-dialog__panel {
+  width: min(720px, 100%);
+}
+
+.my-sales-dialog .my-detail-summary,
+.my-sales-dialog .my-detail-summary > div,
+.my-sales-dialog .my-detail-items,
+.my-sales-dialog .my-detail-items li > *,
+.my-sales-dialog .my-payments,
+.my-sales-dialog .my-payments li > * {
+  min-width: 0;
+}
+
+.my-sales-dialog .my-detail-items li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.my-sales-dialog .my-payments li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.my-sales-dialog .my-detail-items li > span,
+.my-sales-dialog .my-detail-items li > b,
+.my-sales-dialog .my-detail-summary strong,
+.my-sales-dialog .my-payments strong {
+  overflow-wrap: normal;
+}
+
+@media (max-width: 700px) {
+  .my-sales .my-commerce-heading,
+  .my-sales .my-commerce-filters,
+  .my-sales .my-commerce-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .my-sales-dialog .my-detail-items li {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-sales-dialog .my-detail-items li > div {
+    grid-column: 1 / -1;
+  }
+
+  .my-sales-dialog .my-payments li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}

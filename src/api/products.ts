@@ -234,8 +234,8 @@ export const getProducts = async (
   return result.data;
 };
 
-export const getProductBySlug = async (slug: string, signal?: AbortSignal): Promise<Product> => {
-  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/products/${encodeURIComponent(slug)}`, {
+export const getProductBySlug = async (slug: string, signal?: AbortSignal, vehicleQuery = ""): Promise<Product> => {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}/api/products/${encodeURIComponent(slug)}${vehicleQuery ? "?" + vehicleQuery : ""}`, {
     signal,
     method: "GET",
     headers: {

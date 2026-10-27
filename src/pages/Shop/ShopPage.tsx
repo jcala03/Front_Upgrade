@@ -30,6 +30,7 @@ import {
   shopApiFilters,
   shopUrl,
   type ShopFilters,
+  vehicleSelectionQuery,
 } from "./shopFilters";
 import "./ShopPage.css";
 
@@ -189,6 +190,7 @@ export const ShopPage = ({
   }, [drawerOpen]);
 
   const change = (patch: Partial<ShopFilters>) => {
+    if ("vehicle_brand_id" in patch || "vehicle_model_id" in patch || "vehicle_version_id" in patch) patch.vehicle_multimedia_system_id = "";
     const next = { ...filters, ...patch };
     setFilters(next);
     const url = shopUrl(next, location.search);
@@ -409,6 +411,17 @@ export const ShopPage = ({
                       </select>
                     </label>
                   ) : null}
+                  {filters.vehicle_version_id ? <label className="shop-filter-field">
+                    <span>Sistema multimedia OEM original</span>
+                    <select aria-label="Sistema multimedia OEM original" value={filters.vehicle_multimedia_system_id}
+                      onChange={event => change({ vehicle_multimedia_system_id: event.target.value })}>
+                      <option value="">Selecciona el sistema original de tu vehículo</option>
+                      {(versions.find(version => String(version.id) === filters.vehicle_version_id)?.multimedia_systems ?? [])
+                        .filter(system => system.is_active && String(system.vehicle_brand_id) === filters.vehicle_brand_id)
+                        .map(system => <option value={system.id} key={system.id}>{system.name}</option>)}
+                    </select>
+                    <small>El año o la generación no identifican por sí solos el sistema OEM.</small>
+                  </label> : null}
                   <label className="shop-filter-field">
                     <span>Año del vehículo</span>
                     <input
@@ -424,8 +437,10 @@ export const ShopPage = ({
                 </>
               ) : null}
               <p>
-                Incluye artículos universales y coincidencias de compatibilidad
-                publicadas. Verifica la instalación antes de comprar.
+                {filters.vehicle_multimedia_system_id || selectedCategory?.requires_oem_compatibility
+                  ? "Selecciona el sistema original: solo se consideran variantes con compatibilidad OEM exacta."
+                  : "Incluye artículos universales y coincidencias de compatibilidad publicadas."}
+                {" "}Verifica la instalación antes de comprar.
               </p>
             </fieldset>
           ) : null}
@@ -599,7 +614,7 @@ export const ShopPage = ({
                     <article className="shop-product-card" key={product.id}>
                       <a
                         className="shop-product-card__media"
-                        href={productPath(product)}
+                        href={productPath(product) + (vehicleSelectionQuery(serializeShopFilters(filters)) ? "?" + vehicleSelectionQuery(serializeShopFilters(filters)) : "")}
                         aria-label={`Ver ${product.name}`}
                       >
                         {image ? (
@@ -625,7 +640,7 @@ export const ShopPage = ({
                           ) : null}
                         </div>
                         <h2>
-                          <a href={productPath(product)}>{product.name}</a>
+                          <a href={productPath(product) + (vehicleSelectionQuery(serializeShopFilters(filters)) ? "?" + vehicleSelectionQuery(serializeShopFilters(filters)) : "")}>{product.name}</a>
                         </h2>
                         <p className="shop-product-card__compatibility">
                           {compatibility}
@@ -641,7 +656,7 @@ export const ShopPage = ({
                         </div>
                         <div className="shop-product-card__footer">
                           <strong>{price(product)}</strong>
-                          <a href={productPath(product)}>
+                          <a href={productPath(product) + (vehicleSelectionQuery(serializeShopFilters(filters)) ? "?" + vehicleSelectionQuery(serializeShopFilters(filters)) : "")}>
                             Ver producto{" "}
                             <ArrowUpRight size={15} aria-hidden="true" />
                           </a>

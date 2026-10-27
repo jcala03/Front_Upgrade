@@ -17,7 +17,7 @@ import "./Contact.css";
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S"] as const;
 const MAX_MONTH_OFFSET = 2;
 
-type FieldName = "name" | "phone" | "vehicle" | "date" | "time";
+type FieldName = "name" | "phone" | "vehicle" | "date" | "time" | "consent";
 type FormErrors = Partial<Record<FieldName, string>>;
 
 const atStartOfDay = (date: Date) =>
@@ -85,6 +85,7 @@ export const Contact = () => {
   const [phone, setPhone] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [reason, setReason] = useState("");
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasEntered, setHasEntered] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -177,6 +178,7 @@ export const Contact = () => {
 
   const validateForm = () => {
     const nextErrors: FormErrors = {};
+    if (!consent) nextErrors.consent = "Debes leer y aceptar la política para enviar tu solicitud.";
 
     if (!name.trim()) nextErrors.name = "Escribe tu nombre.";
     if (!phone.trim()) nextErrors.phone = "Escribe un teléfono de contacto.";
@@ -465,7 +467,34 @@ export const Contact = () => {
                 {vehicle.trim() ? <p>{vehicle.trim()}</p> : null}
               </div>
 
-              <button className="contact__submit" type="submit">
+              <p className="contact__privacy-note" id="contact-privacy-note">
+                Usaremos tus datos únicamente para responder tu solicitud y comunicarnos contigo sobre los productos o servicios de Upgrade La 79. No vendemos tus datos personales.
+              </p>
+              <div className="contact__consent">
+                <input
+                  id="contact-consent"
+                  type="checkbox"
+                  checked={consent}
+                  required
+                  aria-invalid={Boolean(errors.consent)}
+                  aria-describedby={"contact-privacy-note contact-consent-help" + (errors.consent ? " contact-consent-error" : "")}
+                  onChange={(event) => {
+                    setConsent(event.target.checked);
+                    clearError("consent");
+                  }}
+                />
+                <label htmlFor="contact-consent">
+                  He leído y acepto la <a href="/politica-de-datos" target="_blank" rel="noreferrer">Política de Tratamiento de Datos Personales</a>.
+                </label>
+              </div>
+              <a className="contact__policy-link" href="/politica-de-datos" target="_blank" rel="noreferrer">
+                Ver política de tratamiento de datos <span>(abre en otra pestaña)</span>
+              </a>
+              <p className="contact__privacy-note" id="contact-consent-help">
+                Para habilitar el envío, lee la política y marca la casilla.
+              </p>
+              {errors.consent ? <p className="contact__error" id="contact-consent-error" role="alert">{errors.consent}</p> : null}
+              <button className="contact__submit" type="submit" disabled={!consent}>
                 Solicitar visita por WhatsApp
                 <ArrowUpRight size={19} strokeWidth={1.8} aria-hidden="true" />
               </button>

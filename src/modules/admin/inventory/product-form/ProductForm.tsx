@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createProduct, ProductApiError, updateProduct } from "../../../../api/products";
 import { hasPermission } from "../../../../utils/authStorage";
 import type { ProductCategoryField } from "../../../../types/productCategory";
@@ -140,6 +140,14 @@ export const ProductForm = ({
     () => categories.find((category) => String(category.id) === form.category_id) ?? null,
     [categories, form.category_id]
   );
+  const requiresOem = Boolean(selectedCategory?.requires_oem_compatibility);
+  useEffect(() => {
+    if (!requiresOem) return;
+    setShowVariants(true);
+    setVariants(current => current.map(variant => ({
+      ...variant, use_general_compatibility: false, compatibility_type: "vehicle_specific",
+    })));
+  }, [requiresOem, variants.length]);
   const productFields = useMemo(
     () => selectedCategory?.fields.filter((field) => field.is_active && field.scope === "product") ?? [],
     [selectedCategory]
@@ -214,6 +222,7 @@ export const ProductForm = ({
     vehicleVersions.filter((version) => version.is_active && String(version.vehicle_model_id) === modelId);
   const systemsForCompatibility = (row: VariantCompatibilityDraft): VehicleMultimediaSystem[] => {
     const version = vehicleVersions.find((item) => String(item.id) === row.vehicle_version_id);
+    if (requiresOem) return (version?.multimedia_systems ?? []).filter(system => system.is_active && String(system.vehicle_brand_id) === row.vehicle_brand_id);
     if (version?.multimedia_systems?.length) {
       return version.multimedia_systems.filter((system) => system.is_active);
     }
@@ -256,6 +265,14 @@ export const ProductForm = ({
                 </select>
                 {version ? <small>Rango natural: {version.year_from}–{version.year_to ?? "Actual"}</small> : null}
               </label>
+              {advanced ? <label className="smart-product-form__field"><span>Sistema multimedia OEM {requiresOem ? "*" : ""}</span>
+                <select required={requiresOem} value={row.vehicle_multimedia_system_id} disabled={!row.vehicle_version_id}
+                  onChange={event => updateCompatibility(rows, setRows, index, "vehicle_multimedia_system_id", event.target.value)}>
+                  <option value="">{requiresOem ? "Seleccionar sistema original" : "No aplica"}</option>
+                  {systemsForCompatibility(row).map(system => <option value={system.id} key={system.id}>{system.name}</option>)}
+                </select>
+                {requiresOem && row.vehicle_version_id && !systemsForCompatibility(row).length ? <small>Configura los sistemas OEM de esta generación en Compatibilidad vehicular.</small> : null}
+              </label> : null}
             </div>
 
             {advanced ? (
@@ -272,7 +289,6 @@ export const ProductForm = ({
                   <div className="smart-product-form__advanced">
                     <label className="smart-product-form__field"><span>Desde</span><input type="number" min="1900" max="2100" value={row.year_from} placeholder={version ? String(version.year_from) : ""} onChange={(event) => updateCompatibility(rows, setRows, index, "year_from", event.target.value)} /></label>
                     <label className="smart-product-form__field"><span>Hasta</span><input type="number" min="1900" max="2100" value={row.year_to} placeholder={version?.year_to ? String(version.year_to) : "Actual"} onChange={(event) => updateCompatibility(rows, setRows, index, "year_to", event.target.value)} /></label>
-                    <label className="smart-product-form__field"><span>Sistema multimedia OEM</span><select value={row.vehicle_multimedia_system_id} disabled={!row.vehicle_brand_id} onChange={(event) => updateCompatibility(rows, setRows, index, "vehicle_multimedia_system_id", event.target.value)}><option value="">No aplica</option>{systemsForCompatibility(row).map((system) => <option value={system.id} key={system.id}>{system.name}</option>)}</select></label>
                     <label className="smart-product-form__field"><span>Nota técnica</span><input type="text" value={row.notes} onChange={(event) => updateCompatibility(rows, setRows, index, "notes", event.target.value)} /></label>
                   </div>
                 ) : null}
@@ -340,6 +356,7 @@ export const ProductForm = ({
 
   const validate = () => {
     const nextErrors: ProductFormErrors = {};
+    if (requiresOem && !variants.length) nextErrors.variants = "Esta categoría necesita variantes con compatibilidad OEM.";
     if (!form.name.trim()) nextErrors.name = "El nombre es obligatorio.";
     if (form.is_visible && (!images.length || images.filter((image) => image.primary).length !== 1)) nextErrors.gallery = "Para publicar necesitas al menos una imagen y exactamente una principal.";
     if (!form.category_id) nextErrors.category_id = "Selecciona una categoría.";
@@ -373,6 +390,10 @@ export const ProductForm = ({
         ? (form.compatibility_type || "universal")
         : variant.compatibility_type;
       const rows = variant.use_general_compatibility ? generalCompatibilities : variant.vehicle_compatibilities;
+      if (requiresOem && (variant.use_general_compatibility || effectiveType !== "vehicle_specific"
+        || !rows.length || rows.some(row => !row.vehicle_brand_id || !row.vehicle_model_id || !row.vehicle_version_id || !row.vehicle_multimedia_system_id))) {
+        nextErrors["variants." + index + ".compatibility"] = "Completa marca, modelo, generación y sistema OEM en cada fila de esta variante.";
+      }
       if (effectiveType === "vehicle_specific" && !rows.some((row) => row.vehicle_brand_id)) nextErrors[`variants.${index}.compatibility`] = "Agrega al menos una compatibilidad válida.";
       rows.forEach((row, rowIndex) => {
         if (row.year_from && row.year_to && Number(row.year_from) > Number(row.year_to)) nextErrors[`variants.${index}.compatibility.${rowIndex}`] = "El año inicial no puede superar el final.";
@@ -465,6 +486,8 @@ export const ProductForm = ({
           <div className="smart-product-form__choice-grid">
             {(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={form.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input data-error-key="compatibility" type="radio" name="product-compatibility" checked={form.compatibility_type === type} onChange={() => updateForm("compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Vehículos específicos"}</strong><small>{type === "universal" ? "No requiere selección vehicular." : "Define marcas, modelos o versiones."}</small></label>)}
           </div>
+          {requiresOem ? <p className="smart-product-form__hint">Esta categoría requiere marca, modelo, generación y sistema OEM en cada variante. La compatibilidad general es solo orientativa.</p> : null}
+          {errors.variants ? <p className="smart-product-form__section-error" role="alert">{errors.variants}</p> : null}
           {errors.compatibility ? <p className="smart-product-form__section-error">{errors.compatibility}</p> : null}
           {form.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(generalCompatibilities, setGeneralCompatibilities, "general", false) : <p className="smart-product-form__hint">Este artículo podrá utilizarse sin asociarlo a un vehículo concreto.</p>}
         </section>
@@ -511,7 +534,7 @@ export const ProductForm = ({
                   </div>
                   <div className="smart-product-form__subsection"><h4>Detalles de esta variante</h4><ProductDynamicFields fields={variantFields} values={variant.specs} errors={errors} errorPrefix={`variants.${index}.specs`} onChange={(field, value) => updateVariantSpec(index, field, value)} /></div>
                   <div className="smart-product-form__subsection"><h4>Precio</h4><PricingFields draft={variant} update={(key, value) => updateVariant(index, key, value)} preview={pricing} error={errors[`variants.${index}.pricing`]} /></div>
-                  <div className="smart-product-form__subsection"><label className="smart-product-form__check"><input type="checkbox" checked={variant.use_general_compatibility} onChange={(event) => updateVariant(index, "use_general_compatibility", event.target.checked)} /><span>Usar la compatibilidad general del producto</span></label>{variant.use_general_compatibility ? <p className="smart-product-form__hint">Usará {form.compatibility_type === "universal" ? "compatibilidad universal" : `${generalCompatibilities.filter((row) => row.vehicle_brand_id).length} compatibilidades del producto`}.</p> : <><div className="smart-product-form__choice-grid smart-product-form__choice-grid--small">{(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={variant.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input type="radio" name={`variant-compatibility-${index}`} checked={variant.compatibility_type === type} onChange={() => updateVariant(index, "compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Específica"}</strong></label>)}</div>{errors[`variants.${index}.compatibility`] ? <p className="smart-product-form__section-error">{errors[`variants.${index}.compatibility`]}</p> : null}{variant.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(variant.vehicle_compatibilities, variantRowsSetter, `variant-${index}`, true) : null}</>}</div>
+                  <div className="smart-product-form__subsection"><label className="smart-product-form__check"><input type="checkbox" disabled={requiresOem} checked={variant.use_general_compatibility} onChange={(event) => updateVariant(index, "use_general_compatibility", event.target.checked)} /><span>Usar la compatibilidad general del producto</span></label>{variant.use_general_compatibility ? <p className="smart-product-form__hint">Usará {form.compatibility_type === "universal" ? "compatibilidad universal" : `${generalCompatibilities.filter((row) => row.vehicle_brand_id).length} compatibilidades del producto`}.</p> : <><div className="smart-product-form__choice-grid smart-product-form__choice-grid--small">{(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={variant.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input type="radio" name={`variant-compatibility-${index}`} disabled={requiresOem && type === "universal"} checked={variant.compatibility_type === type} onChange={() => updateVariant(index, "compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Específica"}</strong></label>)}</div>{errors[`variants.${index}.compatibility`] ? <p className="smart-product-form__section-error">{errors[`variants.${index}.compatibility`]}</p> : null}{variant.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(variant.vehicle_compatibilities, variantRowsSetter, `variant-${index}`, true) : null}</>}</div>
                   <div className="smart-product-form__checks"><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_active} onChange={(event) => updateVariant(index, "is_active", event.target.checked)} /><span>Activa</span></label><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_visible} onChange={(event) => updateVariant(index, "is_visible", event.target.checked)} /><span>Visible</span></label></div>
                 </article>
               );

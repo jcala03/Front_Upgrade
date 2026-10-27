@@ -1,8 +1,10 @@
-# Manual de usuario — Upgrade La 79
+# MANUAL OPERATIVO DEL CRM — UPGRADE LA 79
 
-Versión: FINAL-PRODUCT-01C · 1 de octubre de 2026 · Idioma: español.
+Manual integral de operación y capacitación.
 
-Este manual describe la aplicación actual. El dominio previsto es upgradecolombia.com; todavía no está desplegado. Utiliza la dirección de acceso que te entregue el administrador. Los importes y nombres de ejemplo no establecen precios, comisiones, plazos ni políticas del negocio.
+Edición revisada el 17 de octubre de 2026 · Idioma: español.
+
+Este manual describe la operación actual de Upgrade La 79. La tienda pública y el CRM se inspeccionaron en https://upgradecolombia.com; el acceso administrativo está en https://upgradecolombia.com/login. Usa tu propia cuenta interna y no compartas credenciales. Las capturas marcadas como producción se tomaron el 17 de octubre de 2026 y muestran el estado de ese día; los catálogos, existencias e indicadores pueden cambiar. Los importes y nombres de ejemplo no establecen precios, comisiones, plazos ni políticas del negocio.
 
 ## Índice
 
@@ -48,6 +50,9 @@ Este manual describe la aplicación actual. El dominio previsto es upgradecolomb
 40. [Qué no hacer](#no-hacer)
 41. [Glosario](#glosario)
 42. [Cómo usar este manual y cobertura](#navegacion-manual)
+43. [Observaciones de producción y datos demo](#produccion-observada)
+44. [Casos de pantallas BMW, Mercedes-Benz y Audi](#casos-multimedia)
+45. [Ampliación del catálogo demo](#catalogo-demo-ampliado)
 
 <a id="introduccion"></a>
 
@@ -181,6 +186,10 @@ Una venta **Pagada + Confirmada** puede ser correcta: falta completar la atenci�
 
 **Problemas frecuentes:** comprueba sede y periodo antes de concluir que faltan ventas. Espera a que termine la actualización; ante error, reintenta la consulta, no recrees registros.
 
+![Dashboard del CRM en producción el 17 de octubre de 2026](manual-images/production/01-dashboard-produccion.png)
+
+**Captura de producción:** vista General; en el momento de la inspección los indicadores visibles estaban en cero. No interpretes una captura fechada como una garantía de los valores actuales.
+
 <a id="sedes"></a>
 
 ## 6. Sedes
@@ -277,6 +286,10 @@ Una venta **Pagada + Confirmada** puede ser correcta: falta completar la atenci�
 **Qué hacer después:** registra stock por sede/variante y verifica publicación. Un artículo publicado pero agotado no está disponible para agregar a compra.
 
 **Problemas frecuentes:** categoría inexistente/inactiva, SKU repetido, detalles obligatorios o compatibilidad incompleta: corrige el campo. Para publicar sin foto, agrega una imagen válida o desmarca **Visible en ecommerce** para conservarlo oculto. Un margen inválido debe corregirse, no confundirse con ganancia sobre costo.
+
+![Formulario de producto en producción con Pantallas Android seleccionada](manual-images/production/06-producto-pantallas-android-campos.png)
+
+**Captura de producción:** muestra el formulario sin guardar y la categoría real. En esta configuración, **ram** no aparece como obligatorio y **Almacenamiento** sí. No rellenes valores de demostración en un producto real.
 
 ### 7.2 Agregar, ordenar y conservar fotografías
 
@@ -441,6 +454,10 @@ En la lista, los botones **Publicado / Oculto** y **Destacado / Normal** cambian
 
 **Problemas frecuentes:** un modelo no aparece si no has elegido su marca; una generación depende del modelo. Si el rango OEM no corresponde a la generación, corrígelo. Para reactivar un registro desactivado, edita **Activo** y pulsa **Actualizar**; no crees otro con el mismo nombre.
 
+![Formulario de alta de sistema multimedia OEM en producción](manual-images/production/02-alta-sistema-oem-produccion.png)
+
+**Captura de producción:** el formulario solicita marca del vehículo y nombre del sistema; código interno y descripción son opcionales, y **Activo** viene seleccionado. El texto de ayuda muestra ejemplos de nombres, no confirma que estén creados ni que sean compatibles con un vehículo concreto.
+
 ### 8.2 Dónde se reutiliza esta información
 
 La **Marca del producto** identifica el artículo. Marca/modelo/generación/años/OEM describen compatibilidad. **Clientes → Vehículos** identifica el automóvil atendido. Ventas y cotizaciones utilizan esas selecciones y conservan los datos de su momento comercial. No cambies una generación compartida para corregir sólo la placa o el año de un cliente.
@@ -448,6 +465,10 @@ La **Marca del producto** identifica el artículo. Marca/modelo/generación/año
 <a id="categorias"></a>
 
 ## 9. Categorías de productos
+
+![Configuración real de categorías en producción](manual-images/production/04-categorias-produccion.png)
+
+**Captura de producción:** al momento de la revisión había una categoría activa, **Pantallas Android**, con los campos técnicos **ram** y **Almacenamiento**. La tabla y el formulario determinan cuáles son obligatorios; no supongas que una especificación es un filtro público.
 
 ### Crear y mantener una categoría
 
@@ -1884,7 +1905,7 @@ La siguiente secuencia es una recomendación de uso, no una nueva política del 
 
 ## 36. Compra pública, entrega, pago y confirmación
 
-El comprador utiliza la tienda como invitado. No necesita cuenta CRM. Filtrar, agregar al carrito y pagar requieren que el navegador tenga las funciones interactivas habilitadas. El dominio futuro no significa que el servicio ya esté publicado allí.
+El comprador utiliza la tienda como invitado. No necesita cuenta CRM. Filtrar, agregar al carrito y pagar requieren que el navegador tenga las funciones interactivas habilitadas. La disponibilidad de un producto depende de que exista y esté publicado; consulta también las observaciones fechadas de producción al final del manual.
 
 ### 36.1 Conocer el negocio y solicitar contacto
 
@@ -1925,22 +1946,25 @@ El comprador utiliza la tienda como invitado. No necesita cuenta CRM. Filtrar, a
 
 **Paso a paso:**
 
-1. Escribe producto/marca en **Buscar**.
-2. Filtra **Categoría**, **Marca producto** y, si corresponde, **Marca vehículo → Modelo → Versión / generación → Año**.
-3. Revisa **Solo productos con stock** y **Solo destacados**. El filtro de stock está activo inicialmente; quítalo para explorar publicados agotados.
-4. Ordena por Destacados primero, Más recientes, Menor precio, Mayor precio, Nombre A-Z o Mayor stock. Algunas categorías ofrecen características adicionales como filtros.
-5. Usa **Limpiar** o **Limpiar filtros** para retirar restricciones si no hay coincidencias.
-6. Abre una tarjeta. En el detalle, revisa título, galería, descripción, especificaciones y compatibilidad. Selecciona miniaturas para ver otras imágenes.
-7. Si hay versiones, selecciona **Versión** antes de agregar; revisa su precio, SKU y stock. “Desde” en una tarjeta no significa que todas las versiones cuesten lo mismo.
-8. Ajusta cantidad con los controles y pulsa **Agregar al carrito**. Espera el aviso; no repitas el clic suponiendo que no se agregó.
+1. Escribe nombre o término en **Buscar**.
+2. Elige **Categoría** y, si necesitas acotar por vehículo, selecciona **Marca del vehículo** y luego **Modelo**.
+3. En **Disponibilidad**, marca **Incluir productos agotados** para incluir productos sin unidades disponibles o **Sólo destacados** para limitar la búsqueda a productos promocionados.
+4. Abre **Precio** y, si hace falta, completa **Desde (COP)** y/o **Hasta (COP)**.
+5. En **Ordenar**, elige **Selección destacada**, **Más recientes**, **Menor precio**, **Mayor precio**, **Nombre A–Z** o **Disponibilidad**.
+6. Usa **Limpiar filtros** para retirar las condiciones si no hay coincidencias.
+7. Abre una tarjeta. En el detalle, revisa título, galería, descripción, especificaciones y compatibilidad. Selecciona miniaturas para ver otras imágenes.
+8. Si hay versiones, selecciona **Versión** antes de agregar; revisa su precio, SKU y stock. “Desde” en una tarjeta no significa que todas las versiones cuesten lo mismo.
+9. Ajusta cantidad con los controles y pulsa **Agregar al carrito**. Espera el aviso; no repitas el clic suponiendo que no se agregó.
 
 **Qué significa cada campo/control:**
 
 | Campo | Qué significa | Ejemplo |
 |---|---|---|
-| Buscar / Categoría / Marca producto | Artículo, familia y fabricante del artículo | Radio / Radios / marca del equipo |
-| Marca vehículo / Modelo / Versión / generación / Año | Compatibilidad vehicular registrada | Datos reales de tu automóvil |
-| Solo productos con stock / Solo destacados | Disponibilidad de red / promoción | Quitar destacados para ver todos |
+| Buscar / Categoría | Texto buscado y familia del producto | Nombre o término / Pantallas Android |
+| Marca del vehículo / Modelo | Compatibilidad vehicular disponible en los filtros actuales | BMW / una opción cargada para esa marca |
+| Incluir productos agotados / Sólo destacados | Amplía resultados agotados / restringe a promoción | Activa cada opción sólo si la necesitas |
+| Desde (COP) / Hasta (COP) | Rango mínimo y máximo de precio | Límites definidos por el comprador |
+| Ordenar | Criterio de presentación de resultados | Más recientes |
 | Versión | Variante concreta con precio/stock propios | Configuración que necesitas |
 | Cantidad | Unidades a agregar | 1 |
 | Miniaturas | Fotos del mismo artículo, no versiones distintas por sí solas | Vista lateral |
@@ -1950,6 +1974,14 @@ El comprador utiliza la tienda como invitado. No necesita cuenta CRM. Filtrar, a
 **Qué hacer después:** abre **Carrito** y revisa el resumen.
 
 **Problemas frecuentes:** sin versión no se puede agregar; versión agotada/cantidad excesiva requiere otra selección disponible. Un filtro de compatibilidad ayuda a explorar, pero no sustituye aclarar requisitos técnicos de montaje. No asumas instalación incluida si la ficha no lo dice.
+
+![Tienda pública en producción durante la inspección](manual-images/production/05-tienda-produccion-sin-productos.png)
+
+**Captura de producción:** el catálogo mostró cero productos. La tienda no presentó filtros por generación, año ni sistema multimedia OEM. No se pudo abrir una ficha real, añadir artículos al carrito ni continuar el checkout desde este catálogo vacío.
+
+![Filtro vehicular BMW en la tienda pública](manual-images/production/07-filtro-bmw-tienda-sin-resultados.png)
+
+**Captura de producción:** al seleccionar BMW, la lista de modelos ofreció **M3** y no devolvió coincidencias. El filtro actual no permite elegir Serie 3/F30 ni un sistema OEM.
 
 ### 36.3 Revisar carrito
 
@@ -2370,4 +2402,194 @@ Los pasos se contrastaron con los formularios, menús, etiquetas y reglas actual
 | Contenido de usuario | Sin credenciales, datos de clientes reales, instrucciones técnicas de despliegue ni reglas antiguas de imágenes/pago/vigencia |
 | Alcance de cambios | Únicamente los cinco documentos de usuario; producto y cambios previos preservados |
 
-No quedaron dudas de etiquetas o permisos que exigieran un nuevo recorrido de navegador. Se reutilizó evidencia existente y no se crearon productos, pagos, ventas, citas ni otros registros para escribir este manual. La siguiente fase de capacitación no está iniciada.
+El inventario de cobertura procede del baseline documentado; la revisión de producción del 17 de octubre fue selectiva y no equivale a repetir las 43 pantallas. No se probaron de nuevo todas las combinaciones de permisos, estados o formularios. La siguiente sección separa los hechos vistos en producción de la evidencia previa.
+
+<a id="produccion-observada"></a>
+
+## 43. Observaciones de producción y datos demo
+
+**Fecha de consulta:** 17 de octubre de 2026. **Perfil observado:** Administrador. **Alcance:** navegación y lectura; formularios abiertos y cancelados sin guardar. No se crearon, editaron ni eliminaron registros.
+
+### Estado que se veía ese día
+
+| Área | Observación directa |
+|---|---|
+| Dashboard | La vista General mostraba $0 en ventas de hoy, ventas del mes y por cobrar; stock crítico 0 bajo y 0 agotados. |
+| Marcas de artículos | En la inspección inicial: 0 registros. En la ampliación demo posterior del 17 de octubre se añadieron 12 marcas comerciales, identificadas como DEMO y sin artículos asociados; véase el capítulo 45. |
+| Categorías | 1 categoría activa: **Pantallas Android**. Sus campos técnicos eran **ram** y **Almacenamiento**; solo Almacenamiento aparecía obligatorio en Crear producto. La tabla indicaba que no había filtros ecommerce configurados para esa categoría. |
+| Catálogo vehicular | 1 marca activa: BMW; 1 modelo: M3; 1 generación: F80, asociada a M3 y con años 2014–2016. En esa fila el OEM aparecía “Sin definir”. |
+| Sistemas multimedia OEM | 0 registros. Abrir el formulario mostró Marca del vehículo (obligatoria), Nombre del sistema (obligatorio), Código interno, Descripción y Activo. Los ejemplos de ayuda no son registros existentes. |
+| Existencias | No había existencias que coincidieran con la consulta de todas las sedes. |
+| Tienda pública | 0 productos. Los filtros visibles eran búsqueda, categoría, marca del vehículo, modelo, incluir agotados, destacados, rango de precio y orden. Al elegir BMW, el modelo disponible era M3. No se vieron filtros por Serie 3/F30, generación, año ni sistema OEM. |
+| Roles | Solo se revisó con la cuenta Administrador disponible. La matriz Admin/Usuario y los espacios del colaborador del manual proceden del inventario funcional documentado previamente; no se volvió a autenticar como colaborador en esta consulta. |
+
+Las capturas fechadas están en [producción: Dashboard](manual-images/production/01-dashboard-produccion.png), [producto](manual-images/production/03-crear-producto-produccion.png), [campos de Pantallas Android](manual-images/production/06-producto-pantallas-android-campos.png), [categorías](manual-images/production/04-categorias-produccion.png), [alta OEM](manual-images/production/02-alta-sistema-oem-produccion.png), [tienda vacía](manual-images/production/05-tienda-produccion-sin-productos.png), [filtro BMW](manual-images/production/07-filtro-bmw-tienda-sin-resultados.png) y [marcas de artículos DEMO](manual-images/production/08-marcas-articulo-demo-produccion.png). Se tomaron sin credenciales ni datos de clientes.
+
+### Casos BMW, Mercedes-Benz y Audi
+
+Los casos didácticos que usan **Serie 3/F30**, **CIC/NBT/NBT EVO**, Mercedes-Benz o Audi no se han creado en el catálogo de producción. La existencia de una marca o un nombre de sistema en el texto de ayuda no demuestra que exista ni que sea compatible con una generación. Antes de publicar esos casos, el responsable técnico debe confirmar para cada vehículo la marca, modelo, generación, rango de años y unidad multimedia original; registrar solo la combinación comprobada y completar precios, variantes y cantidades aprobadas por el negocio.
+
+En la inspección inicial no se proporcionaron datos técnicos validados ni precios/cantidades para productos `GUIA-DEMO`, por lo que no se guardaron productos ni existencias. En la ampliación posterior se crearon 12 referencias de marca de artículo, sin productos vinculados, compatibilidades vehiculares nuevas ni movimientos; el detalle está en el capítulo 45. No uses valores del manual como precio, promesa de compatibilidad o inventario real.
+
+### Limitaciones comprobadas
+
+- No se pudo comprobar una ficha pública, una compra, el checkout, un pedido ni el pago con productos actuales porque la tienda devolvía 0 resultados.
+- No se pudo verificar en producción el filtro compuesto Marca → Modelo → Generación → Año → OEM: la tienda mostraba solo Marca del vehículo y Modelo.
+- El sistema permite abrir formularios de catálogo y productos, pero no se guardó ninguno durante esta revisión; los pasos de creación de este manual describen cómo operar el formulario, no la existencia de catálogos demo.
+- El recorrido de colaborador y los permisos individuales no se probaron en esta sesión.
+
+### Registro y limpieza de datos de guía
+
+| Tipo | Registros creados | Resultado |
+|---|---|---|
+| Marcas/modelos/generaciones/sistemas OEM vehiculares `GUIA-DEMO` | Ninguno | No crear hasta validar compatibilidades. |
+| Marcas de artículo `GUIA-DEMO` | 12 referencias: Xtrons, ATOTO, Pioneer, Kenwood, Alpine, Teyes, Mekede, Dasaita, Eonon, Carlinkit, Carpuride y Ottocast | Registros de catálogo marcados DEMO; no son prueba de surtido o distribución. |
+| Productos/variantes `GUIA-DEMO` | Ninguno | No crear hasta aprobar precio, imágenes, publicación y stock. |
+| Movimientos, cotizaciones, ventas, pagos, pedidos o transferencias demo | Ninguno | No se generaron operaciones. |
+
+**Limpieza:** no se ejecutó ninguna eliminación. Las 12 referencias de marca permanecen en producción; cualquier retirada futura debe ser individual, autorizada y respetar asociaciones e historial. Este manual no borra la base de datos ni recomienda eliminar registros históricos, movimientos, pagos u órdenes.
+
+<a id="casos-multimedia"></a>
+
+## 44. Casos de pantallas BMW, Mercedes-Benz y Audi
+
+Estos procedimientos muestran cómo preparar cada caso cuando el responsable técnico entregue la compatibilidad confirmada y el negocio apruebe sus datos comerciales. **No son una autorización para elegir sistemas por intuición.** No publiques un producto ni registres inventario hasta tener modelo, generación, años, sistema OEM, imágenes, precio y cantidades aprobados.
+
+<a id="preparar-catalogo-comun"></a>
+
+### 44.1 Preparar el catálogo común
+
+1. Abra **Catálogo → Marcas y vehículos → Compatibilidad vehicular**.
+2. En **Marcas de vehículos**, busque primero la marca. Si existe, reutilícela; si no existe, pulse **Nueva marca de vehículo**, complete **Nombre**, **Descripción** si aporta información y deje **Activo** según corresponda; pulse **Crear**.
+3. En **Modelos**, busque el nombre bajo su marca. Si falta, pulse **Nuevo modelo**, seleccione la **Marca del vehículo**, complete el **Nombre del modelo** y guarde con **Crear**.
+4. En **Generaciones y años**, busque el modelo y generación. Si falta, pulse **Nueva generación**, seleccione **Modelo**, escriba el **Código de generación** y complete **Año desde**, **Año hasta** y descripción solo con datos confirmados. Guarde con **Crear**.
+5. En **Sistemas multimedia**, compruebe si ya existe el sistema para esa marca. Si falta y fue validado, pulse **Nuevo sistema multimedia**; seleccione **Marca del vehículo**, complete **Nombre del sistema**, y opcionalmente **Código interno** y **Descripción**; deje **Activo** si corresponde y pulse **Crear**.
+6. Abra la generación con **Editar**, asocie únicamente los **Sistemas multimedia OEM** confirmados y complete **Desde / Hasta** cuando la aplicación lo solicite. Pulse **Actualizar**. Tener un sistema en el catálogo no significa que todas las generaciones de esa marca lo utilicen.
+7. Verifique que marca → modelo → generación → sistema aparezcan juntos en el detalle antes de asociarlos a productos.
+
+**No confunda:** la marca del vehículo es el fabricante del automóvil; **Marca del producto** identifica quién fabricó el artículo. **OEM** significa equipo original instalado por el fabricante del vehículo; no es el nombre de la pantalla Android que se vende.
+
+### 44.2 BMW
+
+**Lo encontrado el 17 de octubre de 2026:** BMW estaba activa; el catálogo tenía el modelo **M3** y la generación **F80 (2014–2016)**. La generación figuraba con **OEM: Sin definir**. No aparecían **Serie 3**, **F30**, ni sistemas multimedia en el selector. Por lo tanto, no reutilice M3/F80 para representar Serie 3/F30.
+
+Cuando el técnico confirme la aplicación para el vehículo exacto:
+
+1. Reutilice la marca BMW.
+2. Cree el modelo **Serie 3** sólo si se confirma que falta y ese nombre es el que debe manejar el catálogo del negocio.
+3. Cree la generación F30 con el rango de años entregado por el técnico, no con un rango genérico copiado de otro mercado.
+4. Cree y asocie únicamente el/los sistema(s) que el equipo confirme para esa generación y años. **CIC**, **NBT** y **NBT EVO** son nombres sugeridos en la solicitud del cliente, no opciones existentes ni una confirmación de compatibilidad en esta revisión.
+5. Cree el producto desde **Inventario → Crear producto**, elija **Pantallas Android**, complete nombre, SKU real del negocio, detalles técnicos confirmados, imágenes y las variantes efectivamente vendidas. En compatibilidad de variante, seleccione el vehículo y sistema OEM que corresponda; no escriba “NBT” solo en el nombre.
+6. Antes de publicar, valide la unidad original del vehículo y la pantalla/arnés requerido con el responsable de instalación. Para alta y stock, siga [Productos](#productos), [Variantes](#productos) e [Inventario](#inventario).
+
+### 44.3 Mercedes-Benz
+
+**Lo encontrado el 17 de octubre de 2026:** Mercedes-Benz no aparecía como marca de vehículo disponible en el formulario observado. No se encontraron modelos, generaciones ni sistemas OEM Mercedes-Benz en el catálogo inspeccionado.
+
+Cuando el negocio haya elegido un vehículo concreto, pida al técnico que identifique generación/código, años y unidad multimedia de fábrica. **COMAND**, **Audio 20** y **MBUX** son candidatos nombrados en la solicitud, no sistemas observados en el CRM ni confirmación de que pertenezcan al mismo modelo o rango. Después, use los pasos de [Preparar el catálogo común](#preparar-catalogo-comun) y cree el producto solo con la combinación validada.
+
+### 44.4 Audi
+
+**Lo encontrado el 17 de octubre de 2026:** Audi no aparecía como marca de vehículo disponible en el formulario observado. No se encontraron modelos, generaciones ni sistemas OEM Audi en el catálogo inspeccionado.
+
+Elija primero un modelo y generación concretos y solicite al técnico el sistema instalado de fábrica y sus años de aplicación. **MMI 2G**, **MMI 3G** y **MIB** son posibilidades mencionadas en la solicitud del cliente, no opciones existentes ni compatibilidades verificadas aquí. Cuando se apruebe la configuración, siga [Preparar el catálogo común](#preparar-catalogo-comun); no cree sistemas genéricos para toda la marca.
+
+### 44.5 Producto, variantes, publicación e inventario de demostración
+
+Una vez validados el catálogo y los datos del producto:
+
+1. Use un nombre inequívoco con prefijo `GUIA-DEMO-` y un SKU de demostración único aprobado por el negocio. No reutilice SKU reales ni ponga precios ficticios en una tienda pública.
+2. Complete los detalles de la categoría **Pantallas Android**: en la configuración observada, **ram** era opcional y **Almacenamiento** obligatorio. Ingrese exclusivamente las especificaciones del equipo que se va a demostrar.
+3. Agregue variantes solo cuando representen opciones reales distintas, por ejemplo diferentes configuraciones de memoria. Asigne a cada una su propio SKU y compatibilidad si cambia el equipo original admitido.
+4. Agregue imágenes reales del producto correcto; la ficha pública necesita imagen principal. No use una fotografía de otro modelo.
+5. Active **Visible en ecommerce** únicamente después de validar título, descripción, compatibilidad, precio y variantes. El filtro público actual no ofrece generación, año ni OEM, así que no prometa que un comprador podrá filtrar hasta ese nivel.
+6. Registre cantidades solo después de contar unidades físicas demo y obtener aprobación de precio/sede/cantidad. Use **Ajustar existencias** y un motivo que identifique la demostración; la ficha de producto no registra stock por sí sola.
+7. Antes de exponer productos de entrenamiento, el responsable del negocio debe decidir cómo evitar que se interpreten como una oferta comercial normal. Registre los IDs, nombres, SKUs, relaciones, precios, cantidades y sede en el anexo de datos demo.
+
+En la inspección actual estos pasos no se ejecutaron: faltan los datos técnicos y comerciales aprobados. Los registros demo siguen sin crear y la tienda permanece sin productos.
+
+<a id="catalogo-demo-ampliado"></a>
+
+## 45. Ampliación del catálogo demo
+
+### 45.1 Separar fabricante del vehículo y marca comercial del artículo
+
+La **marca de vehículo** organiza fabricante → modelo → generación → años → sistema multimedia original. La **marca de artículo** identifica quién comercializa o fabrica el equipo que se vende. Son catálogos distintos; por ejemplo, `Audi → A4 → B9 → MIB` sería una compatibilidad del automóvil, mientras que `Xtrons` sería la marca del producto. La existencia de una marca comercial no demuestra que un producto esté inventariado, que Upgrade sea distribuidor autorizado ni que una unidad sea compatible.
+
+### 45.2 Marcas comerciales de producto con evidencia pública
+
+Los sitios oficiales consultados muestran portafolios o líneas de automoción para las marcas siguientes. Esto permite documentar los nombres como candidatos de catálogo, pero **no demuestra disponibilidad, distribución autorizada ni existencias de Upgrade La 79**.
+
+![Doce marcas comerciales DEMO registradas en producción](manual-images/production/08-marcas-articulo-demo-produccion.png)
+
+El 17 de octubre de 2026 se registraron como referencias de capacitación **Xtrons, ATOTO, Pioneer, Kenwood, Alpine, Teyes, Mekede, Dasaita, Eonon, Carlinkit, Carpuride y Ottocast**. Cada registro lleva una descripción `DEMO capacitación` y un enlace a la fuente del portafolio automotriz; no se registraron productos, ventas, distribución autorizada ni inventario para esas marcas.
+
+| Marca de artículo | Línea automotriz mostrada por el sitio oficial |
+|---|---|
+| Xtrons | [Multimedia y accesorios](https://xtrons.com/) |
+| ATOTO | [Receptores Android, navegación y adaptadores](https://www.atotodirect.com/) |
+| Pioneer | [Audio, navegación y cámaras para automóvil](https://www.pioneer-car.eu/) |
+| Kenwood | [Audio y navegación para automóvil](https://www.kenwood.com/usa/car/) |
+| Alpine | [Productos para automóvil](https://www.alpine-usa.com/products) |
+| JVC | [Audio para automóvil](https://www.jvc.com/) |
+| Dynavin | [Multimedia, navegación y accesorios](https://www.dynavin.de/produkte/) |
+| Carpuride | [Pantallas multimedia para vehículos](https://carpuride.com/) |
+| Ottocast | [Adaptadores multimedia para automóvil](https://www.ottocast.com/) |
+| Carlinkit | [Productos CarPlay y TBox](https://www.carlinkit.com/) |
+| Teyes | [Receptores Android, GPS y conectividad](https://www.teyes.com.au/) |
+| Mekede | [Multimedia y conectividad automotriz](https://mekede.com/) |
+| Dasaita | [Estéreos Android y navegación](https://www.dasaita.com/) |
+| Eonon | [Estéreos Android y accesorios](https://www.eonon.com/) |
+
+**Pendientes de verificación oficial suficiente en esta revisión:** Sony, Navifly, Hikity, Joying y Ainavi. No agregue estas marcas al catálogo a partir de los nombres sugeridos solamente. Tampoco use marcas verificadas como nombres de categoría: son fabricantes, no tipos de producto.
+
+### 45.3 Categorías y tipos de producto
+
+La configuración de producción observada tenía una sola categoría, **Pantallas Android**, con los campos **ram** y **Almacenamiento**, sin filtros ecommerce. No se observaron artículos ni evidencia de que Upgrade comercialice todas las familias de esta tabla.
+
+| Tipo propuesto | Criterio antes de crear una categoría |
+|---|---|
+| Pantallas Android | Ya existe; reutilizarla y completar las especificaciones del artículo real. |
+| Interfaces o módulos CarPlay / Android Auto | Crear sólo si el negocio confirma que los vende como artículo separado de una pantalla. |
+| Cámaras de reversa, 360 o DVR | Separar sólo cuando se vendan como productos distintos y tengan SKU/especificaciones propios. |
+| Decodificadores CANBUS, marcos/fascias, cables/arneses | Crear si se venden e inventarían individualmente; identificar vehículos y restricciones con evidencia técnica. |
+| Antenas GPS, micrófonos, USB y adaptadores | Mantener como categoría o accesorios agrupados según cómo se compren, almacenen y filtren realmente. |
+
+No crear estas categorías únicamente para que el catálogo parezca más grande. Antes de una nueva categoría, el administrador debe confirmar surtido real, unidad de venta, campos técnicos obligatorios y si cada campo será filtro público. La configuración de categorías no sustituye la compatibilidad vehicular.
+
+### 45.4 Muestra multi-marca y control de evidencia
+
+Los modelos de cobertura pedidos —incluidos Serie 3/Serie 5/X3/X5; Clase C/Clase E/GLC/GLA; A3/A4/A6/Q3/Q5; Golf/Jetta/Tiguan/Passat; Corolla/Hilux/Prado/RAV4 y los ejemplos de Mazda, Ford, Chevrolet, Kia, Hyundai, Nissan, Honda, Renault, Peugeot, Citroën, Jeep, Volvo, Porsche y Lexus— son **objetivos de cobertura**, no registros validados. Antes de guardar cada fila, el responsable debe completar y archivar evidencia para cada relación:
+
+| Dato a comprobar | Evidencia mínima |
+|---|---|
+| Marca y modelo | Fuente del fabricante o manual de propietario para el mercado elegido. |
+| Código de generación/plataforma | Documento técnico oficial que vincule el código al modelo. |
+| Desde / Hasta | Años de fabricación para ese mercado y esa configuración; no extrapolar años de otro país. |
+| Sistema OEM | Manual, ficha o documento del fabricante que identifique el equipo multimedia de fábrica de esa versión. |
+| Compatibilidad de producto | Confirmación del proveedor/fabricante del artículo para ese vehículo, generación, OEM y arnés/CANBUS requeridos. |
+
+Registre el enlace, fecha de consulta, mercado y versión de la fuente en la descripción o documentación interna antes de crear la combinación. Una nota de compatibilidad basada sólo en una coincidencia de nombre no es evidencia.
+
+#### Ejemplos cortos para capacitación
+
+- **Volkswagen Tiguan → MIB → pantalla/interfaz:** usar sólo cuando la fuente identifique la generación, el mercado, los años y la versión MIB concreta; “Tiguan con MIB” sin esos datos no es una asociación suficiente.
+- **Toyota Corolla o RAV4 → sistema Toyota:** especificar el nombre y versión exacta del sistema por mercado y año; “Toyota Touch” no debe asignarse a todos los modelos.
+- **Mazda CX-5 → Mazda Connect:** confirmar la generación y el equipo instalado antes de asociar la familia multimedia.
+- **Ford Explorer → SYNC:** identificar versión concreta (por ejemplo, SYNC 3 sólo si la fuente y el vehículo lo confirman), años y pantalla/arnés.
+- **Kia Sportage o Hyundai Tucson → infotainment de fábrica:** no generalizar nombres Gen5/ccNC; comprobar modelo, mercado, año y equipo.
+- **Jeep Compass → Uconnect:** anotar generación/plataforma y variante de Uconnect; la marca del sistema por sí sola no prueba compatibilidad.
+
+Estos ejemplos enseñan la estructura, no autorizan altas: no se asigna aquí una generación, un intervalo de años ni un producto específico sin una fuente aplicable.
+
+### 45.5 Productos, precios, visibilidad e inventario demo
+
+La inspección inicial encontró el catálogo de marcas comerciales vacío y sólo la categoría Pantallas Android. Ahora contiene las 12 referencias DEMO anteriores; aún no hay artículos, fotos de producto, SKUs ni productos de inventario que puedan reutilizarse como demostración. Los precios estimados no son cotizaciones aprobadas y las cantidades ficticias no son existencias físicas.
+
+1. Use un prefijo identificable `GUIA-DEMO` en nombres, descripciones y SKUs para no confundir registros de capacitación con artículos comerciales.
+2. No marque como disponible una cantidad que no exista físicamente. Para capacitarse en ajustes multi-sede, use un entorno aislado de demo o una sesión guiada sin guardar; no falsee el saldo de BAQ/BOG en inventario operativo.
+3. No publique una ficha demo sin producto, precio, especificaciones, fotos y compatibilidad reales aprobados. Que el sitio aún no se haya inaugurado no impide que una URL pública sea accesible.
+4. Sólo después de contar unidades, confirmar precio y aprobar la exposición se puede activar ecommerce y crear entradas de inventario reales, identificando su sede, variante y motivo.
+5. No borre la base de datos ni ejecute eliminaciones masivas para retirar una demostración. Mantenga un registro de IDs y use el procedimiento administrativo aprobado, revisando dependencias e historial antes de retirar cada dato.
+
+**Alcance de esta ampliación:** documenta el esquema de cobertura y añadió sólo 12 marcas comerciales DEMO a producción. No se añadieron marcas/modelos/generaciones vehiculares ni sistemas OEM porque las fuentes oficiales accesibles no confirmaron una combinación completa modelo + generación + años + sistema; tampoco se crearon categorías, productos, precios, publicaciones o movimientos. Las marcas vehiculares, plataformas, años y sistemas OEM que no tengan evidencia aplicable se mantienen pendientes.

@@ -1,35 +1,4 @@
-.splash {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-splash);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  pointer-events: auto;
-  isolation: isolate;
-}
-
-.splash__backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: #05070a;
-}
-
-.splash__logo-wrap {
-  position: relative;
-  z-index: 3;
-  width: clamp(390px, 42vw, 640px);
-  opacity: 0;
-  transform-origin: center;
-}
-
-.splash__logo {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
+@import "./SplashScreen.initial.css";
 
 .splash__effects {
   position: absolute;
@@ -52,7 +21,9 @@
 
 .splash__track-stroke {
   fill: none;
-  stroke: rgba(3, 5, 7, 0.92);
+  /* Texture must remain legible on the opaque #05070a splash, not depend on
+     the landing becoming visible underneath it. */
+  stroke: rgba(71, 85, 105, 0.72);
   stroke-linecap: round;
   stroke-width: 19;
 }
@@ -63,7 +34,7 @@
 
 .splash__track-breaks {
   fill: none;
-  stroke: rgba(148, 163, 184, 0.16);
+  stroke: rgba(148, 163, 184, 0.28);
   stroke-dasharray: 4 12 18 9 3 20 28 13;
   stroke-linecap: butt;
   stroke-width: 7;
@@ -97,10 +68,6 @@
 }
 
 @media (max-width: 760px) {
-  .splash__logo-wrap {
-    width: clamp(300px, 82vw, 470px);
-  }
-
   .splash__tracks {
     width: 148%;
     height: 220px;
@@ -114,15 +81,11 @@
   }
 
   .splash__smoke {
-    left: 48%;
+    left: 50%;
     width: 390px;
     min-width: 0;
-  }
-}
-
-@media (max-width: 390px) {
-  .splash__logo-wrap {
-    width: 88vw;
+    /* Keep the plume inside narrow viewports and below the opaque lettering. */
+    transform: translate(-50%, -35%);
   }
 }
 

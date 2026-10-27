@@ -1,11 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { publicSeoPlugin } from "./scripts/public-seo-plugin.mjs";
+import { publicDevProxy } from "./scripts/public-dev-proxy.mjs";
 
 export default defineConfig(({ mode }) => {
-  const { siteUrl, plugin } = publicSeoPlugin(mode);
+  const { siteUrl, apiBase, plugin } = publicSeoPlugin(mode);
 
-  const backendUrl = "https://crmupgradecol.com";
+  // Authentication, CRM requests and SSR must use the same configured backend.
+  const backendUrl = apiBase;
   const frontendUrl = "http://127.0.0.1:5173";
 
   const proxyConfig = {
@@ -27,6 +29,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       proxy: {
+        ...publicDevProxy(apiBase),
         "/api": proxyConfig,
         "/sanctum": proxyConfig,
       },

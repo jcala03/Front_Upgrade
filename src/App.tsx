@@ -1,6 +1,8 @@
 import { Layout } from "./components/layout/Layout";
+import { MyInventoryPage } from "./modules/crm/my-commerce/MyInventoryPage";
 import { Atelier } from "./components/sections/Atelier";
 import { Contact } from "./components/sections/Contact";
+import { LegalPage } from "./pages/Legal/LegalPage";
 import { FeaturedProducts } from "./components/sections/FeaturedProducts";
 import { Hero } from "./components/sections/Hero";
 import { Transformation } from "./components/sections/Transformation";
@@ -271,7 +273,7 @@ const PrivatePage = ({ children, title, description, permission, adminOnly = fal
 };
 
 const AppContent = () => {
-  const { isSplashVisible, completeSplash } = useSplash();
+  const { isSplashVisible, completeSplash } = useSplash({ deferUntilMounted: Boolean(publicBootstrap()) });
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
 
   useEffect(() => {
@@ -334,6 +336,8 @@ const AppContent = () => {
       document.title = "Mis metas | Upgrade La 79";
     } else if (matchesCrmRoute(pathname, myBusinessOverviewRoute)) {
       document.title = "Resumen del negocio | Upgrade La 79";
+    } else if (pathname === "/crm/me/inventory") {
+      document.title = "Inventario / Existencias | Upgrade La 79";
     } else if (matchesCrmRoute(pathname, myQuotationsRoute)) {
       document.title = "Mis cotizaciones | Upgrade La 79";
     } else if (matchesCrmRoute(pathname, mySalesRoute)) {
@@ -413,6 +417,9 @@ const AppContent = () => {
     );
   }
 
+  if (pathname === "/crm/me/inventory") {
+    return <PrivatePage title="Inventario / Existencias" permission="inventory.view_own"><MyInventoryPage /></PrivatePage>;
+  }
   if (pathname === "/crm/inventory" || pathname === "/admin/inventory") {
     return (
       <PrivatePage
@@ -722,11 +729,14 @@ const AppContent = () => {
     );
   }
 
+  if (pathname === "/politica-de-datos" || pathname === "/terminos-y-condiciones") {
+    return <Layout><LegalPage terms={pathname === "/terminos-y-condiciones"} /></Layout>;
+  }
   if (pathname !== "/") return <Layout><PublicNotFound /></Layout>;
 
   return (
     <>
-      {isSplashVisible && !publicBootstrap() ? <SplashScreen onComplete={completeSplash} /> : null}
+      {isSplashVisible ? <SplashScreen onComplete={completeSplash} /> : null}
 
       <Layout>
         <main>

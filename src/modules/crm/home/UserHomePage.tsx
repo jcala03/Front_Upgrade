@@ -100,6 +100,7 @@ const CardEmpty = ({ children }: { children: ReactNode }) => <p className="user-
 export const UserHomePage = () => {
   const user = getAuthUser();
   const employee = user?.employee ?? null;
+  const canViewInventory = hasPermission("inventory.view_own");
   const canViewQuotations = hasPermission("quotations.view_own");
   const canViewSales = hasPermission("orders.view_own");
   const canViewCommissions = hasPermission("commissions.view_own");
@@ -188,11 +189,12 @@ export const UserHomePage = () => {
     ? Math.min(100, Math.max(0, numeric(goal.data.progress_percentage)))
     : 0;
   const quickActions = useMemo(() => [
+    ...(canViewInventory ? [{ href: "/crm/me/inventory", label: "Consultar inventario", icon: <ShoppingBag size={19} aria-hidden="true" /> }] : []),
     { href: "/crm/me/calendar", label: "Ver calendario", icon: <CalendarDays size={19} aria-hidden="true" /> },
     { href: "/crm/me/tasks", label: "Ver tareas", icon: <ListTodo size={19} aria-hidden="true" /> },
     ...(canViewQuotations ? [{ href: "/crm/me/quotations", label: "Mis cotizaciones", icon: <FileText size={19} aria-hidden="true" /> }] : []),
     ...(canViewSales ? [{ href: "/crm/me/sales", label: "Mis ventas", icon: <ShoppingBag size={19} aria-hidden="true" /> }] : []),
-  ], [canViewQuotations, canViewSales]);
+  ], [canViewInventory, canViewQuotations, canViewSales]);
 
   return (
     <section className="user-home" aria-labelledby="user-home-title">
