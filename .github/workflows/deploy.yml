@@ -11,7 +11,7 @@ on:
         required: false
         type: string
       backend_sha:
-        description: 'Optional exact backend SHA for a coordinated release'
+        description: 'Optional confirmation; must match the committed required backend SHA'
         required: false
         type: string
       backup_id:
@@ -60,6 +60,14 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Require the backend commit paired with this frontend
+        run: |
+          set -euo pipefail
+          REQUIRED_BACKEND_SHA=$(cat .github/required-backend-sha)
+          [[ "$REQUIRED_BACKEND_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [ -n "$BACKEND_SHA" ]; then test "$BACKEND_SHA" = "$REQUIRED_BACKEND_SHA"; fi
+          printf 'BACKEND_SHA=%s\n' "$REQUIRED_BACKEND_SHA" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -211,7 +219,10 @@ jobs:
             test -f "$FRONT/laravel-api.php"
             test -f "$FRONT/.htaccess"
             test ! -f "$PROJECT/storage/framework/down"
-            if [ -n "$BACKEND_SHA" ]; then test "$(git -C "$PROJECT" rev-parse HEAD)" = "$BACKEND_SHA"; fi
+            [[ "$BACKEND_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$(git -C "$PROJECT" rev-parse HEAD)" = "$BACKEND_SHA"
+            test -f "$HOME/.upgrade79-backend-deployed-sha"
+            test "$(cat "$HOME/.upgrade79-backend-deployed-sha")" = "$BACKEND_SHA"
             if [ -n "$BACKUP_ID" ]; then
               BACKUP="$HOME/upgrade79-private-backups/$BACKUP_ID"
               test -f "$BACKUP/RESTORE_VERIFIED"
