@@ -1,73 +1,65 @@
 name: Deploy Upgrade La 79 Frontend
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       release_sha:
-        description: 'Approved full frontend SHA (selected main commit)'
-        required: true
+        description: 'Optional SHA confirmation; defaults to the selected main commit'
+        required: false
         type: string
       backend_sha:
-        description: 'Approved backend SHA, already deployed successfully'
-        required: true
+        description: 'Optional exact backend SHA for a coordinated release'
+        required: false
         type: string
       backup_id:
         description: 'Verified private backup directory ID'
-        required: true
+        required: false
         type: string
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: upgrade79-frontend-production
   cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    environment: production
     runs-on: ubuntu-latest
     env:
-      RELEASE_SHA: ${{ inputs.release_sha }}
-      WORKFLOW_SHA: ${{ github.sha }}
+      RELEASE_SHA: ${{ github.sha }}
+      REQUESTED_SHA: ${{ inputs.release_sha }}
+      RELEASE_RUN_NUMBER: ${{ github.run_number }}
       BACKEND_SHA: ${{ inputs.backend_sha }}
       BACKUP_ID: ${{ inputs.backup_id }}
 
     steps:
-      - name: Validate explicit release approval
+      - name: Validate automatic event or optional manual confirmations
         shell: bash
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$RELEASE_SHA" = "$WORKFLOW_SHA"
-          [[ "$BACKEND_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$BACKUP_ID" =~ ^release-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{6}$ ]]
+          if [ -n "$REQUESTED_SHA" ]; then test "$REQUESTED_SHA" = "$RELEASE_SHA"; fi
+          [[ "$RELEASE_RUN_NUMBER" =~ ^[0-9]+$ ]]
+          if [ -n "$BACKEND_SHA" ]; then [[ "$BACKEND_SHA" =~ ^[0-9a-f]{40}$ ]]; fi
+          if [ -n "$BACKUP_ID" ]; then
+            [[ "$BACKUP_ID" =~ ^release-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{6}$ ]]
+          fi
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
-
-      - name: Verify backup and coordinated backend release
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          password: ${{ secrets.HOSTINGER_PASSWORD }}
-          port: 65002
-          envs: BACKEND_SHA,BACKUP_ID
-          script: |
-            set -eu
-            BACKUP="$HOME/upgrade79-private-backups/$BACKUP_ID"
-            PROJECT="$HOME/domains/crmupgradecol.com/laravel"
-            test -f "$BACKUP/RESTORE_VERIFIED"
-            (cd "$BACKUP" && sha256sum --check --quiet SHA256SUMS)
-            test "$(git -C "$PROJECT" rev-parse HEAD)" = "$BACKEND_SHA"
-            test ! -f "$PROJECT/storage/framework/down"
-            cd "$PROJECT"
-            php ops/release-preflight.php --require-current
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -77,6 +69,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Frontend regression tests before build or upload
+        run: npm test
 
       - name: Audit API configuration
         run: |
@@ -97,6 +92,7 @@ jobs:
 
       - name: Verify build output
         run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -f dist/index.html
           test -d dist/assets
           test -f dist/seo/entry-server.js
@@ -156,11 +152,18 @@ jobs:
           test -f deploy-package/robots.txt
           test -f deploy-package/sitemap.xml
           test -f deploy-package/seo/apache.conf
+          FORBIDDEN=$(find deploy-package -type f \( -name '.env*' -o -name '*.sql' -o -name '*.sql.gz' -o -name '*.dump' -o -name '*.bak' \) -print -quit)
+          test -z "$FORBIDDEN"
+          test -z "$(find deploy-package -type l -print -quit)"
 
           echo "=== Archivo que se publicara ==="
           grep -oE 'src="/assets/[^"]+"' deploy-package/index.html
 
-      - name: Deploy to Hostinger
+          printf '%s\n' "$RELEASE_SHA" > deploy-package/RELEASE_COMMIT
+          (cd deploy-package && find . -type f -print0 | sort -z | xargs -0 sha256sum) > deployment-sha256.txt
+          cp deployment-sha256.txt deploy-package/DEPLOY_SHA256SUMS
+
+      - name: Upload private candidate without publishing
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
@@ -168,22 +171,77 @@ jobs:
           password: ${{ secrets.HOSTINGER_PASSWORD }}
           port: 65002
           source: "deploy-package/*"
-          target: "/home/${{ secrets.HOSTINGER_USERNAME }}/domains/upgradecolombia.com/public_html"
+          target: "/home/${{ secrets.HOSTINGER_USERNAME }}/upgrade79-deploy-incoming/frontend/${{ github.sha }}"
           strip_components: 1
           overwrite: true
           rm: false
 
-      - name: Verify deployment on Hostinger
+      - name: Publish under shared lock and verify deployment
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
           port: 65002
+          command_timeout: 30m
+          envs: RELEASE_SHA,RELEASE_RUN_NUMBER,BACKEND_SHA,BACKUP_ID
           script: |
-            set -e
+            bash -se <<'UPGRADE79_REMOTE'
+            set -euo pipefail
+            umask 077
+            command -v flock > /dev/null
+            exec 9>"$HOME/.upgrade79-deploy.lock"
+            flock -w 900 9
 
             FRONT="$HOME/domains/upgradecolombia.com/public_html"
+            PROJECT="$HOME/domains/crmupgradecol.com/laravel"
+            CANDIDATE="$HOME/upgrade79-deploy-incoming/frontend/$RELEASE_SHA"
+            STATE="$HOME/.upgrade79-frontend-deploy-state"
+            if [ -f "$STATE" ]; then
+              read -r PUBLISHED_RUN PUBLISHED_SHA < "$STATE"
+              [[ "$PUBLISHED_RUN" =~ ^[0-9]+$ ]]
+              test "$RELEASE_RUN_NUMBER" -ge "$PUBLISHED_RUN"
+              if [ "$RELEASE_RUN_NUMBER" = "$PUBLISHED_RUN" ]; then test "$RELEASE_SHA" = "$PUBLISHED_SHA"; fi
+            fi
+            test "$(cat "$CANDIDATE/RELEASE_COMMIT")" = "$RELEASE_SHA"
+            (cd "$CANDIDATE" && sha256sum --check --quiet DEPLOY_SHA256SUMS)
+            chmod 700 "$CANDIDATE"
+            find "$CANDIDATE" -mindepth 1 -type d -exec chmod 755 {} +
+            find "$CANDIDATE" -type f -exec chmod 644 {} +
+            test -f "$FRONT/laravel-api.php"
+            test -f "$FRONT/.htaccess"
+            test ! -f "$PROJECT/storage/framework/down"
+            if [ -n "$BACKEND_SHA" ]; then test "$(git -C "$PROJECT" rev-parse HEAD)" = "$BACKEND_SHA"; fi
+            if [ -n "$BACKUP_ID" ]; then
+              BACKUP="$HOME/upgrade79-private-backups/$BACKUP_ID"
+              test -f "$BACKUP/RESTORE_VERIFIED"
+              (cd "$BACKUP" && sha256sum --check --quiet SHA256SUMS)
+            fi
+            cd "$PROJECT"
+            php ops/release-preflight.php --require-current
+
+            echo "=== Respaldo automatico del frontend anterior ==="
+            install -d -m 700 "$HOME/upgrade79-deploy-rollbacks"
+            ROLLBACK=$(mktemp -d "$HOME/upgrade79-deploy-rollbacks/frontend-$RELEASE_SHA-XXXXXX")
+            tar --exclude='./storage' -czf "$ROLLBACK/frontend-code.tar.gz" -C "$FRONT" .
+            gzip -t "$ROLLBACK/frontend-code.tar.gz"
+            sha256sum "$ROLLBACK/frontend-code.tar.gz" > "$ROLLBACK/SHA256SUMS"
+
+            echo "=== Publicar assets antes del HTML, sin tocar bridge/storage ==="
+            install -d "$FRONT/assets"
+            cp -a "$CANDIDATE/assets/." "$FRONT/assets/"
+            for SOURCE in "$CANDIDATE"/*; do
+              NAME=$(basename "$SOURCE")
+              case "$NAME" in
+                index.html|assets|storage|RELEASE_COMMIT|DEPLOY_SHA256SUMS|laravel-api.php|laravel-api.php.bak) continue ;;
+              esac
+              cp -a "$SOURCE" "$FRONT/"
+            done
+            cp "$CANDIDATE/index.html" "$FRONT/.upgrade79-index-$RELEASE_SHA.tmp"
+            chmod 644 "$FRONT/.upgrade79-index-$RELEASE_SHA.tmp"
+            mv "$FRONT/.upgrade79-index-$RELEASE_SHA.tmp" "$FRONT/index.html"
+            printf '%s %s\n' "$RELEASE_RUN_NUMBER" "$RELEASE_SHA" > "$STATE.tmp"
+            mv "$STATE.tmp" "$STATE"
 
             echo "=== JavaScript publicado ==="
             grep -oE 'src="/assets/[^"]+"' "$FRONT/index.html"
@@ -256,3 +314,4 @@ jobs:
             test "$WWW_STATUS" = "301"
 
             echo "DEPLOY VALIDADO CORRECTAMENTE"
+            UPGRADE79_REMOTE
