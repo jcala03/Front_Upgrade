@@ -1,5 +1,6 @@
 import type { ProductCategoryField } from "../../../../types/productCategory";
 import type { ProductTechnicalSpecs } from "../../../../types/product";
+import { memoryFields } from "./variantTechnicalReadiness";
 
 type ProductDynamicFieldsProps = {
   fields: ProductCategoryField[];
@@ -7,6 +8,7 @@ type ProductDynamicFieldsProps = {
   errors?: Record<string, string>;
   errorPrefix: string;
   onChange: (field: ProductCategoryField, value: string | boolean) => void;
+  variantMemory?: boolean;
 };
 
 export const ProductDynamicFields = ({
@@ -15,6 +17,7 @@ export const ProductDynamicFields = ({
   errors = {},
   errorPrefix,
   onChange,
+  variantMemory = false,
 }: ProductDynamicFieldsProps) => {
   if (fields.length === 0) {
     return <p className="smart-product-form__empty">No hay campos adicionales para esta categoría.</p>;
@@ -65,6 +68,8 @@ export const ProductDynamicFields = ({
                 id={inputId}
                 data-error-key={errorKey}
                 type={field.type === "number" ? "number" : "text"}
+                min={variantMemory && field.field_key in memoryFields ? 1 : undefined}
+                step={variantMemory && field.field_key in memoryFields ? 1 : undefined}
                 value={typeof value === "string" || typeof value === "number" ? value : ""}
                 onChange={(event) => onChange(field, event.target.value)}
                 required={field.is_required}

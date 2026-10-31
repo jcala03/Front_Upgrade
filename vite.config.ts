@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { publicSeoPlugin } from "./scripts/public-seo-plugin.mjs";
 import { publicDevProxy } from "./scripts/public-dev-proxy.mjs";
+import { currentServiceWorkerVersion } from "./scripts/pwa-version.mjs";
 
 export default defineConfig(({ mode, isSsrBuild }) => {
   const { siteUrl, apiBase, plugin } = publicSeoPlugin(mode);
@@ -41,6 +42,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
 
     define: {
       __PUBLIC_SITE_URL__: JSON.stringify(siteUrl),
+      __PWA_SW_VERSION__: JSON.stringify(currentServiceWorkerVersion()),
     },
   };
 });

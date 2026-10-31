@@ -69,8 +69,7 @@ export const createOrder = async (
     const error = await response.json().catch(() => null);
 
     throw new Error(
-      error?.message ??
-        error?.errors?.items?.[0] ??
+      error?.errors?.items?.[0] ?? error?.message ??
         "No se pudo crear la orden. Revisa los datos."
     );
   }

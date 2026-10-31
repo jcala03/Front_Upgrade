@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getPublicOrder } from "../../api/orders";
 import { useCart } from "../../context/CartContext";
 import type { PublicOrder, PublicOrderItem } from "../../types/order";
+import { ConfigurationSummary } from "../../components/ConfigurationSummary";
 import { finishActiveCheckout, readLastOrder, reconcilePaidCart, startNewPurchase } from "../../utils/checkoutStorage";
 import "./OrderConfirmationPage.css";
 
@@ -94,7 +95,7 @@ export const OrderConfirmationPage = () => {
         <div className="order-confirmation-products">
           <div className="order-confirmation-products__title"><ShoppingBag size={18} strokeWidth={1.8} /><h3>Productos</h3></div>
           {order.items.map((item: PublicOrderItem) => <article className="order-confirmation-product" key={item.id}>
-            <div><h4>{item.product_name}</h4><p>{item.quantity} x {formatPrice(item.unit_price, order.currency)}</p></div>
+            <div><h4>{item.product_name}</h4><ConfigurationSummary context={item.configuration_context} /><p>{item.quantity} x {formatPrice(item.unit_price, order.currency)}</p></div>
             <strong>{formatPrice(item.total, order.currency)}</strong>
           </article>)}
         </div>

@@ -5,6 +5,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createOrder } from "../../api/orders";
+import { purchaseConfiguration } from "../../types/productConfiguration";
+import { ConfigurationSummary } from "../../components/ConfigurationSummary";
 import type { PublicFulfillmentType, PublicOrder } from "../../types/order";
 import { CheckoutDelivery } from "./CheckoutDelivery";
 import { CheckoutOrderSummary } from "./CheckoutOrderSummary";
@@ -144,6 +146,7 @@ export const CheckoutPage = () => {
           product_id: item.product.id,
           product_variant_id: item.variant?.id ?? null,
           quantity: item.quantity,
+          ...(item.configuration_context ? { configuration_context: purchaseConfiguration(item.configuration_context) } : {}),
         })),
       }, idempotencyKey.current);
 
@@ -322,7 +325,7 @@ export const CheckoutPage = () => {
               return (
                 <article
                   className="checkout-summary__item"
-                  key={cartItemKey(item.product.id, item.variant?.id)}
+                  key={cartItemKey(item.product.id, item.variant?.id, item.configuration_context)}
                 >
                   <div className="checkout-summary__image">
                     {imageUrl ? (
@@ -334,6 +337,7 @@ export const CheckoutPage = () => {
 
                   <div>
                     <h3>{item.product.name}</h3>
+                    <ConfigurationSummary context={item.configuration_context} />
                     {item.variant ? <small>{item.variant.display_name || item.variant.name}</small> : null}
                     <p>
                       {item.quantity} x {formatPrice(unitPrice)}

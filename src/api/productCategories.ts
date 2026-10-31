@@ -139,7 +139,8 @@ export const updateProductCategory = async (
         ...csrfHeaders(),
       },
       credentials: "include",
-      body: JSON.stringify(payload),
+      // This editor sends the complete canonical list; partial API callers can merge.
+      body: JSON.stringify({ ...payload, replace_fields: true }),
     }
   );
 

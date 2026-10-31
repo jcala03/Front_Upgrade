@@ -195,12 +195,23 @@ export type ProductVariantPayload = {
   sort_order: number;
 };
 
+export type ProductConfiguration = {
+  schema_version: number;
+  required: true;
+  profile_id: string | null;
+  profile_version: number | null;
+  ui_enabled: boolean;
+  purchase_enabled: boolean;
+};
+
 export type Product = {
   id: number;
 
   name: string;
   normalized_name: string;
   slug: string;
+  /** Additive public backend authority; absent on historical payloads. */
+  configuration?: ProductConfiguration | null;
   description: string | null;
 
   category: string | null;

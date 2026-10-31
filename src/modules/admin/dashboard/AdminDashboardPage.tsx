@@ -8,6 +8,7 @@ import { formatCurrency } from "../../../utils/formatCurrency";
 import { hasPermission } from "../../../utils/authStorage";
 import { originLabels, paymentStatusLabels } from "../orders/orderUtils";
 import { SalesChart } from "./SalesChart";
+import { TeamCommissionKpis } from "../commissions/TeamCommissionKpis";
 import "./AdminDashboardPage.css";
 
 const formatDateTime = (value: string | null) => value
@@ -116,6 +117,8 @@ export const AdminDashboardPage = () => {
         <MetricCard label="Por cobrar" value={formatCurrency(payments.outstanding)} detail={`${payments.orders_with_balance} ${payments.orders_with_balance === 1 ? "orden con saldo" : "órdenes con saldo"}`} icon={<FileText size={19} aria-hidden="true" />} />
         <MetricCard label="Stock crítico" value={`${inventory.low_stock_count} bajo`} detail={`${inventory.out_of_stock_count} ${inventory.out_of_stock_count === 1 ? "agotado" : "agotados"}`} icon={<AlertTriangle size={19} aria-hidden="true" />} />
       </section>
+
+      {hasPermission("commissions.view") ? <TeamCommissionKpis branchId={mode === "branch" ? selectedBranchId ?? undefined : undefined} /> : null}
 
       <div className="dashboard-grid dashboard-grid--hero">
         <section className="dashboard-panel dashboard-panel--chart">

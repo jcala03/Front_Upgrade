@@ -6,12 +6,14 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash, createECDH } from 'node:crypto';
+import { currentServiceWorkerVersion } from './pwa-version.mjs';
 
 const playwright = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { chromium, devices: browserDevices } = playwright.default ?? playwright;
 const upstream = process.env.PWA_QA_URL || 'http://127.0.0.1:4175';
 let revision = 1;
 let disconnected = false;
+let subscriptionWrites = 0;
 // In-memory proxy changes only a SW comment to exercise a real browser update, without editing the application.
 const proxy = http.createServer(async (request, response) => {
   if (disconnected) { request.socket.destroy(); return; }
@@ -20,7 +22,16 @@ const proxy = http.createServer(async (request, response) => {
     const headers = Object.fromEntries(result.headers);
     delete headers['content-encoding']; delete headers['content-length'];
     let bytes = Buffer.from(await result.arrayBuffer());
-    if (request.url === '/sw.js') bytes = Buffer.concat([bytes, Buffer.from(`\n// Local QA revision ${revision}\n`)]);
+    const url = new URL(request.url, upstream);
+    if (url.pathname === '/sw.js') {
+      if (!url.searchParams.has('v')) {
+        // Reproduce a permanently stale bare URL, with no diagnostic message handlers.
+        // Owner binding, offline shell and the rest of the real worker remain unchanged.
+        bytes = Buffer.from(bytes.toString().replaceAll('PUSH_DIAGNOSTICS_GET', 'LEGACY_GET_DISABLED')
+          .replaceAll('PUSH_DIAGNOSTICS_CLEAR', 'LEGACY_CLEAR_DISABLED')
+          .replaceAll('PUSH_DIAGNOSTIC_CLIENT_OPEN', 'LEGACY_OPEN_DISABLED'));
+      } else bytes = Buffer.concat([bytes, Buffer.from(`\n// Local QA revision ${revision}\n`)]);
+    }
     response.writeHead(result.status, headers); response.end(bytes);
   } catch { response.writeHead(503); response.end(); }
 });
@@ -36,13 +47,13 @@ let devices = [];
 const results = [];
 
 async function diagnosticMessage(page, type) {
-  return page.evaluate(async (type) => {
+  return page.evaluate(async (message) => {
     const active = (await navigator.serviceWorker.ready).active;
     return new Promise((resolve, reject) => {
       const channel = new MessageChannel();
       const timeout = setTimeout(() => { channel.port1.close(); reject(new Error('Diagnostic message timed out')); }, 3000);
       channel.port1.onmessage = (event) => { clearTimeout(timeout); channel.port1.close(); resolve(event.data); };
-      active.postMessage({ type }, [channel.port2]);
+      active.postMessage(typeof message === 'string' ? { type: message } : message, [channel.port2]);
     });
   }, type);
 }
@@ -79,10 +90,12 @@ async function prepare(context, state = 'compatible') {
     }
     else if (url.pathname === '/api/push/subscriptions' && request.method() === 'GET') data = { data: devices };
     else if (url.pathname === '/api/push/subscriptions' && request.method() === 'POST') {
+      subscriptionWrites++;
       const body = request.postDataJSON();
       devices = [{ id: 1, endpoint_hash: createHash('sha256').update(body.endpoint).digest('hex'), is_active: true, expires_at: null }];
       data = { data: devices[0] };
     } else if (/\/api\/push\/subscriptions\/\d+$/.test(url.pathname) && request.method() === 'DELETE') {
+      subscriptionWrites++;
       devices = devices.map((device) => ({ ...device, is_active: false })); data = { data: null };
     } else if (url.pathname.endsWith('/notifications/unread-count')) data = { data: { count: 3 } };
     else if (url.pathname === '/api/admin/notifications') data = { data: { unread_count: 3, notifications: { data: [], current_page: 1, last_page: 1, total: 0 } } };
@@ -95,8 +108,49 @@ try {
   await prepare(context);
   let page = await context.newPage(); const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  // An isolated profile starts as an existing legacy installation, not a clean install.
+  // Do not unregister anything: the same root registration must migrate in place.
+  await page.goto(`${origin}/offline.html`);
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+    await navigator.serviceWorker.ready;
+  });
+  await diagnosticMessage(page, { type: 'PUSH_OWNER', userId: user.id });
+  await assert.rejects(diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET'), /timed out/);
+  await context.addCookies([{ name: 'qa_session_fixture', value: 'preserve', url: origin }]);
   await page.goto(`${origin}/crm/profile`);
   await page.getByRole('heading', { name: 'Notificaciones del dispositivo' }).waitFor();
+  await page.getByRole('button', { name: 'Actualizar aplicación', exact: true }).waitFor();
+  const beforeMigration = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration('/');
+    return { count: (await navigator.serviceWorker.getRegistrations()).length, scope: registration.scope,
+      active: registration.active.scriptURL, waiting: registration.waiting?.scriptURL, updateViaCache: registration.updateViaCache };
+  });
+  assert.equal(beforeMigration.count, 1);
+  assert.equal(beforeMigration.scope, `${origin}/`);
+  assert.equal(beforeMigration.active, `${origin}/sw.js`);
+  const expectedURL = `${origin}/sw.js?v=${currentServiceWorkerVersion()}`;
+  assert.equal(beforeMigration.waiting, expectedURL); assert.equal(beforeMigration.updateViaCache, 'none');
+  await page.locator('.pwa-diagnostics summary').click();
+  await page.getByRole('button', { name: 'Actualizar diagnóstico', exact: true }).click();
+  await page.locator('.pwa-diagnostics').getByRole('alert').filter({ hasText: '[worker_outdated]' }).waitFor();
+  assert.equal(subscriptionWrites, 0);
+  await Promise.all([
+    page.waitForEvent('framenavigated', (frame) => frame === page.mainFrame()),
+    page.getByRole('button', { name: 'Actualizar aplicación', exact: true }).click(),
+  ]);
+  await page.getByRole('heading', { name: 'Notificaciones del dispositivo' }).waitFor();
+  await page.waitForFunction((expected) => navigator.serviceWorker.controller?.scriptURL === expected, expectedURL);
+  const migrated = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
+  assert.equal(migrated.ok, true); assert.ok(Array.isArray(migrated.records));
+  assert.equal(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), 1);
+  assert.equal(subscriptionWrites, 0);
+  assert.equal((await context.cookies()).find((cookie) => cookie.name === 'qa_session_fixture').value, 'preserve');
+  const activeWorker = context.serviceWorkers().find((worker) => worker.url() === expectedURL);
+  assert.ok(activeWorker); assert.equal(await activeWorker.evaluate(() => getOwner()), user.id);
+  // The poisoned bare URL stays poisoned: recovery comes from versioning, not a cache purge.
+  assert.equal(await page.evaluate(async () => (await (await fetch('/sw.js', { cache: 'no-store' })).text()).includes('PUSH_DIAGNOSTICS_GET')), false);
+  results.push({ check: 'Migración real /sw.js obsoleto → URL hash, waiting + aceptación + recarga; un registro, owner/cookie conservados, sin escrituras de suscripción', result: 'PASS' });
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   assert.equal(await page.evaluate(() => window.__qaPermissionCalls), 0);
   const cdp = await context.newCDPSession(page);
@@ -134,8 +188,11 @@ try {
   await page.getByText('Notificaciones activadas.', { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => window.__qaPermissionCalls), 0);
   results.push({ check: 'Perfil refresca suscripción al terminar registro PWA, sin foco ni nuevo permiso', result: 'PASS' });
-  const worker = context.serviceWorkers().find((item) => item.url().endsWith('/sw.js'));
+  const worker = context.serviceWorkers().find((item) => item.url() === expectedURL);
   assert.ok(worker);
+  assert.equal(await page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration('/')).waiting)), false);
+  assert.equal(await page.evaluate(() => navigator.serviceWorker.controller.scriptURL), expectedURL);
+  results.push({ check: 'Reloads del mismo build conservan URL estable y no crean otra actualización waiting', result: 'PASS' });
   const startup = await diagnosticMessage(page, 'PUSH_DIAGNOSTICS_GET');
   assert.equal(startup.ok, true);
   assert.ok(startup.records.some((record) => record.stage === 'client_open' && record.path === '/crm/profile'));

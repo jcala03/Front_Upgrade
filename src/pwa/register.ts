@@ -1,6 +1,7 @@
 import { AUTH_USER_EVENT, getAuthUser } from "../utils/authStorage";
 import { API_BASE_URL } from "../api/apiConfig";
 import { recordPushClientOpen } from "./diagnostics";
+import { SERVICE_WORKER_URL } from "./version";
 
 export const PWA_UPDATE_EVENT = "pwa:update-ready";
 export const PWA_READY_EVENT = "pwa:ready";
@@ -30,11 +31,14 @@ export function registerPwa() {
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.type === "CRM_PUSH_RECEIVED") window.dispatchEvent(new Event(PUSH_RECEIVED_EVENT));
   });
-  void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async (value) => {
+  void navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: "/", updateViaCache: "none" }).then(async (value) => {
     registration = value;
     const announce = () => { if (value.waiting) window.dispatchEvent(new Event(PWA_UPDATE_EVENT)); };
+    const observeInstalling = () => value.installing?.addEventListener("statechange", announce);
+    value.addEventListener("updatefound", observeInstalling);
+    // register() can resolve after updatefound: observe an installation already in progress too.
+    observeInstalling();
     announce();
-    value.addEventListener("updatefound", () => value.installing?.addEventListener("statechange", announce));
     const ready = await navigator.serviceWorker.ready;
     registration = ready;
     recordPushClientOpen(ready.active);

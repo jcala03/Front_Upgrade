@@ -1,0 +1,10 @@
+.configuration-summary {
+  min-width: 0;
+  max-width: 100%;
+  margin: .5rem 0;
+  color: inherit;
+  font-size: .875rem;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

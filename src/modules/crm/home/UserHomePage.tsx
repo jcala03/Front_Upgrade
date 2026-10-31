@@ -264,8 +264,10 @@ export const UserHomePage = () => {
           {canViewSales ? <CardShell icon={<ShoppingBag size={21} />} eyebrow="Mis ventas" title="Pendientes" href="/crm/me/sales" linkLabel="Abrir ventas">
             {sales.status === "loading" ? <CardLoading /> : sales.status === "error" ? <CardError message={sales.error} /> : sales.data.total ? <><strong className="user-home-card__metric">{sales.data.total}</strong><p>{sales.data.total === 1 ? "venta propia pendiente de confirmación" : "ventas propias pendientes de confirmación"}</p></> : <CardEmpty>No tienes ventas pendientes de confirmación.</CardEmpty>}
           </CardShell> : null}
-          {canViewCommissions ? <CardShell icon={<BadgeDollarSign size={21} />} eyebrow="Mes actual" title="Mis comisiones" href="/crm/me/commissions" linkLabel="Ver comisiones">
-            {commission.status === "loading" ? <CardLoading /> : commission.status === "error" ? <CardError message={commission.error} /> : commission.data?.current_month.total_rows ? <div className="user-home-card__money"><span><small>Pendiente</small><strong>{formatCurrency(commission.data.current_month.pending_amount)}</strong></span><span><small>Ganada</small><strong>{formatCurrency(commission.data.current_month.earned_amount)}</strong></span></div> : <CardEmpty>Aún no tienes comisiones en el mes actual.</CardEmpty>}
+          {canViewCommissions ? <CardShell icon={<BadgeDollarSign size={21} />} eyebrow="Mis comisiones" title="Ganadas del mes" href="/crm/me/commissions" linkLabel="Ver comisiones">
+            {commission.status === "loading" ? <CardLoading /> : commission.status === "error" ? <CardError message={commission.error} /> : commission.data?.current_month.total_rows ? <div className="user-home-card__money"><span><small>Ganadas del mes</small><strong>{formatCurrency(commission.data.current_month.earned_amount)}</strong></span><span><small>Pendientes del período</small><strong>{formatCurrency(commission.data.current_month.pending_amount)}</strong></span></div> : <CardEmpty>Aún no tienes comisiones en el mes actual.</CardEmpty>}
+            <small>Ganadas no significa pagadas al empleado.</small>
+            {commission.data && commission.data.totals.review_amount > 0 ? <small>Hay comisiones que requieren revisión por reembolsos o discrepancias.</small> : null}
           </CardShell> : null}
         </div>
       </section> : null}

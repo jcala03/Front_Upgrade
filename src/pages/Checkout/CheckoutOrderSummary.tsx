@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { PublicOrder, PublicOrderCharge } from "../../types/order";
 import { startWompiCheckout } from "../../utils/wompiCheckout";
+import { ConfigurationSummary } from "../../components/ConfigurationSummary";
 
 export const formatPublicMoney = (amount: number, currency: string) => {
   try {
@@ -49,6 +50,10 @@ export function CheckoutOrderSummary({ order, blockingIssue, publicToken }: Prop
       <small>{order.order_number}</small>
     </div>
 
+    {order.items.filter(item => item.configuration_context).map(item => <div key={item.id}>
+      <strong>{item.product_name} · {item.variant_name}</strong>
+      <ConfigurationSummary context={item.configuration_context} />
+    </div>)}
     <dl className="checkout-final-summary__breakdown">
       <div><dt>Subtotal</dt><dd>{formatPublicMoney(order.subtotal, order.currency)}</dd></div>
       {order.discount_total > 0 && <div className="checkout-final-summary__discount"><dt>Descuento</dt><dd>− {formatPublicMoney(order.discount_total, order.currency)}</dd></div>}

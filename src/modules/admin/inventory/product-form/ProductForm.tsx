@@ -25,6 +25,7 @@ import {
 } from "./productFormUtils";
 import "./ProductForm.css";
 import { ProductImagesEditor, type ImageDraft } from "./ProductImagesEditor";
+import { assessVariantTechnicalReadiness, memoryCategorySlug, memorySpecErrors } from "./variantTechnicalReadiness";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -381,6 +382,11 @@ export const ProductForm = ({
         const value = variant.specs[field.field_key];
         if (value === null || value === undefined || value === "") nextErrors[`variants.${index}.specs.${field.field_key}`] = "Campo obligatorio.";
       });
+      if (selectedCategory?.slug === memoryCategorySlug) {
+        for (const [key, message] of Object.entries(memorySpecErrors(variant.specs))) {
+          nextErrors[`variants.${index}.specs.${key}`] = message;
+        }
+      }
       const sku = variant.sku.trim().toLowerCase();
       if (sku && seenSkus.has(sku)) nextErrors[`variants.${index}.sku`] = "El SKU está repetido en otra variante.";
       if (sku) seenSkus.add(sku);
@@ -499,10 +505,15 @@ export const ProductForm = ({
         </section>
 
         <section className="smart-product-form__section" aria-labelledby="product-variants-title">
-          <div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>05</span><div><h3 id="product-variants-title">Variantes</h3><p>{variants.length ? `${variants.length} configurada${variants.length === 1 ? "" : "s"}.` : "Producto simple. Úsalas solo si existen versiones diferentes."}</p></div><button className="smart-product-form__secondary" type="button" aria-expanded={showVariants} aria-controls="product-variants-content" onClick={() => { setShowVariants(true); if (!variants.length) setVariants([emptyVariant(0)]); }}>+ Agregar variante</button></div>
+          <div className="smart-product-form__section-heading smart-product-form__section-heading--action"><span>05</span><div><h3 id="product-variants-title">Variantes</h3><p>{variants.length ? `${variants.length} configurada${variants.length === 1 ? "" : "s"}.` : "Producto simple. Úsalas solo si existen versiones diferentes."}</p></div><button className="smart-product-form__secondary" type="button" aria-expanded={showVariants} aria-controls="product-variants-content" onClick={() => { setShowVariants(true); setVariants(current => [...current, emptyVariant(current.length)]); }}>+ Agregar variante</button></div>
           {showVariants && variants.length ? <div id="product-variants-content" className="smart-product-form__variants">
             {variants.map((variant, index) => {
               const pricing = calculatePricingPreview(variant);
+              const readiness = selectedCategory?.slug === memoryCategorySlug
+                ? assessVariantTechnicalReadiness(variant.specs, requiresOem,
+                  variant.use_general_compatibility ? form.compatibility_type : variant.compatibility_type,
+                  variant.use_general_compatibility ? generalCompatibilities : variant.vehicle_compatibilities)
+                : null;
               const variantRowsSetter = (rows: VariantCompatibilityDraft[]) => updateVariant(index, "vehicle_compatibilities", rows);
               return (
                 <article className="smart-product-form__variant" key={variant.id ?? `new-${index}`}>
@@ -532,7 +543,9 @@ export const ProductForm = ({
                     <label className="smart-product-form__field"><span>Nombre</span><input data-error-key={`variants.${index}.name`} value={variant.name} placeholder={suggestVariantName(variantFields, variant.specs) || "Nombre de variante"} onChange={(event) => { updateVariant(index, "name", event.target.value); updateVariant(index, "name_is_custom", event.target.value.trim() !== ""); }} />{errors[`variants.${index}.name`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.name`]}</small> : null}</label>
                     <label className="smart-product-form__field"><span>SKU</span><input data-error-key={`variants.${index}.sku`} value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value)} />{errors[`variants.${index}.sku`] ? <small className="smart-product-form__field-error">{errors[`variants.${index}.sku`]}</small> : null}</label>
                   </div>
-                  <div className="smart-product-form__subsection"><h4>Detalles de esta variante</h4><ProductDynamicFields fields={variantFields} values={variant.specs} errors={errors} errorPrefix={`variants.${index}.specs`} onChange={(field, value) => updateVariantSpec(index, field, value)} /></div>
+                  <div className="smart-product-form__subsection"><h4>Detalles de esta variante</h4><ProductDynamicFields fields={variantFields} values={variant.specs} errors={errors} errorPrefix={`variants.${index}.specs`} variantMemory={selectedCategory?.slug === memoryCategorySlug} onChange={(field, value) => updateVariantSpec(index, field, value)} />
+                    {readiness ? <p className="smart-product-form__hint" role="status">Preparación estructural: {readiness.structurally_ready ? "datos completos." : Object.values(readiness.issues).join(" ")} No certifica compatibilidad física ni activa el configurador público.</p> : null}
+                  </div>
                   <div className="smart-product-form__subsection"><h4>Precio</h4><PricingFields draft={variant} update={(key, value) => updateVariant(index, key, value)} preview={pricing} error={errors[`variants.${index}.pricing`]} /></div>
                   <div className="smart-product-form__subsection"><label className="smart-product-form__check"><input type="checkbox" disabled={requiresOem} checked={variant.use_general_compatibility} onChange={(event) => updateVariant(index, "use_general_compatibility", event.target.checked)} /><span>Usar la compatibilidad general del producto</span></label>{variant.use_general_compatibility ? <p className="smart-product-form__hint">Usará {form.compatibility_type === "universal" ? "compatibilidad universal" : `${generalCompatibilities.filter((row) => row.vehicle_brand_id).length} compatibilidades del producto`}.</p> : <><div className="smart-product-form__choice-grid smart-product-form__choice-grid--small">{(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={variant.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input type="radio" name={`variant-compatibility-${index}`} disabled={requiresOem && type === "universal"} checked={variant.compatibility_type === type} onChange={() => updateVariant(index, "compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Específica"}</strong></label>)}</div>{errors[`variants.${index}.compatibility`] ? <p className="smart-product-form__section-error">{errors[`variants.${index}.compatibility`]}</p> : null}{variant.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(variant.vehicle_compatibilities, variantRowsSetter, `variant-${index}`, true) : null}</>}</div>
                   <div className="smart-product-form__checks"><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_active} onChange={(event) => updateVariant(index, "is_active", event.target.checked)} /><span>Activa</span></label><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_visible} onChange={(event) => updateVariant(index, "is_visible", event.target.checked)} /><span>Visible</span></label></div>

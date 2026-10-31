@@ -1,6 +1,8 @@
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { cartItemKey, cartItemPrice, cartItemStock, useCart } from "../../context/CartContext";
 import "./CartPage.css";
+import { ConfigurationSummary } from "../../components/ConfigurationSummary";
+import { commercialQuantity } from "../../domain/cartLines";
 
 const API_BASE_URL = import.meta.env.DEV
   ? ""
@@ -62,7 +64,7 @@ export const CartPage = () => {
               const availableStock = cartItemStock(item);
 
               return (
-                <article className="cart-item" key={cartItemKey(item.product.id, item.variant?.id)}>
+                <article className="cart-item" key={cartItemKey(item.product.id, item.variant?.id, item.configuration_context)}>
                   <a
                     className="cart-item__image"
                     href={`/tienda/${item.product.slug}`}
@@ -87,6 +89,8 @@ export const CartPage = () => {
                       </h2>
 
                       {item.variant ? <small>{item.variant.display_name || item.variant.name}{item.variant.sku ? ` · ${item.variant.sku}` : ""}</small> : null}
+                      <ConfigurationSummary context={item.configuration_context} />
+                      {item.product.configuration?.required && !item.configuration_context ? <p role="alert">Revisa la configuración de este producto en su ficha antes de comprar.</p> : null}
 
                       <strong>{formatPrice(cartItemPrice(item))}</strong>
                       <p className="cart-item__subtotal">Subtotal · {formatPrice(cartItemPrice(item) * item.quantity)}</p>
@@ -97,7 +101,7 @@ export const CartPage = () => {
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuantity(item.product.id, item.variant?.id ?? null, item.quantity - 1)
+                            updateQuantity(item.product.id, item.variant?.id ?? null, item.quantity - 1, item.configuration_context)
                           }
                           disabled={item.quantity <= 1}
                           aria-label="Reducir cantidad"
@@ -110,9 +114,9 @@ export const CartPage = () => {
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuantity(item.product.id, item.variant?.id ?? null, item.quantity + 1)
+                            updateQuantity(item.product.id, item.variant?.id ?? null, item.quantity + 1, item.configuration_context)
                           }
-                          disabled={item.quantity >= availableStock}
+                          disabled={commercialQuantity(items, item.product.id, item.variant?.id) >= availableStock}
                           aria-label="Aumentar cantidad"
                         >
                           <Plus size={15} strokeWidth={1.8} />
@@ -122,7 +126,7 @@ export const CartPage = () => {
                       <button
                         className="cart-item__remove"
                         type="button"
-                        onClick={() => removeItem(item.product.id, item.variant?.id ?? null)}
+                        onClick={() => removeItem(item.product.id, item.variant?.id ?? null, item.configuration_context)}
                       >
                         <Trash2 size={16} strokeWidth={1.8} />
                         Quitar

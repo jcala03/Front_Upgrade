@@ -207,13 +207,15 @@ test('SKIP_WAITING keeps explicit update behavior', async () => {
 const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
 after(() => vite.close());
 const api = await vite.ssrLoadModule('/src/pwa/diagnostics.ts');
+const { SERVICE_WORKER_URL } = await vite.ssrLoadModule('/src/pwa/version.ts');
+const scriptURL = `${origin}${SERVICE_WORKER_URL}`;
 
 test('page diagnostic reader uses MessageChannel, sorts newest first and does not call backend', async (t) => {
   const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const originalWindow = globalThis.window;
   t.after(() => { if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator); else delete globalThis.navigator; globalThis.window = originalWindow; });
   const messages = [];
-  const active = { postMessage(message, [port]) {
+  const active = { scriptURL, postMessage(message, [port]) {
     messages.push(message);
     port.postMessage({ ok: true, records: message.type === 'PUSH_DIAGNOSTICS_CLEAR' ? [] : [
       { id: 1, timestamp: '2026-10-27T10:00:00.000Z', stage: 'push_event_received' },
@@ -239,8 +241,32 @@ test('page reader reports unavailable/old Service Workers and cleans up unanswer
   const serviceWorker = { getRegistration: async () => ({ active: null }) };
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { serviceWorker } });
   await assert.rejects(api.getPushDiagnostics(), /no tiene un Service Worker activo/);
-  serviceWorker.getRegistration = async () => ({ active: { postMessage() {} } });
-  await assert.rejects(api.getPushDiagnostics(), /aplicación esté actualizada/);
-  serviceWorker.getRegistration = async () => ({ active: { postMessage(_message, [port]) { port.postMessage({ ok: false }); port.close(); } } });
-  await assert.rejects(api.getPushDiagnostics(), /No se pudo leer el diagnóstico/);
+  let sent = false;
+  serviceWorker.getRegistration = async () => ({ active: { scriptURL: `${origin}/sw.js`, postMessage() { sent = true; } } });
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'worker_outdated');
+  assert.equal(sent, false, 'A known old URL is identified without waiting for a message timeout.');
+  serviceWorker.getRegistration = async () => ({ active: { scriptURL, postMessage() {} } });
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'timeout');
+  serviceWorker.getRegistration = async () => ({ active: { scriptURL, postMessage(_message, [port]) { port.postMessage({ ok: false }); port.close(); } } });
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'rejected');
+});
+
+test('diagnostic errors distinguish unsupported, registration, protocol and MessageChannel failures without leaking exceptions', async (t) => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const originalWindow = globalThis.window; const originalChannel = globalThis.MessageChannel;
+  t.after(() => { if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator); else delete globalThis.navigator; globalThis.window = originalWindow; globalThis.MessageChannel = originalChannel; });
+  globalThis.window = { setTimeout, clearTimeout };
+  const setNavigator = (value) => Object.defineProperty(globalThis, 'navigator', { configurable: true, value });
+  setNavigator({});
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'unsupported');
+  setNavigator({ serviceWorker: { getRegistration: async () => { throw new Error('SECRET cookie'); } } });
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'registration_error' && !error.message.includes('SECRET'));
+  for (const response of [null, { ok: true }, { ok: true, records: 'SECRET' }]) {
+    setNavigator({ serviceWorker: { getRegistration: async () => ({ active: { scriptURL, postMessage(_message, [port]) { port.postMessage(response); port.close(); } } }) } });
+    await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'invalid_response' && !error.message.includes('SECRET'));
+  }
+  setNavigator({ serviceWorker: { getRegistration: async () => ({ active: { scriptURL, postMessage() { throw new Error('SECRET endpoint'); } } }) } });
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'channel_error' && !error.message.includes('SECRET'));
+  globalThis.MessageChannel = class { constructor() { throw new Error('SECRET token'); } };
+  await assert.rejects(api.getPushDiagnostics(), (error) => error.code === 'channel_error' && !error.message.includes('SECRET'));
 });

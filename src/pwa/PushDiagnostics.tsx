@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { clearPushDiagnostics, getPushDiagnostics, type PushDiagnostic } from "./diagnostics";
+import { SERVICE_WORKER_VERSION } from "./version";
 
 // TEMPORARY: remove this panel and the SW tracing once the device delay is identified.
 export function PushDiagnostics() {
@@ -17,6 +18,7 @@ export function PushDiagnostics() {
   return <details className="pwa-diagnostics">
     <summary>Diagnóstico Push</summary>
     <p className="pwa-help">Temporal · historial local de este dispositivo · máximo 30 eventos. Horas en UTC (ISO).</p>
+    <p className="pwa-help">Versión SW esperada: <code>{SERVICE_WORKER_VERSION}</code></p>
     <div className="pwa-actions">
       <button type="button" disabled={busy} onClick={() => void update()}>Actualizar diagnóstico</button>
       <button type="button" disabled={busy} onClick={() => void update(true)}>Limpiar diagnóstico</button>

@@ -1,5 +1,6 @@
 import type { CartItem, CartLineQuantity } from "../context/CartContext";
 import type { PublicFulfillmentType } from "../types/order";
+import { purchaseConfiguration } from "../types/productConfiguration";
 
 const LAST_ORDER_KEY = "upgrade79_last_order";
 const ACTIVE_CHECKOUT_KEY = "upgrade79_active_checkout";
@@ -53,6 +54,7 @@ export const storeCreatedCheckout = (reference: CheckoutReference, items: CartIt
     productId: item.product.id,
     variantId: item.variant?.id ?? null,
     quantity: item.quantity,
+    ...(item.configuration_context ? { configuration_context: purchaseConfiguration(item.configuration_context) } : {}),
   }));
   sessionStorage.setItem(cartSnapshotKey(reference.public_token), JSON.stringify(lines));
 };

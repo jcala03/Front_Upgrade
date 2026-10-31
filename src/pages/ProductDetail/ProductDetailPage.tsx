@@ -9,10 +9,14 @@ import { productDescription } from "../../seo/model";
 import { getProductImageUrl } from "../../utils/getProductImageUrl";
 import {
   productCompatibility,
+  productCompatibilitySummary,
   productGallery,
+  isQaProduct,
   specificationFacts,
 } from "./productPresentation";
 import "./ProductDetailPage.css";
+import { ProductConfigurator, ProductConfigurationSummary } from "./ProductConfigurator";
+import { useProductConfigurator } from "./useProductConfigurator";
 
 type ProductDetailPageProps = { slug: string; initialProduct?: Product; query?: string };
 const formatPrice = (value: number) =>
@@ -58,6 +62,7 @@ export const ProductDetailPage = ({
   const isAddingRef = useRef(false);
   const addStartTotalRef = useRef(totalItems);
   const toastTimeout = useRef<number | null>(null);
+  const configuration = useProductConfigurator(product, slug, vehicleQuery);
   useEffect(() => {
     setMounted(true);
     return () => {
@@ -68,7 +73,18 @@ export const ProductDetailPage = ({
 
   useEffect(() => {
     // Static HTML hydrates first; refresh its build-time price/stock afterwards.
-    if (matchingInitial && retry === 0 && !publicBootstrap()?.prerendered) return;
+    if (matchingInitial && retry === 0 && !publicBootstrap()?.prerendered) {
+      // Client navigation may reuse this component with a new SSR/public snapshot.
+      if (product?.slug !== slug) {
+        setProduct(matchingInitial);
+        setSelectedVariantId(null);
+        setSelectedImageUrl(null);
+        setSelectionError("");
+        setQuantity(matchingInitial.has_variants ? 0 : matchingInitial.stock > 0 ? 1 : 0);
+      }
+      setStatus("ready");
+      return;
+    }
     const controller = new AbortController();
     if (!(matchingInitial && retry === 0 && publicBootstrap()?.prerendered)) setStatus("loading");
     setNotFound(false);
@@ -104,31 +120,33 @@ export const ProductDetailPage = ({
     [product]
   );
   const hasVariants = Boolean(product?.has_variants) || variants.length > 0;
-  const selectedVariant =
-    variants.find((v) => v.id === selectedVariantId) ?? null;
+  const selectedVariant = configuration.required ? configuration.selectedVariant
+    : variants.find((v) => v.id === selectedVariantId) ?? null;
+  const presentationProduct = configuration.required ? configuration.fullProduct ?? product : product;
   const availableStock = Number(
     selectedVariant?.stock ??
-      (hasVariants ? product?.total_variant_stock : product?.stock) ??
+      (configuration.required ? 0 : hasVariants ? product?.total_variant_stock : product?.stock) ??
       0
   );
   const effectivePrice = Number(
     selectedVariant?.price ??
-      (hasVariants ? product?.lowest_variant_price : product?.price) ??
+      (hasVariants ? presentationProduct?.lowest_variant_price : presentationProduct?.price) ??
       0
   );
   // Session-dependent information is restored only AFTER the public SSR tree is
   // hydrated. Cart storage, variant identity and checkout stock validation stay intact.
   const cartQuantity =
     mounted && product
-      ? items.find(
+      ? items.filter(
           (i) =>
             i.product.id === product.id &&
             (i.variant?.id ?? null) === (selectedVariant?.id ?? null)
-        )?.quantity ?? 0
+        ).reduce((sum, item) => sum + item.quantity, 0)
       : 0;
   const remainingStock = Math.max(availableStock - cartQuantity, 0);
+  const configurationBlocked = configuration.required && !configuration.purchaseContext;
   const visibleTotal = mounted ? totalItems : 0;
-  const gallery = product ? productGallery(product, selectedVariant) : [];
+  const gallery = presentationProduct ? productGallery(presentationProduct, selectedVariant) : [];
   const imageUrl = getProductImageUrl(
     selectedImageUrl ??
       selectedVariant?.image_url ??
@@ -146,6 +164,12 @@ export const ProductDetailPage = ({
     setIsAdding(false);
   }, [isAdding, totalItems]);
 
+  useEffect(() => {
+    if (!configuration.required) return;
+    setSelectedImageUrl(null);
+    setQuantity(selectedVariant && selectedVariant.stock > 0 ? 1 : 0);
+  }, [configuration.required, selectedVariant?.id, selectedVariant?.stock]);
+
   const selectVariant = (variant: ProductVariant | null) => {
     setSelectedImageUrl(null);
     setSelectedVariantId(variant?.id ?? null);
@@ -158,7 +182,8 @@ export const ProductDetailPage = ({
     setQuantity(variant && variant.stock > inCart ? 1 : 0);
   };
   const handleAdd = () => {
-    if (!product || isAddingRef.current) return;
+    // UX only: the server independently verifies context and purchase enrollment.
+    if (!product || configurationBlocked || isAddingRef.current) return;
     if (hasVariants && !selectedVariant) {
       setSelectionError("Selecciona una versión antes de agregar el producto.");
       return;
@@ -167,14 +192,14 @@ export const ProductDetailPage = ({
     isAddingRef.current = true;
     addStartTotalRef.current = totalItems;
     setIsAdding(true);
-    addItem(product, Math.min(quantity, remainingStock), selectedVariant);
+    addItem(presentationProduct!, Math.min(quantity, remainingStock), selectedVariant, configuration.purchaseContext ?? undefined);
     setWasAdded(true);
     if (toastTimeout.current !== null)
       window.clearTimeout(toastTimeout.current);
     toastTimeout.current = window.setTimeout(() => setWasAdded(false), 2400);
   };
 
-  if (status === "loading")
+  if (status === "loading" || product && product.slug !== slug)
     return (
       <main className="product-detail-page">
         <a className="product-detail__back" href={backToShop}>
@@ -252,6 +277,7 @@ export const ProductDetailPage = ({
       ) : null}
       <section className="product-detail">
         <div className="product-detail__gallery">
+          {isQaProduct(product) ? <p className="product-detail__qa-notice"><span>QA · SOLO LOCAL</span> Datos sintéticos e imágenes ilustrativas. No es mercancía real ni compatibilidad certificada.</p> : null}
           <div className="product-detail__media">
             {imageUrl ? (
               <img
@@ -295,31 +321,14 @@ export const ProductDetailPage = ({
         </div>
         <div className="product-detail__content">
           <span className="product-detail__eyebrow">
-            {product.product_brand?.name ?? "UP GRADE 79 — STORE"}
+            {product.product_category?.name ?? product.category ?? "UP GRADE 79 — STORE"}
           </span>
           <h1>{product.name}</h1>
-          {selectedVariant?.sku || product.sku ? (
-            <span className="product-detail__sku">
-              Ref. {selectedVariant?.sku ?? product.sku}
-            </span>
-          ) : null}
-          <strong className="product-detail__price">
-            {hasVariants && !selectedVariant ? "Desde " : ""}
-            {formatPrice(effectivePrice)}
-          </strong>
-          <section
-            className="product-detail__compatibility"
-            aria-label="Compatibilidad del producto"
-          >
-            <h2>Compatible con</h2>
-            {compatibility.map((label) => (
-              <p key={label}>{label}</p>
-            ))}
-            <small>
-              Confirma conexiones, medidas e instalación con el taller.
-            </small>
-          </section>
-          {hasVariants ? (
+          <p className="product-detail__compatibility-summary">{productCompatibilitySummary(presentationProduct ?? product, selectedVariant)} <a href="#product-compatibility" onClick={() => {
+            const detail = document.getElementById("product-compatibility");
+            if (detail instanceof HTMLDetailsElement) detail.open = true;
+          }}>Ver detalle <span aria-hidden="true">↗</span></a></p>
+          {configuration.required ? <ProductConfigurator model={configuration} product={product} interactive={mounted} /> : hasVariants ? (
             <label className="product-detail__variant">
               <span>Versión del producto</span>
               <select
@@ -357,8 +366,20 @@ export const ProductDetailPage = ({
               ) : null}
             </label>
           ) : null}
-          <div className="product-detail__stock">
-            {hasVariants && !selectedVariant
+          <section className="product-detail__commercial" aria-label="Resumen y compra">
+          {configuration.required ? <ProductConfigurationSummary model={configuration} /> : selectedVariant ? <p className="product-detail__selected-reference">{selectedVariant.display_name || selectedVariant.name}</p> : null}
+          <strong className="product-detail__price">
+            {(hasVariants || configuration.required) && !selectedVariant ? <span>Desde </span> : null}
+            {formatPrice(effectivePrice)}
+          </strong>
+          {selectedVariant?.sku || (!configuration.required && product.sku) ? (
+            <span className="product-detail__sku">SKU {selectedVariant?.sku ?? product.sku}</span>
+          ) : null}
+          <div className="product-detail__stock" data-available={availableStock > 0 && (!hasVariants || Boolean(selectedVariant))}>
+            {configuration.required ? selectedVariant
+              ? availableStock > 0 ? `${availableStock} disponibles en la red · surtido por confirmar` : "Referencia agotada"
+              : "Selecciona una configuración para consultar su disponibilidad"
+              : hasVariants && !selectedVariant
               ? availableStock > 0
                 ? `${availableStock} disponibles en nuestra red entre versiones`
                 : "Producto agotado"
@@ -378,7 +399,7 @@ export const ProductDetailPage = ({
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(q - 1, 1))}
                 disabled={
-                  !mounted || quantity <= 1 || (hasVariants && !selectedVariant)
+                  configurationBlocked || !mounted || quantity <= 1 || (hasVariants && !selectedVariant)
                 }
                 aria-label="Reducir cantidad"
               >
@@ -393,7 +414,7 @@ export const ProductDetailPage = ({
                   setQuantity((q) => Math.min(q + 1, remainingStock))
                 }
                 disabled={
-                  !mounted ||
+                  configurationBlocked || !mounted ||
                   quantity >= remainingStock ||
                   (hasVariants && !selectedVariant)
                 }
@@ -406,7 +427,7 @@ export const ProductDetailPage = ({
               className="product-detail__button"
               type="button"
               disabled={
-                !mounted ||
+                configurationBlocked || !mounted ||
                 isAdding ||
                 remainingStock <= 0 ||
                 (hasVariants && !selectedVariant)
@@ -414,7 +435,7 @@ export const ProductDetailPage = ({
               onClick={handleAdd}
             >
               <ShoppingBag size={18} aria-hidden="true" />
-              {isAdding
+              {configurationBlocked ? configuration.purchaseEnabled ? "Completa tu configuración" : "Compra online no habilitada" : isAdding
                 ? "Agregando…"
                 : remainingStock <= 0 && availableStock > 0
                 ? "Stock máximo en carrito"
@@ -431,19 +452,22 @@ export const ProductDetailPage = ({
               ? `${visibleTotal} productos en tu carrito.`
               : "La disponibilidad se verifica nuevamente antes de confirmar tu compra."}
           </p>
+          {configuration.required && !configuration.purchaseEnabled ? <p className="product-detail__preview-note">Vista previa de configuración. La compra online de este producto todavía no está habilitada.</p> : null}
           <a className="product-detail__cart-link" href="/carrito">
             Ver carrito <span aria-hidden="true">→</span>
           </a>
+          </section>
         </div>
       </section>
       <section className="product-detail__information">
-        <section aria-labelledby="product-description-title">
-          <h2 id="product-description-title">El producto</h2>
-          <p>{productDescription(product)}</p>
-        </section>
+        <details className="product-detail__disclosure">
+          <summary>Descripción</summary>
+          <div><p>{productDescription(product)}</p></div>
+        </details>
         {facts.length > 0 ? (
-          <section aria-labelledby="product-specifications-title">
-            <h2 id="product-specifications-title">Especificaciones</h2>
+          <details className="product-detail__disclosure" id="product-specifications">
+            <summary>Especificaciones</summary>
+            <div>
             <dl>
               {facts.map(([name, value]) => (
                 <div key={name}>
@@ -452,17 +476,24 @@ export const ProductDetailPage = ({
                 </div>
               ))}
             </dl>
-          </section>
+            </div>
+          </details>
         ) : null}
-        <section className="product-detail__purchase-info">
-          <h2>Antes de comprar</h2>
+        <details className="product-detail__disclosure" id="product-compatibility">
+          <summary>Compatibilidad</summary>
+          <div>{compatibility.map(label => <p key={label}>{label}</p>)}<p>Confirma sistema original, conexiones, medidas e instalación con el taller. El año por sí solo no identifica el sistema OEM.</p></div>
+        </details>
+        <details className="product-detail__disclosure">
+          <summary>Antes de comprar</summary>
+          <div>
           <p>
             Precios en pesos colombianos. El envío y los cargos aplicables se
             muestran en checkout antes del pago. La instalación se coordina con
             el taller.
           </p>
           <a href={backToShop}>Continuar explorando</a>
-        </section>
+          </div>
+        </details>
       </section>
     </main>
   );

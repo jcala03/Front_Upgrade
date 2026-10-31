@@ -178,14 +178,14 @@ const downloadFilename = (header: string | null) => {
   return /filename="?([^";]+)"?/i.exec(header)?.[1]?.trim() ?? null;
 };
 
-export const apiDownload = async (path: string, query: QueryParams = {}, signal?: AbortSignal): Promise<ApiDownload> => {
+export const apiDownload = async (path: string, query: QueryParams = {}, signal?: AbortSignal, accept = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json"): Promise<ApiDownload> => {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}${buildQueryString(query)}`, {
       method: "GET",
       credentials: "include",
       signal,
-      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json" },
+      headers: { Accept: accept },
     });
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === "AbortError") throw cause;

@@ -7,26 +7,18 @@ import {
   type ReactNode,
 } from "react";
 import type { Product, ProductVariant } from "../types/product";
-
-export type CartItem = {
-  product: Product;
-  variant: ProductVariant | null;
-  quantity: number;
-};
-
-export type CartLineQuantity = {
-  productId: number;
-  variantId: number | null;
-  quantity: number;
-};
+import type { ConfigurationContext } from "../types/productConfiguration";
+import { addCartItem, changeCartQuantity, consumeCartLines, cartItemKey, cartItemPrice, type CartItem, type CartLineQuantity } from "../domain/cartLines";
+export { cartItemKey, cartItemPrice, cartItemStock } from "../domain/cartLines";
+export type { CartItem, CartLineQuantity } from "../domain/cartLines";
 
 type CartContextValue = {
   items: CartItem[];
   totalItems: number;
   subtotal: number;
-  addItem: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
-  removeItem: (productId: number, variantId?: number | null) => void;
-  updateQuantity: (productId: number, variantId: number | null, quantity: number) => void;
+  addItem: (product: Product, quantity?: number, variant?: ProductVariant | null, context?: ConfigurationContext) => void;
+  removeItem: (productId: number, variantId?: number | null, context?: ConfigurationContext) => void;
+  updateQuantity: (productId: number, variantId: number | null, quantity: number, context?: ConfigurationContext) => void;
   clearCart: () => void;
   consumeLines: (lines: CartLineQuantity[]) => void;
 };
@@ -34,12 +26,6 @@ type CartContextValue = {
 const CART_KEY = "upgrade79_cart";
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
-
-export const cartItemKey = (productId: number, variantId?: number | null) =>
-  `${productId}:${variantId ?? "product"}`;
-
-export const cartItemStock = (item: CartItem) => Number(item.variant?.stock ?? item.product.stock ?? 0);
-export const cartItemPrice = (item: CartItem) => Number(item.variant?.price ?? item.product.price ?? 0);
 
 const productHasVariants = (product: Product) =>
   Boolean(product.has_variants) ||
@@ -63,7 +49,8 @@ const readCart = (): CartItem[] => {
     }
 
     return parsedCart
-      .filter((item) => item?.product && (!productHasVariants(item.product) || item.variant != null))
+      .filter((item) => item?.product && Number.isInteger(item.quantity) && item.quantity > 0
+        && (item.product.configuration?.required || !productHasVariants(item.product) || item.variant != null))
       .map((item) => ({ ...item, variant: item.variant ?? null }));
   } catch {
     return [];
@@ -77,77 +64,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product: Product, quantity = 1, variant: ProductVariant | null = null) => {
-    if ((product.has_variants || Boolean(product.variants?.length)) && !variant) return;
-    const availableStock = Number(variant?.stock ?? product.stock ?? 0);
-    if (availableStock <= 0) {
-      return;
-    }
+  const addItem = (product: Product, quantity = 1, variant: ProductVariant | null = null, context?: ConfigurationContext) =>
+    setItems(current => addCartItem(current, product, quantity, variant, context));
 
-    setItems((currentItems: CartItem[]) => {
-      const existingItem = currentItems.find(
-        (item: CartItem) => cartItemKey(item.product.id, item.variant?.id) === cartItemKey(product.id, variant?.id)
-      );
-
-      if (!existingItem) {
-        return [
-          ...currentItems,
-          {
-            product,
-            variant,
-            quantity: Math.min(quantity, availableStock),
-          },
-        ];
-      }
-
-      return currentItems.map((item: CartItem) => {
-        if (cartItemKey(item.product.id, item.variant?.id) !== cartItemKey(product.id, variant?.id)) {
-          return item;
-        }
-
-        return {
-          ...item,
-          product,
-          variant,
-          quantity: Math.min(item.quantity + quantity, availableStock),
-        };
-      });
-    });
-  };
-
-  const removeItem = (productId: number, variantId: number | null = null) => {
+  const removeItem = (productId: number, variantId: number | null = null, context?: ConfigurationContext) => {
     setItems((currentItems: CartItem[]) =>
-      currentItems.filter((item: CartItem) => cartItemKey(item.product.id, item.variant?.id) !== cartItemKey(productId, variantId))
+      currentItems.filter((item: CartItem) => cartItemKey(item.product.id, item.variant?.id, item.configuration_context) !== cartItemKey(productId, variantId, context))
     );
   };
 
-  const updateQuantity = (productId: number, variantId: number | null, quantity: number) => {
-    setItems((currentItems: CartItem[]) =>
-      currentItems.map((item: CartItem) => {
-        if (cartItemKey(item.product.id, item.variant?.id) !== cartItemKey(productId, variantId)) {
-          return item;
-        }
-
-        return {
-          ...item,
-          quantity: Math.max(1, Math.min(quantity, cartItemStock(item))),
-        };
-      })
-    );
-  };
+  const updateQuantity = (productId: number, variantId: number | null, quantity: number, context?: ConfigurationContext) =>
+    setItems(current => changeCartQuantity(current, productId, variantId, quantity, context));
 
   const clearCart = () => {
     setItems([]);
   };
 
   const consumeLines = (lines: CartLineQuantity[]) => {
-    const quantities = new Map(lines.map((line) => [cartItemKey(line.productId, line.variantId), line.quantity]));
-    setItems((currentItems) => currentItems.flatMap((item) => {
-      const purchased = quantities.get(cartItemKey(item.product.id, item.variant?.id));
-      if (!purchased) return [item];
-      const remaining = item.quantity - purchased;
-      return remaining > 0 ? [{ ...item, quantity: remaining }] : [];
-    }));
+    setItems(current => consumeCartLines(current, lines));
   };
 
   const totalItems = useMemo(() => {

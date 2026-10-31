@@ -1,6 +1,7 @@
 import type { Product, ProductVariant, ProductVariantSpecs } from "./product";
 import type { VehicleBrand, VehicleModel, VehicleVersion } from "./vehicle";
 import type { Service } from "./service";
+import type { ConfigurationContext, PurchaseConfiguration } from "./productConfiguration";
 
 export type OrderStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type OrderPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
@@ -25,6 +26,7 @@ export type OrderItem = {
   variant_name: string | null;
   variant_sku: string | null;
   variant_specs: ProductVariantSpecs | null;
+  configuration_context?: ConfigurationContext | null;
   unit_price: number;
   unit_cost: number | null;
   quantity: number;
@@ -129,10 +131,10 @@ export type CreateOrderPayload = {
   customer_city?: string;
   customer_address?: string;
   customer_notes?: string;
-  items: { product_id: number; product_variant_id?: number | null; quantity: number }[];
+  items: { product_id: number; product_variant_id?: number | null; quantity: number; configuration_context?: PurchaseConfiguration }[];
 };
 
-export type PublicOrderItem = Pick<OrderItem, "id" | "item_type" | "product_id" | "product_variant_id" | "product_name" | "product_slug" | "product_sku" | "variant_name" | "variant_sku" | "variant_specs" | "quantity" | "unit_price" | "subtotal" | "discount_amount" | "total">;
+export type PublicOrderItem = Pick<OrderItem, "id" | "item_type" | "product_id" | "product_variant_id" | "product_name" | "product_slug" | "product_sku" | "variant_name" | "variant_sku" | "variant_specs" | "configuration_context" | "quantity" | "unit_price" | "subtotal" | "discount_amount" | "total">;
 export type PublicOrderCharge = { type: string; label: string; amount: number; currency: string };
 export type PublicShippingAddress = { recipient_name: string; recipient_phone: string; country_code: string; state: string; city: string; postal_code: string; address_line1: string; address_line2?: string | null; delivery_notes?: string | null };
 export type PublicShippingQuote = { quote_token: string; carrier: string | null; service: string; amount: number; currency: string; estimated_days_min: number | null; estimated_days_max: number | null; expires_at: string | null };

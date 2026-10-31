@@ -18,3 +18,12 @@ dist/
 Thumbs.db
 # Local browser tooling
 .playwright-mcp/
+
+# Private environment backups; production/example contain public settings only.
+.env*
+!.env.example
+!.env.production
+
+# Local browser evidence and temporary release output.
+/qa-artifacts/
+/release-artifacts/

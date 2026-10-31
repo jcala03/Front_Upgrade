@@ -1,7 +1,1 @@
-import type { Product, ProductVariant } from "./product";
-
-export type CartItem = {
-  product: Product;
-  variant: ProductVariant | null;
-  quantity: number;
-};
+export type { CartItem } from "../domain/cartLines";

@@ -39,6 +39,16 @@ export const AdminOrdersPage = () => {
 
   useEffect(() => { void loadOrders(); }, [canView]);
   useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("order_id"));
+    if (!canView || !Number.isSafeInteger(id) || id <= 0) return;
+    let active = true;
+    setDetailLoading(true);
+    getAdminOrder(id).then((order) => { if (active) setSelectedOrder(order); })
+      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "La venta no está disponible."); })
+      .finally(() => { if (active) setDetailLoading(false); });
+    return () => { active = false; };
+  }, [canView]);
+  useEffect(() => {
     const customerId = readCustomerHandoffId();
     if (!customerId || !canCreate) return;
     let active = true;

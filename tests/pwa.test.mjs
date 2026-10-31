@@ -45,7 +45,7 @@ test('hash de endpoint estable, sin guardar endpoint en storage', async () => {
 test('registro seguro, actualización voluntaria y permiso solo dentro de activar', async () => {
   const source = await read('src/pwa/register.ts');
   assert.match(source, /import.meta.env.PROD/); assert.match(source, /window.isSecureContext/);
-  assert.match(source, /register\("\/sw.js", \{ scope: "\/"/);
+  assert.match(source, /register\(SERVICE_WORKER_URL, \{ scope: "\/"/);
   assert.match(source, /registration\?\.waiting/); assert.match(source, /SKIP_WAITING/);
   assert.ok(!(await read('src/main.tsx')).includes('requestPermission'));
   const profile = await read('src/pwa/DeviceNotifications.tsx');

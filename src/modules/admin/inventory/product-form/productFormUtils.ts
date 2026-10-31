@@ -215,10 +215,12 @@ export const buildProductFormData = ({
     );
 
     Object.entries(variant.specs).forEach(([fieldKey, value]) => {
-      if (value === null || value === undefined || value === "") return;
+      // Omitted keys are preserved by the API; an explicitly cleared input must
+      // still be sent so the administrator can clear an optional specification.
+      if (value === undefined) return;
       formData.append(
         `variants[${index}][specs][${fieldKey}]`,
-        typeof value === "boolean" ? (value ? "1" : "0") : String(value)
+        value === null ? "" : typeof value === "boolean" ? (value ? "1" : "0") : String(value)
       );
     });
 

@@ -1,10 +1,20 @@
 name: Deploy Upgrade La 79 Frontend
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Approved full frontend SHA (selected main commit)'
+        required: true
+        type: string
+      backend_sha:
+        description: 'Approved backend SHA, already deployed successfully'
+        required: true
+        type: string
+      backup_id:
+        description: 'Verified private backup directory ID'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,11 +25,49 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
+    environment: production
     runs-on: ubuntu-latest
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      WORKFLOW_SHA: ${{ github.sha }}
+      BACKEND_SHA: ${{ inputs.backend_sha }}
+      BACKUP_ID: ${{ inputs.backup_id }}
 
     steps:
+      - name: Validate explicit release approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$RELEASE_SHA" = "$WORKFLOW_SHA"
+          [[ "$BACKEND_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BACKUP_ID" =~ ^release-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{6}$ ]]
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify backup and coordinated backend release
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: 65002
+          envs: BACKEND_SHA,BACKUP_ID
+          script: |
+            set -eu
+            BACKUP="$HOME/upgrade79-private-backups/$BACKUP_ID"
+            PROJECT="$HOME/domains/crmupgradecol.com/laravel"
+            test -f "$BACKUP/RESTORE_VERIFIED"
+            (cd "$BACKUP" && sha256sum --check --quiet SHA256SUMS)
+            test "$(git -C "$PROJECT" rev-parse HEAD)" = "$BACKEND_SHA"
+            test ! -f "$PROJECT/storage/framework/down"
+            cd "$PROJECT"
+            php ops/release-preflight.php --require-current
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
