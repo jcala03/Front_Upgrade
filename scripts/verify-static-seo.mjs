@@ -10,7 +10,7 @@ import { request } from 'node:http';
 
 const directory = await mkdtemp(join(tmpdir(), 'upgrade79-apache-qa-'));
 const root = join(directory, 'public');
-await cp(resolve('dist'), root, { recursive: true });
+await cp(resolve(process.env.SEO_QA_DIST || 'dist'), root, { recursive: true });
 await writeFile(join(root, 'laravel-api.php'), 'QA-API-BRIDGE');
 const socket = createServer();
 await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve));
@@ -20,7 +20,7 @@ const moduleDir = process.env.APACHE_MODULE_DIR || '/usr/lib/apache2/modules';
 const configuration = [
   `ServerRoot "${directory}"`, `PidFile "${directory}/httpd.pid"`,
   `Listen 127.0.0.1:${port}`, 'ServerName localhost',
-  ...['mpm_event', 'authz_core', 'authz_host', 'dir', 'mime', 'rewrite', 'headers'].map(name => `LoadModule ${name}_module "${moduleDir}/mod_${name}.so"`),
+  ...[...(process.env.APACHE_MPM_MODULE === 'builtin' ? ['unixd'] : ['mpm_event']), 'authz_core', 'authz_host', 'dir', 'mime', 'rewrite', 'headers'].map(name => `LoadModule ${name}_module "${moduleDir}/mod_${name}.so"`),
   'TypesConfig /etc/mime.types', `ErrorLog "${directory}/error.log"`,
   process.env.APACHE_QA_TRACE ? 'LogLevel warn rewrite:trace5' : 'LogLevel warn',
   `DocumentRoot "${root}"`, 'DirectoryIndex index.html',
@@ -28,7 +28,7 @@ const configuration = [
 ].join('\n');
 const configFile = join(directory, 'httpd.conf');
 await writeFile(configFile, configuration);
-const server = spawn(process.env.APACHE_BINARY || 'apache2', ['-f', configFile, '-DFOREGROUND'], { stdio: ['ignore', 'ignore', 'pipe'] });
+const server = spawn(process.env.APACHE_BINARY || 'apache2', ['-f', configFile, '-DFOREGROUND'], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
 let startupError = '';
 server.stderr.on('data', chunk => { startupError += chunk; });
 server.on('error', error => { startupError += error.message; });
@@ -46,6 +46,11 @@ try {
     const response = await get(page.path);
     assert.equal(response.status, 200, page.path);
     const html = await response.text();
+    if (page.path.startsWith('/tienda/')) {
+      assert.equal(html, 'QA-API-BRIDGE', page.path);
+      results.push({ path: page.path, dynamicLaravelRoute: true });
+      continue;
+    }
     assert.match(html, /<title>/); assert.match(html, /<h1\b/);
     assert.ok(html.includes(`rel="canonical" href="${routes.siteUrl}${page.path}"`));
     assert.doesNotMatch(html, /<!--seo-head-->|<div id="root"><\/div>/);
@@ -53,7 +58,6 @@ try {
   }
   for (const [path, type, content] of [
     ['/robots.txt', /text\/plain/, 'Sitemap: https://upgradecolombia.com/sitemap.xml'],
-    ['/sitemap.xml', /(?:application|text)\/xml/, '<urlset'],
     ['/sw.js', /javascript/, "addEventListener('push'"],
     ['/manifest.webmanifest', /json/, 'standalone'],
   ]) {
@@ -63,7 +67,9 @@ try {
     const head = await get(path, { method: 'HEAD' }); assert.equal(head.status, 200);
     results.push({ path, status: 200, contentType: head.headers.get('content-type') });
   }
-  for (const path of ['/api/auth/me', '/sanctum/csrf-cookie']) {
+  // Static Apache fixture proves forwarding only. Real HTML/status/SQL are
+  // tested by PublicCatalogRuntimeTest + verify-dynamic-catalog.mjs, not faked here.
+  for (const path of ['/api/auth/me', '/sanctum/csrf-cookie', '/sitemap.xml', '/tienda/after-build', '/tienda/missing']) {
     const response = await get(path); assert.equal(await response.text(), 'QA-API-BRIDGE');
     results.push({ path, existingBridge: true });
   }
@@ -73,7 +79,7 @@ try {
     assert.doesNotMatch(html, /public-bootstrap|rel="canonical"/);
     results.push({ path, privateClientRoute: true });
   }
-  for (const path of ['/does-not-exist', '/tienda/missing', '/seo/template.html', '/seo/entry-server.js']) {
+  for (const path of ['/does-not-exist', '/seo/template.html', '/seo/entry-server.js']) {
     const response = await get(path);
     assert.equal(response.status, 404, path);
     assert.match(await response.text(), /Página no encontrada/);

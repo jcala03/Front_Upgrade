@@ -28,8 +28,13 @@ export function apacheRules(pages, origin) {
     // URLs cannot expose templates, old snapshots or the SSR module.
     '  RewriteCond %{ENV:REDIRECT_STATUS} ^$',
     '  RewriteCond %{THE_REQUEST} "\\s/+seo(?:[/\\s?])" [NC]',
-    '  RewriteRule ^seo(?:/|$) - [R=404,L]'];
+    '  RewriteRule ^seo(?:/|$) - [R=404,L]',
+    // Validate every product against Laravel, including old snapshots that may
+    // now be hidden. These rules MUST precede snapshots and the static-file gate.
+    '  RewriteRule ^tienda/[^/]+/?$ laravel-api.php [END,QSA]',
+    '  RewriteRule ^sitemap\\.xml$ laravel-api.php [END,QSA]'];
   for (const page of pages) {
+    if (page.path.startsWith('/tienda/')) continue;
     const pattern = page.path === '/' ? '^$' : `^${escapeRegex(decodeURIComponent(page.path.slice(1)))}/?$`;
     const quoted = `"${pattern.replaceAll('"', '\\"')}"`;
     if (page.queryFile) {

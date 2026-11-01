@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'vite';
-import { prerender } from '../scripts/prerender.mjs';
+import { prerender, apacheRules } from '../scripts/prerender.mjs';
 
 const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
   define: { __PUBLIC_SITE_URL__: JSON.stringify('https://upgradecolombia.com') },
@@ -17,6 +17,19 @@ const options = { siteUrl: origin, apiBase: 'http://127.0.0.1:9999' };
 const product = { id: 1, name: 'Producto QA', slug: 'producto-qa', is_active: true, is_visible: true,
   price: 10000, stock: 2, image_url: 'https://example.test/product.png', images: [], variants: [], vehicle_compatibilities: [] };
 const template = '<!doctype html><html lang="es"><head><!--seo-head--></head><body><div id="root"></div></body></html>';
+
+test('Hostinger validates old and future product slugs and sitemap through the existing Laravel bridge before static files', () => {
+  const rules = apacheRules([{ path: '/tienda/old-product', file: 'seo/pages/old.html' }, { path: '/tienda', file: 'seo/pages/shop.html' }], origin);
+  const productRule = 'RewriteRule ^tienda/[^/]+/?$ laravel-api.php [END,QSA]';
+  const sitemapRule = 'RewriteRule ^sitemap\\.xml$ laravel-api.php [END,QSA]';
+  assert.ok(rules.includes(productRule));
+  assert.ok(rules.includes(sitemapRule));
+  assert.ok(rules.indexOf(productRule) < rules.indexOf('REQUEST_FILENAME} -f'));
+  assert.ok(rules.indexOf(sitemapRule) < rules.indexOf('REQUEST_FILENAME} -f'));
+  assert.ok(!rules.includes('seo/pages/old.html'));
+  assert.ok(rules.includes('seo/pages/shop.html'));
+  assert.ok(rules.includes('(?:api|sanctum)'));
+});
 
 async function fixture(t, handler) {
   const directory = await mkdtemp(join(tmpdir(), 'upgrade79-static-test-'));

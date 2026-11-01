@@ -19,7 +19,9 @@ const application = (
 
 // Public pages already have usable, styled HTML and their exact public data.
 // Reuse those nodes rather than clearing the SSR tree and replaying the page.
-if (publicBootstrap() && root.hasChildNodes()) {
+// PHP supplies semantic HTML + current public data for products published after
+// the build. It is not a React SSR tree, so mount rather than falsely hydrating it.
+if (publicBootstrap() && publicBootstrap()?.renderMode !== "client" && root.hasChildNodes()) {
   hydrateRoot(root, application);
 } else {
   // Private routes retain client rendering and never hydrate session data.

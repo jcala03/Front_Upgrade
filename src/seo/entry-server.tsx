@@ -17,7 +17,7 @@ import { splashBootScript } from "../components/ui/SplashScreen/firstPaint";
 import logo from "../assets/logos/upgrade79-logo.png";
 import type { Product } from "../types/product";
 import { parseShopFilters, serializeShopFilters, shopApiQuery, vehicleSelectionQuery } from "../pages/Shop/shopFilters";
-import { createSeo, indexableProduct, safeJson, seoHead, siteOrigin, sitemapXml, type PublicBootstrap } from "./model";
+import { createSeo, publicProductReadable, safeJson, seoHead, siteOrigin, sitemapXml, type PublicBootstrap } from "./model";
 
 type Options = { siteUrl: string; apiBase: string };
 type Response = { status: number; body: string; headers: Record<string, string> };
@@ -62,7 +62,7 @@ export async function renderRequest(requestUrl: string, template: string, option
       products = data;
     } else if (/^\/tienda\/[^/]+$/.test(path)) {
       product = await publicApi(`/${encodeURIComponent(decodeURIComponent(path.slice(8)))}${vehicleSelectionQuery(url.search) ? "?" + vehicleSelectionQuery(url.search) : ""}`, options) ?? undefined;
-      if (!product || !indexableProduct(product)) { product = undefined; status = 404; }
+      if (!product || !publicProductReadable(product)) { product = undefined; status = 404; }
     } else if (!privateRoute && path !== "/politica-de-datos" && path !== "/terminos-y-condiciones") status = 404;
   } catch (error) {
     // Home remains useful without its catalog preview. Keep failures local to that

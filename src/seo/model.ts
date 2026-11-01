@@ -6,7 +6,7 @@ export type Seo = {
   robots: string; image: string | null; type: "website" | "product";
   structuredData: Record<string, unknown>[];
 };
-export type PublicBootstrap = { path: string; query?: string; product?: Product; products?: Product[]; homeCatalogUnavailable?: boolean; prerendered?: boolean; seo: Seo };
+export type PublicBootstrap = { path: string; query?: string; product?: Product; products?: Product[]; homeCatalogUnavailable?: boolean; prerendered?: boolean; renderMode?: "client"; seo: Seo };
 
 export function siteOrigin(value: string) {
   const url = new URL(value);
@@ -28,7 +28,8 @@ export function productImages(product: Product) {
   const urls = [product.image_url, ...(product.images ?? []).filter(i => i.is_primary).map(i => i.image_url), ...(product.images ?? []).filter(i => !i.is_primary).map(i => i.image_url)];
   return [...new Set(urls.filter((u): u is string => Boolean(u) && /^https?:\/\//.test(u!)))];
 }
-export const indexableProduct = (p: Product) => Boolean(p.is_active && p.is_visible && p.slug && productImages(p).length);
+export const publicProductReadable = (p: Product) => Boolean(p.is_active && p.is_visible && p.slug);
+export const indexableProduct = (p: Product) => publicProductReadable(p) && productImages(p).length > 0;
 
 export function productFacts(product: Product): [string, string][] {
   const facts: [string, string][] = [];
@@ -72,12 +73,13 @@ export function createSeo(path: string, origin: string, options: { product?: Pro
     base.structuredData = [breadcrumbs([["Inicio", "/"], ["Tienda", "/tienda"]])];
     const query = new URLSearchParams(options.query);
     if ([...query.keys()].some(key => !/^(utm_.+|gclid|fbclid|msclkid)$/.test(key))) base.robots = "noindex, follow";
-  } else if (options.product && indexableProduct(options.product)) {
+  } else if (options.product && publicProductReadable(options.product)) {
     const product = options.product;
     base.canonical = site + productPath(product);
     base.title = `${product.name} | ${brand.name}`;
     base.description = productDescription(product).slice(0, 170);
     const images = productImages(product);
+    if (!images.length) base.robots = "noindex, follow";
     base.image = images[0] ?? null;
     base.type = "product";
     const variants = publicVariants(product);

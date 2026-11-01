@@ -38,3 +38,12 @@ test('JSON incrustado no permite cerrar script; fallos API nunca indexables', ()
   assert.ok(!safeJson({ name: '</script><script>alert(1)</script>' }).includes('<'));
   for (const status of [404, 503]) { const seo = createSeo('/', origin, { status }); assert.equal(seo.robots, 'noindex, nofollow'); assert.equal(seo.canonical, null); assert.deepEqual(seo.structuredData, []); }
 });
+
+test('un producto público histórico sin imagen sigue siendo legible, pero no se indexa ni entra al sitemap', () => {
+  const legacy = { ...product, image_url: null, images: [] };
+  const seo = createSeo('/tienda/pantalla-pro', origin, { product: legacy });
+  assert.equal(seo.title, legacy.name + ' | UP GRADE 79');
+  assert.equal(seo.canonical, origin + '/tienda/pantalla-pro');
+  assert.equal(seo.robots, 'noindex, follow');
+  assert.ok(!sitemapXml([legacy], origin).includes('/tienda/pantalla-pro'));
+});
