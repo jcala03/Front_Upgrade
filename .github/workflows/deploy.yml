@@ -231,6 +231,9 @@ jobs:
             cd "$PROJECT"
             php ops/release-preflight.php --require-current
 
+            # Reject an unknown bridge BEFORE copying more files into the live site.
+            php "$CANDIDATE/seo/install-seo-routing.php" "$FRONT" --check "$CANDIDATE/seo/apache.conf"
+
             echo "=== Respaldo automatico del frontend anterior ==="
             install -d -m 700 "$HOME/upgrade79-deploy-rollbacks"
             ROLLBACK=$(mktemp -d "$HOME/upgrade79-deploy-rollbacks/frontend-$RELEASE_SHA-XXXXXX")
@@ -260,8 +263,8 @@ jobs:
             echo "=== Archivos de Laravel ==="
             test -f "$FRONT/laravel-api.php"
             test -f "$FRONT/.htaccess"
-            # Install only a managed block; preserve the existing API bridge,
-            # domain redirects and Hostinger settings. Keeps a private backup.
+            # Preserve bridge bootstrap/settings; extend only its reviewed URI
+            # guard and the managed SEO block, with private backups.
             php "$FRONT/seo/install-seo-routing.php" "$FRONT"
             test -f "$FRONT/seo/.htaccess"
             test -f "$FRONT/sw.js"
@@ -303,10 +306,12 @@ jobs:
             test "$FRONT_STATUS" = "200"
 
             echo "=== Comprobar SEO publico real ==="
+            echo "GET https://upgradecolombia.com/robots.txt"
             curl --fail --silent --show-error -D /tmp/upgrade79-robots-headers \
               https://upgradecolombia.com/robots.txt -o /tmp/upgrade79-robots
             grep -qi '^content-type: text/plain' /tmp/upgrade79-robots-headers
             grep -q '^Sitemap: https://upgradecolombia.com/sitemap.xml' /tmp/upgrade79-robots
+            echo "GET https://upgradecolombia.com/sitemap.xml"
             curl --fail --silent --show-error -D /tmp/upgrade79-sitemap-headers \
               https://upgradecolombia.com/sitemap.xml -o /tmp/upgrade79-sitemap
             grep -qiE '^content-type: (application|text)/xml' /tmp/upgrade79-sitemap-headers

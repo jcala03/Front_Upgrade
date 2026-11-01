@@ -7,8 +7,9 @@ del build, sitemap estático y un 404 final. Un producto posterior existía en L
 pero Apache no dejaba llegar su URL a la aplicación.
 
 Ahora TODAS las fichas `/tienda/:slug` y `/sitemap.xml` pasan al puente existente
-`laravel-api.php` antes de los snapshots y del control de archivos estáticos. No se
-modifica ese puente ni se instala Node en Hostinger. Inicio, tienda, legales y páginas
+`laravel-api.php` antes de los snapshots y del control de archivos estáticos. Se conserva
+el bootstrap del puente; el instalador amplía únicamente su guard URI reconocido para
+admitir fichas y sitemap además de API/Sanctum. No se instala Node en Hostinger. Inicio, tienda, legales y páginas
 privadas conservan su mecanismo existente. API, Sanctum, imágenes, SW y assets no cambian.
 
 Laravel incorpora `PublicCatalogController`, `PublicCatalogPage`, dos vistas y
@@ -96,5 +97,47 @@ SQL posterior: cero productos/sedes persistidos por las fixtures del router.
 SW fuente y build coinciden: 43338314702133f01e4df46edf0e9640229a0da55f593d0773104e6bcbfa3482.
 
 No se modificaron Hostinger, producción, bases comerciales, .env privados ni el SW.
-La implementación inicial no hizo commit. La preparación posterior autorizada genera
-commits locales coordinados; NO se ha hecho push ni deploy.
+La implementación inicial y su preparación no ejecutaron push/deploy. Posteriormente,
+el operador publicó backend y frontend; el último quedó parcialmente instalado antes
+del fallo descrito a continuación. La corrección del guard sigue SOLO en local.
+
+## Corrección del guard confirmada después del deploy
+
+El operador confirmó que el puente existente contiene este rechazo previo a Laravel:
+`if (!preg_match('#^/(api|sanctum)(/|$)#', $uri)) { http_response_code(404); exit; }`.
+Las reglas Apache llegaban al PHP, pero ese guard devolvía 404 vacío para las rutas nuevas.
+El fallo de Actions fue en sitemap.xml; robots.txt respondía 200. La publicación ya
+había copiado assets, HTML y reglas: no era una transacción revertida automáticamente.
+
+Se verificó por HTTP que el backend b807c6b publicado sirve la ficha (200, HTML/SEO),
+sitemap (200 XML) y slug inexistente (404) desde su dominio directo. No hace falta otro
+release backend ni migraciones: `.github/required-backend-sha` permanece en b807c6b.
+
+La corrección pendiente afecta SOLO al frontend:
+
+- `scripts/install-seo-routing.php`: reconoce el guard mediante tokens PHP (no comentarios),
+  valida sintaxis y sustituye solo el literal regex. Conserva el resto del puente y su
+  modo de archivo; respaldo 600 y temporal fuera de public_html, reemplazo atómico.
+  Si hay un guard desconocido/ambiguo, falla sin modificar archivos. Es idempotente,
+  incluso si las reglas SEO ya fueron instaladas por la ejecución parcialmente fallida.
+- `.github/workflows/deploy.yml`: check-only con el instalador candidato ANTES de copiar
+  archivos. Conserva push automático, bloqueo, verificaciones HTTP y respaldos. Explicita
+  en el log las URLs robots/sitemap comprobadas. No convierte 404 en 200.
+- `tests/seo-bridge.test.mjs`: reproduce el puente estricto mediante un PHP HTTP aislado,
+  prueba ampliación limitada, 404 real de aplicación, consultas OEM, backup/idempotencia,
+  publicación parcial, check-only y rechazo seguro de guards desconocidos.
+- `tests/seo-prerender.test.mjs`: usa el guard real confirmado, no un placeholder permisivo.
+
+Para publicar DESPUÉS de autorización, desde upgrade79-web:
+
+```bash
+git add scripts/install-seo-routing.php .github/workflows/deploy.yml \
+  tests/seo-bridge.test.mjs tests/seo-prerender.test.mjs DYNAMIC_PRODUCT_ROUTES.md
+git diff --cached --check
+git commit -m "fix: extend Hostinger bridge guard for dynamic product SEO"
+git push origin main
+```
+
+No se ejecutaron esos comandos durante esta corrección. No repetir deploy backend ni
+restaurar automáticamente el frontend anterior. Conservar los respaldos ya existentes.
+Tras Actions PASS, comprobar los HTTP de cámara, inexistente y sitemap indicados arriba.

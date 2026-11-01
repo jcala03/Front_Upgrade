@@ -117,7 +117,14 @@ test('instalador conserva reglas Hostinger y API, hace respaldo privado y es ide
   await prerender({ dist, renderer, options });
   const original = '# Hostinger settings\nRewriteEngine On\nRewriteRule ^(api|sanctum)(/.*)?$ laravel-api.php [L,QSA]\nRewriteRule ^ index.html [L]\n';
   await writeFile(join(dist, '.htaccess'), original);
-  await writeFile(join(dist, 'laravel-api.php'), '<?php // QA bridge placeholder');
+  await writeFile(join(dist, 'laravel-api.php'), `<?php
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+if (!preg_match('#^/(api|sanctum)(/|$)#', $uri)) {
+    http_response_code(404);
+    exit;
+}
+// Existing bootstrap must remain unchanged.
+`);
   const installer = new URL('../scripts/install-seo-routing.php', import.meta.url).pathname;
   // decodeURIComponent handles the spaces in the real workspace path.
   execFileSync('php', [decodeURIComponent(installer), dist]);
