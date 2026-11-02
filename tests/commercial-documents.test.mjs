@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const api = await vite.ssrLoadModule('/src/api/commercialDocuments.ts');
 const { CommercialDocumentActions } = await vite.ssrLoadModule('/src/components/CommercialDocumentActions.tsx');

@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const readiness = await vite.ssrLoadModule('/src/modules/admin/inventory/product-form/variantTechnicalReadiness.ts');
 const { ProductDynamicFields } = await vite.ssrLoadModule('/src/modules/admin/inventory/product-form/ProductDynamicFields.tsx');

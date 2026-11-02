@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-const vite = await createServer({ configFile: false, esbuild: { jsx: 'automatic' }, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, esbuild: { jsx: 'automatic' }, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const utils = await vite.ssrLoadModule('/src/modules/admin/commissions/commissionUtils.ts');
 const { MyCommissionsPage } = await vite.ssrLoadModule('/src/modules/crm/my-commissions/MyCommissionsPage.tsx');

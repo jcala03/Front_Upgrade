@@ -9,7 +9,7 @@ import ts from 'typescript';
 import { createServer as createHttpServer } from 'node:http';
 import { runInNewContext } from 'node:vm';
 
-const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const { useSplash } = await vite.ssrLoadModule('/src/hooks/useSplash.ts');
 const { splashBootScript } = await vite.ssrLoadModule('/src/components/ui/SplashScreen/firstPaint.ts');

@@ -9,7 +9,7 @@ import { prerender, apacheRules } from '../scripts/prerender.mjs';
 
 const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
   define: { __PUBLIC_SITE_URL__: JSON.stringify('https://upgradecolombia.com') },
-  server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+  server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const renderer = await vite.ssrLoadModule('/src/seo/entry-server.tsx');
 const origin = 'https://upgradecolombia.com';

@@ -4,7 +4,7 @@ import {createServer} from 'vite';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 
-const vite = await createServer({configFile: false, esbuild: {jsx: 'automatic'}, optimizeDeps: {noDiscovery: true, include: []}, server: {middlewareMode: true, hmr: false}, appType: 'custom'});
+const vite = await createServer({configFile: false, esbuild: {jsx: 'automatic'}, optimizeDeps: {noDiscovery: true, include: []}, server: {middlewareMode: true, hmr: false, ws: false}, appType: 'custom'});
 after(() => vite.close());
 const {DashboardCommissionKpis, DashboardCommissionKpisView} = await vite.ssrLoadModule('/src/modules/admin/dashboard/DashboardCommissionKpis.tsx');
 const {TeamCommissionKpis} = await vite.ssrLoadModule('/src/modules/admin/commissions/TeamCommissionKpis.tsx');

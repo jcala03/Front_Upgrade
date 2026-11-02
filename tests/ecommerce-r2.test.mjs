@@ -13,7 +13,7 @@ const vite = await createServer({
   define: {
     __PUBLIC_SITE_URL__: JSON.stringify("https://upgradecolombia.com"),
   },
-  server: { middlewareMode: true, hmr: false },
+  server: { middlewareMode: true, hmr: false, ws: false },
   appType: "custom",
 });
 after(() => vite.close());

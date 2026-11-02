@@ -7,6 +7,13 @@ import { serviceWorkerVersion, currentServiceWorkerVersion } from '../scripts/pw
 const source = await readFile(new URL('../public/sw.js', import.meta.url));
 const version = currentServiceWorkerVersion();
 
+// Complete asynchronous setup before any tests can start or close the server.
+const vite = await createServer({ configFile: false, define: { __PWA_SW_VERSION__: JSON.stringify(version), 'import.meta.env.PROD': 'true' },
+  optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
+after(() => vite.close());
+const versions = await vite.ssrLoadModule('/src/pwa/version.ts');
+const pwa = await vite.ssrLoadModule('/src/pwa/register.ts');
+
 test('SW version is deterministic SHA-256 of the exact published source, not time or package version', () => {
   assert.match(version, /^[a-f0-9]{64}$/);
   assert.equal(version, serviceWorkerVersion(source));
@@ -23,12 +30,6 @@ test('real Vite production config embeds that same version and copies public fil
   assert.equal(ssr.define.__PWA_SW_VERSION__, config.define.__PWA_SW_VERSION__);
   assert.equal(ssr.build.copyPublicDir, false);
 });
-
-const vite = await createServer({ configFile: false, define: { __PWA_SW_VERSION__: JSON.stringify(version), 'import.meta.env.PROD': 'true' },
-  optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
-after(() => vite.close());
-const versions = await vite.ssrLoadModule('/src/pwa/version.ts');
-const pwa = await vite.ssrLoadModule('/src/pwa/register.ts');
 
 test('worker URL is stable across reads and distinguishes old/unversioned workers', async () => {
   assert.equal(versions.SERVICE_WORKER_URL, `/sw.js?v=${version}`);

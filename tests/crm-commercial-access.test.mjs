@@ -4,7 +4,7 @@ import { createServer } from "vite";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
-const vite = await createServer({ configFile: false, server: { middlewareMode: true, hmr: false }, appType: "custom" });
+const vite = await createServer({ configFile: false, server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
 after(() => vite.close());
 const { CrmLayout } = await vite.ssrLoadModule("/src/modules/crm/layout/CrmLayout.tsx");
 const { UserHomePage } = await vite.ssrLoadModule("/src/modules/crm/home/UserHomePage.tsx");

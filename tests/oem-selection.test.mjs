@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createServer } from "vite";
 import { after } from "node:test";
 
-const vite = await createServer({ configFile: false, server: { middlewareMode: true, hmr: false }, appType: "custom" });
+const vite = await createServer({ configFile: false, server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
 after(() => vite.close());
 const filters = await vite.ssrLoadModule("/src/pages/Shop/shopFilters.ts");
 

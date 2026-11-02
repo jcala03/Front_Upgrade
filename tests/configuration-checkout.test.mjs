@@ -5,7 +5,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { configurableProduct, traditionalProduct } from './fixtures/configurator-products.mjs';
 
-const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
 after(() => vite.close());
 const cart = await vite.ssrLoadModule('/src/domain/cartLines.ts');
 const contract = await vite.ssrLoadModule('/src/types/productConfiguration.ts');

@@ -9,6 +9,14 @@ const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8
 const payload = { notification_id: 28, user_id: 7, title: 'Tarea asignada', body: 'Mensaje CRM', url: '/crm/tasks', unread_count: 3 };
 const origin = 'https://upgrade.example';
 
+// Finish SSR setup before registering tests: Node 22 can otherwise run the
+// first batch and its root after() while a later top-level await is pending.
+const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
+after(() => vite.close());
+const api = await vite.ssrLoadModule('/src/pwa/diagnostics.ts');
+const { SERVICE_WORKER_URL } = await vite.ssrLoadModule('/src/pwa/version.ts');
+const scriptURL = `${origin}${SERVICE_WORKER_URL}`;
+
 function worker({ failStorage = false, realStorage = false } = {}) {
   const handlers = {}; const records = new Map(); const trace = []; const shown = []; const messages = []; const badges = [];
   let sequence = 0; let owner = 7; let ownerReads = 0;
@@ -203,12 +211,6 @@ test('SKIP_WAITING keeps explicit update behavior', async () => {
   await harness.emit('message', { source: { url: `${origin}/crm/profile` }, data: { type: 'SKIP_WAITING' } });
   assert.deepEqual(harness.messages, ['SKIP_WAITING']); assert.equal(harness.records.size, 0);
 });
-
-const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
-after(() => vite.close());
-const api = await vite.ssrLoadModule('/src/pwa/diagnostics.ts');
-const { SERVICE_WORKER_URL } = await vite.ssrLoadModule('/src/pwa/version.ts');
-const scriptURL = `${origin}${SERVICE_WORKER_URL}`;
 
 test('page diagnostic reader uses MessageChannel, sorts newest first and does not call backend', async (t) => {
   const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
