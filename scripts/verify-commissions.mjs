@@ -67,13 +67,15 @@ try {
     if (role === 'user') assert.ok(!auth.permissions.includes('commissions.view'));
     const navigation = page.locator('.crm-layout__sidebar a[href="' + (role === 'admin' ? '/crm/commissions' : '/crm/me/commissions') + '"]');
     await navigation.waitFor({ state: 'attached' }); assert.equal(await navigation.count(), 1);
-    const block = role === 'admin' ? page.locator('.team-commission-kpis') : page.locator('.user-home-card').filter({ has: page.getByRole('heading', { name: 'Ganadas del mes', exact: true }) });
+    const block = role === 'admin' ? page.locator('.dashboard-commission-kpis') : page.locator('.user-home-card').filter({ has: page.getByRole('heading', { name: 'Ganadas del mes', exact: true }) });
     await block.waitFor();
     if (role === 'admin') {
       await page.setViewportSize({ width: 430, height: 1000 });
+      const summaryForBranch = page.waitForResponse(r => { const url = new URL(r.url()); return url.pathname === '/api/admin/commissions/summary' && url.searchParams.get('branch_id') === String(fixture.branch_id); });
       await page.locator('.dashboard-scope select').selectOption(String(fixture.branch_id));
-      await block.getByText('Sede histórica seleccionada', { exact: true }).waitFor();
-      await block.getByText('Vendedor comisiones QA user', { exact: true }).waitFor();
+      assert.equal((await summaryForBranch).status(), 200);
+      await block.getByText('28.000', { exact: false }).first().waitFor();
+      assert.equal(await block.locator('form,input,select,table,.team-commission-sellers').count(), 0);
     } else await block.getByText('28.000', { exact: false }).first().waitFor();
     for (const width of [1440, 1280, 1024, 768, 430, 390, 360]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -84,7 +86,7 @@ try {
       if ([1440, 390].includes(width)) await page.screenshot({ path: join(artifacts, role + '-dashboard-' + width + '.png'), fullPage: true });
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await block.getByRole('link', { name: role === 'admin' ? 'Ver ventas de Vendedor comisiones QA user' : 'Ver comisiones', exact: true }).click();
+    await block.getByRole('link', { name: 'Ver comisiones', exact: true }).click();
     await page.getByRole('heading', { name: role === 'admin' ? 'Comisiones' : 'Mis comisiones', exact: true, level: 2 }).waitFor();
     const saleLink = page.getByRole('link', { name: fixture.orders.earned.number, exact: true });
     await saleLink.waitFor();
@@ -114,7 +116,7 @@ try {
     });
     await dates.nth(0).fill('2020-01-01'); await dates.nth(1).fill('2020-01-31');
     assert.equal((await (await changed).json()).data.totals.total_rows, 0);
-    await page.getByText(role === 'admin' ? 'No hay comisiones registradas.' : 'Aún no tienes comisiones registradas.', { exact: true }).waitFor();
+    await page.locator('.commissions-state').getByText('No se encontraron comisiones con los filtros seleccionados.', { exact: true }).waitFor();
     await dates.nth(1).fill(to); await dates.nth(0).fill(from);
     await saleLink.waitFor();
     await page.setViewportSize({ width: 1440, height: 1000 });

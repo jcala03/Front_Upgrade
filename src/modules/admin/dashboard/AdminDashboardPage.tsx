@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowRight, Banknote, FileText, RefreshCw, ShoppingBag, UsersRound } from "lucide-react";
 import { compareDashboardBranches, getDashboard } from "../../../api/dashboard";
 import { listAllBranches } from "../../../api/branches";
@@ -8,7 +8,8 @@ import { formatCurrency } from "../../../utils/formatCurrency";
 import { hasPermission } from "../../../utils/authStorage";
 import { originLabels, paymentStatusLabels } from "../orders/orderUtils";
 import { SalesChart } from "./SalesChart";
-import { TeamCommissionKpis } from "../commissions/TeamCommissionKpis";
+import { DashboardCommissionKpis } from "./DashboardCommissionKpis";
+import { DashboardMetricCard as MetricCard } from "./DashboardMetricCard";
 import "./AdminDashboardPage.css";
 
 const formatDateTime = (value: string | null) => value
@@ -29,14 +30,6 @@ const expiryLabel = (date: string) => {
   if (difference > 1 && difference <= 3) return `Vence en ${difference} días`;
   return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" }).format(new Date(`${date.slice(0, 10)}T00:00:00`));
 };
-
-const MetricCard = ({ label, value, detail, icon }: { label: string; value: ReactNode; detail: ReactNode; icon: ReactNode }) => (
-  <article className="dashboard-metric">
-    <div className="dashboard-metric__heading"><span>{label}</span>{icon}</div>
-    <strong>{value}</strong>
-    <small>{detail}</small>
-  </article>
-);
 
 const SectionHeader = ({ eyebrow, title, href, linkLabel }: { eyebrow: string; title: string; href?: string; linkLabel?: string }) => (
   <header className="dashboard-section__header">
@@ -118,7 +111,7 @@ export const AdminDashboardPage = () => {
         <MetricCard label="Stock crítico" value={`${inventory.low_stock_count} bajo`} detail={`${inventory.out_of_stock_count} ${inventory.out_of_stock_count === 1 ? "agotado" : "agotados"}`} icon={<AlertTriangle size={19} aria-hidden="true" />} />
       </section>
 
-      {hasPermission("commissions.view") ? <TeamCommissionKpis branchId={mode === "branch" ? selectedBranchId ?? undefined : undefined} /> : null}
+      {hasPermission("commissions.view") ? <DashboardCommissionKpis branchId={mode === "branch" ? selectedBranchId ?? undefined : undefined} /> : null}
 
       <div className="dashboard-grid dashboard-grid--hero">
         <section className="dashboard-panel dashboard-panel--chart">

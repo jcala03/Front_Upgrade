@@ -25,12 +25,13 @@ export const commissionItemName = (product: { name: string }, variant: { name: s
 export const commissionEventDate = (row: { status: CommissionStatus; created_at: string; earned_at: string | null; voided_at: string | null }) =>
   row.status === "earned" ? row.earned_at : row.status === "voided" ? row.voided_at : row.created_at;
 
-export const commissionMonth = () => {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+export const commissionMonth = (offset = 0, now = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit" }).formatToParts(now);
   const year = Number(parts.find((part) => part.type === "year")!.value);
   const month = Number(parts.find((part) => part.type === "month")!.value);
-  const prefix = String(year) + "-" + String(month).padStart(2, "0");
-  return { from: prefix + "-01", to: prefix + "-" + new Date(Date.UTC(year, month, 0)).getUTCDate() };
+  const start = new Date(Date.UTC(year, month - 1 + offset, 1));
+  const end = new Date(Date.UTC(year, month + offset, 0));
+  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 };
 
 export const commissionQuery = () => new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
