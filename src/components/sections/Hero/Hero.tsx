@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ArrowUpRight } from "lucide-react";
 import heroVideo from "../../../assets/videos/hero-upgrade-desktop.mp4";
 import { brand } from "../../../data/brand";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
@@ -65,7 +66,7 @@ export const Hero = () => {
           <div className="hero__actions">
             <a className="hero__cta hero__cta--primary" href="/tienda">
               Explorar artículos
-              <span aria-hidden="true">↗</span>
+              <ArrowUpRight size={16} strokeWidth={1.8} aria-hidden="true" focusable="false" />
             </a>
 
             <a
@@ -75,7 +76,7 @@ export const Hero = () => {
               rel="noreferrer"
             >
               Cotizar transformación
-              <span aria-hidden="true">↗</span>
+              <ArrowUpRight size={16} strokeWidth={1.8} aria-hidden="true" focusable="false" />
             </a>
           </div>
         </div>

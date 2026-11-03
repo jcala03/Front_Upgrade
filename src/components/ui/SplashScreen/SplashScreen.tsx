@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import logo from "../../../assets/logos/upgrade79-logo-hq.png";
+import logo from "../../../assets/logos/upgrade79-logo.png";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
-import { finishInitialSplash, handoffInitialSplash, hasInitialSplash } from "./firstPaint";
+import { finishInitialSplash, handoffInitialSplash } from "./firstPaint";
 import "./SplashScreen.css";
 
 gsap.registerPlugin(useGSAP);
@@ -90,12 +90,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
         // The SSR cover stays in place through hydration and image decoding.
         // Prepare the real overlay before revealing #root in the same frame.
-        const continuingFirstPaint = hasInitialSplash();
-        gsap.set(logoElement, { opacity: continuingFirstPaint ? 1 : 0, x: 0, rotation: 0 });
-        handoffInitialSplash();
+        gsap.set(logoElement, { opacity: 1, x: 0, rotation: 0 });
 
         if (reducedMotion) {
           gsap.set(".splash__effects", { display: "none" });
+          handoffInitialSplash();
 
           gsap
             .timeline({ onComplete: finish })
@@ -125,8 +124,15 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           return (splashElement.clientWidth + logoWidth) / 2 + 48;
         };
 
+        // Match the mask's leading edge to the logo's trailing edge in screen
+        // pixels, including the mobile SVG's wider, translated viewport.
+        const trackBounds = splashElement.querySelector(".splash__tracks")!.getBoundingClientRect();
+        const trackScale = trackBounds.width / 1600;
+        const trackOrigin = (logoElement.getBoundingClientRect().left - trackBounds.left) / trackScale;
+        const trackTravel = (exitDistance() + 12) / trackScale;
+
         gsap.set(".splash__track-reveal", {
-          attr: { width: 0 },
+          attr: { x: trackOrigin, width: 0 },
         });
         gsap.set(".splash__streak", {
           opacity: 0,
@@ -141,6 +147,10 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           y: 8,
           transformOrigin: "50% 50%",
         });
+        // CSS hides uninitialized effects while the original image decodes.
+        // Reveal only after all layers are prepared, before the SSR handoff.
+        gsap.set(".splash__effects", { visibility: "visible" });
+        handoffInitialSplash();
 
         gsap
           .timeline({
@@ -189,12 +199,12 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           ease: "power1.in",
         }, "launch")
         .to(".splash__track-reveal--upper", {
-          attr: { width: 960 },
+          attr: { width: trackTravel },
           duration: 0.64,
           ease: "power1.in",
         }, "launch")
         .to(".splash__track-reveal--lower", {
-          attr: { width: 940 },
+          attr: { width: trackTravel },
           duration: 0.64,
           ease: "power1.in",
         }, "launch")
@@ -340,7 +350,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
               <stop offset="0" stopColor="white" stopOpacity="0" />
               <stop offset="0.12" stopColor="white" stopOpacity="0.72" />
               <stop offset="0.62" stopColor="white" stopOpacity="0.45" />
-              <stop offset="1" stopColor="white" stopOpacity="0" />
+              <stop offset="1" stopColor="white" stopOpacity="0.72" />
             </linearGradient>
 
             <mask id={svgIds.upperTrackMask}>
@@ -372,11 +382,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           >
             <path
               className="splash__track-stroke"
-              d="M575 155 C690 148 770 161 884 151 S1090 147 1198 158 S1380 151 1535 157"
+              d="M0 155 L575 155 C690 148 770 161 884 151 S1090 147 1198 158 S1380 151 1535 157 L1700 157"
             />
             <path
               className="splash__track-breaks"
-              d="M605 153 C710 148 792 161 905 152 S1124 148 1250 159 S1402 150 1510 156"
+              d="M0 153 L605 153 C710 148 792 161 905 152 S1124 148 1250 159 S1402 150 1510 156 L1700 156"
             />
           </g>
 
@@ -386,11 +396,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           >
             <path
               className="splash__track-stroke splash__track-stroke--lower"
-              d="M575 210 C674 217 784 202 894 214 S1086 218 1210 207 S1405 219 1535 211"
+              d="M0 210 L575 210 C674 217 784 202 894 214 S1086 218 1210 207 S1405 219 1535 211 L1700 211"
             />
             <path
               className="splash__track-breaks splash__track-breaks--lower"
-              d="M610 211 C718 218 805 203 925 214 S1112 216 1248 208 S1410 218 1518 211"
+              d="M0 211 L610 211 C718 218 805 203 925 214 S1112 216 1248 208 S1410 218 1518 211 L1700 211"
             />
           </g>
         </svg>
@@ -500,7 +510,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       </div>
 
       <div ref={logoRef} className="splash__logo-wrap">
-        <img ref={logoImageRef} className="splash__logo" src={logo} alt="" />
+        <img ref={logoImageRef} className="splash__logo" src={logo} alt="" width="150" height="150" />
       </div>
     </div>
   );

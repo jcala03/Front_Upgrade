@@ -13,6 +13,68 @@ const vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery
 after(() => vite.close());
 const { useSplash } = await vite.ssrLoadModule('/src/hooks/useSplash.ts');
 const { splashBootScript } = await vite.ssrLoadModule('/src/components/ui/SplashScreen/firstPaint.ts');
+const { SplashScreen } = await vite.ssrLoadModule('/src/components/ui/SplashScreen/SplashScreen.tsx');
+const { SplashFirstPaint, splashLogo } = await vite.ssrLoadModule('/src/components/ui/SplashScreen/SplashFirstPaint.tsx');
+const { Hero } = await vite.ssrLoadModule('/src/components/sections/Hero/Hero.tsx');
+
+test('los CTA del Hero conservan enlaces y texto con SVG decorativos, no caracteres emoji', () => {
+  const html = renderToString(createElement(Hero));
+  const links = [...html.matchAll(/<a\b[^>]*class="hero__cta[^>]*>[\s\S]*?<\/a>/g)].map(match => match[0]);
+  assert.equal(links.length, 2);
+  assert.match(links[0], /href="\/tienda"/);
+  assert.match(links[0], /Explorar artículos/);
+  assert.match(links[1], /Cotizar transformación/);
+  assert.match(links[1], /target="_blank"/);
+  for (const link of links) {
+    assert.match(link, /<svg[^>]*width="16"[^>]*height="16"/);
+    assert.match(link, /stroke-width="1\.8"/);
+    assert.match(link, /lucide-arrow-up-right/);
+    assert.match(link, /aria-hidden="true"/);
+    assert.match(link, /focusable="false"/);
+    assert.doesNotMatch(link, /[↗\uFE0F\p{Extended_Pictographic}]/u);
+  }
+});
+
+test('el CSS inicial muestra el logo y oculta los efectos todavía sin inicializar', async () => {
+  const initial = await readFile(new URL('../src/components/ui/SplashScreen/SplashScreen.initial.css', import.meta.url), 'utf8');
+  const effects = await readFile(new URL('../src/components/ui/SplashScreen/SplashScreen.css', import.meta.url), 'utf8');
+  assert.match(initial.match(/\.splash__logo-wrap\s*\{([^}]+)\}/)[1], /opacity:\s*1/);
+  assert.match(effects.match(/\.splash__effects\s*\{([^}]+)\}/)[1], /visibility:\s*hidden/);
+  for (const selector of ['streak', 'smoke-form']) {
+    assert.match(effects.match(new RegExp(`\\.splash__${selector}\\s*\\{([^}]+)\\}`))[1], /opacity:\s*0/);
+  }
+});
+
+test('primer paint y animación usan el mismo PNG original con dimensiones intrínsecas correctas', async () => {
+  const png = await readFile(new URL('../src/assets/logos/upgrade79-logo.png', import.meta.url));
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  assert.equal(width, 150);
+  assert.equal(height, 150);
+  const initial = renderToString(createElement(SplashFirstPaint));
+  const animated = renderToString(createElement(SplashScreen, { onComplete() {} }));
+  const image = (html) => html.match(/<img\b[^>]*class="splash__logo"[^>]*>/)?.[0];
+  for (const html of [initial, animated]) {
+    const tag = image(html);
+    assert.ok(tag);
+    assert.ok(tag.includes(`src="${splashLogo}"`));
+    assert.match(tag, new RegExp(`width="${width}" height="${height}"`));
+    assert.doesNotMatch(tag, /logo-hq/);
+  }
+  assert.match(splashLogo, /\/upgrade79-logo\.png$/);
+});
+
+test('ambas etapas comparten tamaño moderado y contienen el logo sin deformación ni filtros', async () => {
+  const css = await readFile(new URL('../src/components/ui/SplashScreen/SplashScreen.initial.css', import.meta.url), 'utf8');
+  const effects = await readFile(new URL('../src/components/ui/SplashScreen/SplashScreen.css', import.meta.url), 'utf8');
+  assert.match(effects, /@import\s+"\.\/SplashScreen\.initial\.css"/);
+  const wrap = css.match(/\.splash__logo-wrap\s*\{([^}]+)\}/)?.[1];
+  const image = css.match(/\.splash__logo\s*\{([^}]+)\}/)?.[1];
+  assert.match(wrap, /width:\s*min\(200px,\s*48vw\)/);
+  assert.match(image, /height:\s*auto/);
+  assert.match(image, /object-fit:\s*contain/);
+  assert.doesNotMatch(wrap + image, /(?:filter|mask|mix-blend-mode)\s*:/);
+});
 
 function SplashState({ deferUntilMounted }) {
   const { isSplashVisible } = useSplash({ deferUntilMounted });
@@ -129,7 +191,7 @@ test('Fast Refresh registra la firma real de useSplash en su módulo React', asy
 
 // Exercise the actual startTimeline body with a recording GSAP adapter, not a
 // second copy of the animation schedule. Browser tests verify rendered frames.
-async function recordSplashTimeline(reducedMotion) {
+async function recordSplashTimeline(reducedMotion, viewportWidth = 1440) {
   const source = await readFile(new URL('../src/components/ui/SplashScreen/SplashScreen.tsx', import.meta.url), 'utf8');
   const ast = ts.createSourceFile('SplashScreen.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let start;
@@ -142,6 +204,13 @@ async function recordSplashTimeline(reducedMotion) {
   const tweens = [];
   const labels = {};
   const events = [];
+  const initialSets = [];
+  const logoWidth = Math.min(200, viewportWidth * 0.48);
+  const svgWidth = viewportWidth * (viewportWidth <= 760 ? 1.48 : 1);
+  const svgLeft = viewportWidth <= 760 ? -svgWidth * 0.18 : 0;
+  const logoElement = { getBoundingClientRect: () => ({ width: logoWidth, left: (viewportWidth - logoWidth) / 2 }) };
+  const splashElement = { clientWidth: viewportWidth, querySelector: () => ({ getBoundingClientRect: () => ({ width: svgWidth, left: svgLeft }) }) };
+  const targetName = target => target === logoElement ? 'logo' : target === splashElement ? 'splash' : target;
   let duration = 0;
   const timeline = {
     addLabel(name, time) { labels[name] = time; return this; },
@@ -149,7 +218,7 @@ async function recordSplashTimeline(reducedMotion) {
       const [label, offset = 0] = typeof position === 'string' ? position.split('+=') : [];
       const time = typeof position === 'number' ? position : labels[label] + Number(offset);
       assert.ok(Number.isFinite(time));
-      tweens.push({ target, vars, start: time, end: time + vars.duration });
+      tweens.push({ target: targetName(target), vars, start: time, end: time + vars.duration });
       duration = Math.max(duration, time + vars.duration);
       return this;
     },
@@ -157,13 +226,42 @@ async function recordSplashTimeline(reducedMotion) {
   };
   const script = ts.transpileModule(`const startTimeline = ${start.getText(ast)}; startTimeline();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   runInNewContext(script, {
-    cancelled: false, reducedMotion, logoElement: 'logo', backdropElement: 'backdrop', splashElement: 'splash',
+    cancelled: false, reducedMotion, logoElement, backdropElement: 'backdrop', splashElement,
     finish: () => {}, hasInitialSplash: () => true,
-    handoffInitialSplash: () => events.push('handoff'),
-    gsap: { set() {}, timeline() { events.push('animation'); return timeline; } },
+    handoffInitialSplash: () => {
+      events.push('handoff');
+      assert.equal(initialSets.find(item => item.target === 'logo')?.vars.opacity, 1);
+      const effects = initialSets.find(item => item.target === '.splash__effects');
+      assert.ok(effects, 'Effects must be prepared before revealing the React overlay');
+      assert.equal(reducedMotion ? effects.vars.display : effects.vars.visibility, reducedMotion ? 'none' : 'visible');
+      if (!reducedMotion) {
+        for (const target of ['.splash__streak', '.splash__smoke-form']) {
+          assert.equal(initialSets.find(item => item.target === target)?.vars.opacity, 0);
+        }
+      }
+    },
+    gsap: { set(target, vars) { initialSets.push({ target: targetName(target), vars }); }, timeline() { events.push('animation'); return timeline; } },
   });
-  return { tweens, labels, duration, events };
+  return { tweens, labels, duration, events, initialSets, svgWidth, svgLeft, logoWidth };
 }
+
+test('la punta de ambas huellas acompaña al logo sin hueco en escritorio y móvil', async () => {
+  for (const width of [1440, 768, 430, 390, 360]) {
+    const { tweens, initialSets, svgWidth, svgLeft, logoWidth } = await recordSplashTimeline(false, width);
+    const origin = initialSets.find(item => item.target === '.splash__track-reveal').vars.attr.x;
+    const tracks = tweens.filter(item => item.target.startsWith?.('.splash__track-reveal'));
+    const launch = tweens.find(item => item.target === 'logo' && typeof item.vars.x === 'function');
+    const exit = launch.vars.x();
+    for (const track of tracks) for (const progress of [0, 0.1, 0.5, 0.9, 1]) {
+      const front = svgLeft + (origin + track.vars.attr.width * progress) * svgWidth / 1600;
+      const rear = (width - logoWidth) / 2 - 6 + (exit + 6) * progress;
+      assert.ok(front >= rear && front <= rear + 12.001, `${width}px: trail must overlap the logo by at most 12px`);
+    }
+  }
+  const html = renderToString(createElement(SplashScreen, { onComplete() {} }));
+  const fade = html.match(/<linearGradient[^>]*id="[^"]*track-fade"[^>]*>([\s\S]*?)<\/linearGradient>/)[1];
+  assert.match(fade, /offset="1"[^>]*stop-opacity="0\.72"/);
+});
 
 test('logo, huellas y estela arrancan sincronizados, sin pausa con el logo inmóvil', async () => {
   const { tweens, labels, duration, events } = await recordSplashTimeline(false);

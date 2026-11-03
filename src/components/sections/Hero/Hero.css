@@ -153,10 +153,8 @@
     color var(--transition-premium);
 }
 
-.hero__cta span {
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1;
+.hero__cta svg {
+  flex-shrink: 0;
   transition: transform var(--transition-premium);
 }
 
@@ -192,7 +190,7 @@
   transform: translateY(-2px);
 }
 
-.hero__cta:hover span {
+.hero__cta:hover svg {
   transform: translate(2px, -2px);
 }
 
@@ -421,13 +419,13 @@
   }
 
   .hero__cta,
-  .hero__cta span,
+  .hero__cta svg,
   .hero__cta--secondary::after {
     transition: none;
   }
 
   .hero__cta:hover,
-  .hero__cta:hover span {
+  .hero__cta:hover svg {
     transform: none;
   }
 }

@@ -1,6 +1,7 @@
 @import "./SplashScreen.initial.css";
 
 .splash__effects {
+  visibility: hidden;
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -46,6 +47,7 @@
 }
 
 .splash__streak {
+  opacity: 0;
   position: absolute;
   top: 50%;
   left: calc(50% - 15px);
@@ -53,6 +55,10 @@
   height: clamp(110px, 17vw, 190px);
   overflow: visible;
   transform: translateY(-50%);
+}
+
+.splash__smoke-form {
+  opacity: 0;
 }
 
 .splash__smoke {

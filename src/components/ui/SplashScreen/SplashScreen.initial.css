@@ -20,8 +20,10 @@
 .splash__logo-wrap {
   position: relative;
   z-index: 3;
-  width: clamp(390px, 42vw, 640px);
-  opacity: 0;
+  /* The original transparent asset is only 150px square. Keep enlargement
+     modest and use this same geometry before and after hydration. */
+  width: min(200px, 48vw);
+  opacity: 1;
   transform-origin: center;
 }
 
@@ -50,16 +52,4 @@ html[data-home-splash="pending"] #root {
 
 html[data-home-splash="pending"] body {
   overflow: hidden;
-}
-
-@media (max-width: 760px) {
-  .splash__logo-wrap {
-    width: clamp(300px, 82vw, 470px);
-  }
-}
-
-@media (max-width: 390px) {
-  .splash__logo-wrap {
-    width: 88vw;
-  }
 }
