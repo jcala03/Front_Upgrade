@@ -103,6 +103,17 @@
   color: #fff;
 }
 
+.footer__employees {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.footer__employees:focus-visible {
+  outline: 2px solid var(--color-accent, #0095d4);
+  outline-offset: 4px;
+}
+
 .footer__bottom {
   display: flex;
   justify-content: space-between;

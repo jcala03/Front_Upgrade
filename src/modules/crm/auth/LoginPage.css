@@ -68,6 +68,31 @@
   gap: 10px;
 }
 
+.crm-login__back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.crm-login__back:hover {
+  border-color: var(--color-accent, #0095d4);
+  background: rgba(0, 149, 212, 0.08);
+  color: #fff;
+}
+
+.crm-login__back:focus-visible {
+  outline: 2px solid var(--color-accent, #0095d4);
+  outline-offset: 4px;
+}
+
 .crm-login__form span {
   color: rgba(255, 255, 255, 0.56);
   font-size: 0.72rem;

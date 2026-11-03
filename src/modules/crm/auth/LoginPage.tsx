@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { login } from "../../../api/auth";
 import { consumeAuthNotice, saveAuthUser } from "../../../utils/authStorage";
 import "./LoginPage.css";
@@ -43,6 +44,10 @@ export const LoginPage = () => {
         </div>
 
         <form className="crm-login__form" onSubmit={handleSubmit}>
+          <a className="crm-login__back" href="/">
+            <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+            Ir atrás
+          </a>
           <label>
             <span>Email</span>
             <input

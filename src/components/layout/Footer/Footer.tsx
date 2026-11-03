@@ -38,6 +38,7 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
                 {item.label}
               </a>
             ))}
+            <a className="footer__employees" href="/login">Empleados</a>
           </div>
           <div>
             <span>Contacto</span>
