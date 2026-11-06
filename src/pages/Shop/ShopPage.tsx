@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { SlidersHorizontal, X, ArrowUpRight } from "lucide-react";
 import { getProducts, type ProductSortOption } from "../../api/products";
+import { yearWithinOemCoverage } from "../../utils/oemYearCoverage";
 import { getProductBrands } from "../../api/productBrands";
 import { getProductCategories } from "../../api/productCategories";
 import {
@@ -418,7 +419,8 @@ export const ShopPage = ({
                       <option value="">Selecciona el sistema original de tu vehículo</option>
                       {(versions.find(version => String(version.id) === filters.vehicle_version_id)?.multimedia_systems ?? [])
                         .filter(system => system.is_active && String(system.vehicle_brand_id) === filters.vehicle_brand_id)
-                        .map(system => <option value={system.id} key={system.id}>{system.name}</option>)}
+                        .map(system => <option value={system.id} key={system.id}
+                          disabled={Boolean(filters.year) && !yearWithinOemCoverage(Number(filters.year), system.pivot)}>{system.name}</option>)}
                     </select>
                     <small>El año o la generación no identifican por sí solos el sistema OEM.</small>
                   </label> : null}

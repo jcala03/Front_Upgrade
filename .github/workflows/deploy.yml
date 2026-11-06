@@ -90,11 +90,15 @@ jobs:
           fi
 
           echo "=== Variables de produccion ==="
-          grep -nE '^(VITE_API_BASE_URL|PUBLIC_SITE_URL)=' .env.production || true
+          grep -qx 'VITE_API_BASE_URL=https://upgradecolombia.com' .env.production
+          grep -qx 'PUBLIC_SITE_URL=https://upgradecolombia.com' .env.production
+          grep -qx 'VITE_PUBLIC_STORAGE_URL=https://crmupgradecol.com/storage' .env.production
+          grep -nE '^(VITE_API_BASE_URL|VITE_PUBLIC_STORAGE_URL|PUBLIC_SITE_URL)=' .env.production
 
       - name: Build production
         env:
           VITE_API_BASE_URL: https://upgradecolombia.com
+          VITE_PUBLIC_STORAGE_URL: https://crmupgradecol.com/storage
           PUBLIC_SITE_URL: https://upgradecolombia.com
         run: npm run build
 
@@ -131,11 +135,18 @@ jobs:
           echo "=== JavaScript principal ==="
           grep -oE 'src="/assets/[^"]+"' dist/index.html
 
-          echo "=== Comprobacion de dominio ==="
-          if grep -Rl 'https://crmupgradecol.com' dist/assets --include='*.js'; then
-            echo "ERROR: El build contiene el dominio antiguo."
-            exit 1
-          fi
+          echo "=== Comprobar origen API y excepcion limitada a medios ==="
+          node --input-type=module -e '
+            import { readdirSync, readFileSync } from "node:fs";
+            import { join } from "node:path";
+            for (const file of readdirSync("dist/assets", { recursive: true }).filter(file => file.endsWith(".js"))) {
+              const source = readFileSync(join("dist/assets", file), "utf8");
+              const withoutMedia = source.replace(/https:\/\/crmupgradecol[.]com\/storage(?=[/"\x27\x60?#\s]|$)/g, "");
+              if (withoutMedia.includes("crmupgradecol.com")) {
+                throw new Error("Dominio antiguo fuera del almacenamiento publico.");
+              }
+            }
+          '
 
           echo "=== Dominio correcto ==="
           grep -Rl 'https://upgradecolombia.com' dist/assets --include='*.js' | head -n 10
@@ -289,11 +300,16 @@ jobs:
             test -n "$JS"
             test -f "$FRONT$JS"
 
-            echo "=== Comprobar dominio antiguo ==="
-            if grep -q 'https://crmupgradecol.com' "$FRONT$JS"; then
-              echo "ERROR: El JavaScript activo contiene el dominio antiguo."
-              exit 1
-            fi
+            echo "=== API publica y almacenamiento independiente ==="
+            # Media has its own origin; this exception must NOT allow the old API.
+            php -r '
+              $source = file_get_contents($argv[1]);
+              $withoutMedia = preg_replace("~https://crmupgradecol[.]com/storage(?=[/\"\\x27\\x60?#[:space:]]|$)~", "", $source);
+              if ($withoutMedia === null || str_contains($withoutMedia, "crmupgradecol.com")) {
+                fwrite(STDERR, "ERROR: Dominio antiguo fuera del almacenamiento publico.\n");
+                exit(1);
+              }
+            ' "$FRONT$JS"
 
             echo "=== Comprobar API y frontend ==="
             API_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H 'Accept: application/json' https://upgradecolombia.com/api/auth/me)

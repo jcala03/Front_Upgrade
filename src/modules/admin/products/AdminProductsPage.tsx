@@ -10,6 +10,8 @@ import { hasPermission } from "../../../utils/authStorage";
 import "./AdminProductsPage.css";
 import { CreateProductForm } from "../inventory/AdminInventoryPage";
 import { CrmDialog } from "../../../components/crm/Dialog";
+import { getProductImageUrl } from "../../../utils/getProductImageUrl";
+import { productSearchText } from "./productSearchText";
 
 type StoreFilter =
   | "all"
@@ -31,7 +33,7 @@ const formatCurrency = (value: number) => {
 };
 
 const getProductImage = (product: AdminProduct) => {
-  return product.image_url || product.main_image || "";
+  return getProductImageUrl(product.image_url || product.main_image);
 };
 
 const getCategoryName = (product: AdminProduct) => {
@@ -208,19 +210,7 @@ export const AdminProductsPage = () => {
         (filter === "hidden" && !product.is_visible) ||
         (filter === "featured" && product.is_featured);
 
-      const compatibilityText = getCompatibilityLabels(product).join(" ");
-
-      const searchableText = [
-        product.name,
-        product.sku,
-        getCategoryName(product),
-        getBrandName(product),
-        compatibilityText,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return matchesFilter && searchableText.includes(normalizedSearch);
+      return matchesFilter && productSearchText(product).includes(normalizedSearch);
     });
   }, [products, filter, search]);
 

@@ -91,6 +91,7 @@ export type ProductVariantCompatibility = {
   vehicle_multimedia_system_id: number | null;
   year_from: number | null;
   year_to: number | null;
+  oem_year_ranges?: { year_from: number | null; year_to: number | null }[] | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

@@ -13,6 +13,7 @@ import { CheckoutOrderSummary } from "./CheckoutOrderSummary";
 import { cartItemKey, cartItemPrice, useCart, type CartItem } from "../../context/CartContext";
 import { CREATE_IDEMPOTENCY_KEY, finishActiveCheckout, readActiveCheckout, storeCheckoutFulfillment, storeCreatedCheckout } from "../../utils/checkoutStorage";
 import "./CheckoutPage.css";
+import { getProductImageUrl } from "../../utils/getProductImageUrl";
 
 type CheckoutForm = {
   customerName: string;
@@ -29,22 +30,6 @@ const initialForm: CheckoutForm = {
 };
 
 type CheckoutField = "fulfillment" | "customerName" | "customerEmail" | "customerPhone";
-
-const API_BASE_URL = import.meta.env.DEV
-  ? ""
-  : (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
-
-const getImageUrl = (imageUrl?: string | null) => {
-  if (!imageUrl) {
-    return "";
-  }
-
-  if (imageUrl.startsWith("http")) {
-    return imageUrl;
-  }
-
-  return `${API_BASE_URL}${imageUrl}`;
-};
 
 const formatPrice = (value: number) => {
   return new Intl.NumberFormat("es-CO", {
@@ -319,7 +304,7 @@ export const CheckoutPage = () => {
 
           <div className="checkout-summary__items">
             {items.map((item: CartItem) => {
-              const imageUrl = getImageUrl(item.variant?.image_url ?? item.product.image_url);
+              const imageUrl = getProductImageUrl(item.variant?.main_image || item.variant?.image_url || item.product.main_image || item.product.image_url);
               const unitPrice = cartItemPrice(item);
 
               return (

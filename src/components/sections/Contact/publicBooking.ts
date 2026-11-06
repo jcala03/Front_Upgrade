@@ -24,6 +24,21 @@ export function selectablePublicDate(date: Date, today: Date): boolean {
   return date.getDay() !== 0 && date >= today;
 }
 
+/** Calendar date, not a midnight instant: safe across server/browser time zones. */
+export function bookingDateSnapshot(now = new Date()): string {
+  const date = bogotaToday(now);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function initialBookingDate(snapshot?: string): Date {
+  if (snapshot && /^\d{4}-\d{2}-\d{2}$/.test(snapshot)) {
+    const [year, month, day] = snapshot.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) return date;
+  }
+  return bogotaToday();
+}
+
 export function allowedPreferredTime(
   date: Date,
   time: string,

@@ -11,7 +11,8 @@ import {
 } from "react";
 import { brand } from "../../../data/brand";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
-import { PUBLIC_BOOKING_TIMES, bogotaToday, selectablePublicDate, allowedPreferredTime } from "./publicBooking";
+import { PUBLIC_BOOKING_TIMES, bogotaToday, initialBookingDate, selectablePublicDate, allowedPreferredTime } from "./publicBooking";
+import { publicBootstrap } from "../../../seo/client";
 import "./Contact.css";
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S"] as const;
@@ -70,9 +71,9 @@ const buildWhatsAppUrl = (message: string) => {
   return whatsappUrl.toString();
 };
 
-export const Contact = () => {
+export const Contact = ({ initialDate = publicBootstrap()?.bookingDate }: { initialDate?: string } = {}) => {
   const sectionRef = useRef<HTMLElement>(null);
-  const today = useMemo(() => atStartOfDay(bogotaToday()), []);
+  const [today, setToday] = useState(() => atStartOfDay(initialBookingDate(initialDate)));
   const firstAllowedMonth = useMemo(() => atStartOfMonth(today), [today]);
   const lastAllowedMonth = useMemo(
     () => addMonths(firstAllowedMonth, MAX_MONTH_OFFSET),
@@ -89,6 +90,14 @@ export const Contact = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasEntered, setHasEntered] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    // Hydrate the exact SSR calendar first, then refresh stale prerender dates.
+    // No timers, hidden content or suppression of hydration errors.
+    const current = atStartOfDay(bogotaToday());
+    setToday(current);
+    setViewMonth(atStartOfMonth(current));
+  }, []);
 
   const monthDays = useMemo(() => {
     const year = viewMonth.getFullYear();

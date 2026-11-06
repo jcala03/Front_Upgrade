@@ -10,6 +10,7 @@ const { resolveConfiguration: resolve } = await vite.ssrLoadModule(base + 'resol
 const { catalogSnapshot, beginCatalogLoad, acceptCatalogResponse, rejectCatalogResponse } = await vite.ssrLoadModule(base + 'catalog.ts');
 const { productVehicleSelection, reconcileSelection, selectionFromShopQuery } = await vite.ssrLoadModule(base + 'selection.ts');
 const { effectiveCompatibility, matchesRow } = await vite.ssrLoadModule(base + 'compatibility.ts');
+const {yearWithinOemCoverage}=await vite.ssrLoadModule('/src/utils/oemYearCoverage.ts');
 const { getCompleteConfiguratorCatalog } = await vite.ssrLoadModule('/src/api/productConfigurator.ts');
 
 // Synthetic references, not technical certification, production data or inventory writes.
@@ -30,6 +31,26 @@ function product(variants = [variant(1)], rest = {}) {
     product_category: { requires_oem_compatibility: true, fields: structuredClone(fields) }, vehicle_compatibilities: [], variants, ...rest };
 }
 const selected = { vehicle_brand_id: 10, vehicle_model_id: 20, vehicle_version_id: 30, vehicle_multimedia_system_id: 40, ram_gb: 8, almacenamiento_gb: 128 };
+
+test('recorded OEM years intersect commercial years, inclusive and without filling gaps',()=>{
+  const recorded={...row({from:2013,to:2018}),oem_year_ranges:[{year_from:2012,year_to:2013},{year_from:2016,year_to:2017}]};
+  for(const [year,expected] of [[2012,false],[2013,true],[2014,false],[2015,false],[2016,true],[2017,true],[2018,false]]){
+    assert.equal(matchesRow(recorded,{...selected,year}),expected,`year ${year}`);
+  }
+  const p=product([variant(1,{rows:[recorded]})]);
+  assert.equal(resolve(input(p,{...selected,year:2013})).status,'valid');
+  assert.equal(resolve(input(p,{...selected,year:2014})).status,'nonexistent');
+  assert.equal(matchesRow(recorded,{...selected,vehicle_version_id:999,year:2013}),false);
+  assert.equal(matchesRow(recorded,{...selected,vehicle_multimedia_system_id:41,year:2013}),false);
+});
+test('OEM year filtering never invents bounds or infers a system from the year',()=>{
+  for(const coverage of [undefined,null,{year_from:null,year_to:null}])assert.equal(yearWithinOemCoverage(2016,coverage),true);
+  assert.equal(yearWithinOemCoverage(2013,{year_from:2013,year_to:null}),true);
+  assert.equal(yearWithinOemCoverage(2012,{year_from:2013,year_to:null}),false);
+  assert.equal(yearWithinOemCoverage(2014,{year_from:null,year_to:2013}),false);
+  for(const ranges of [undefined,null,[]])assert.equal(matchesRow({...row(),oem_year_ranges:ranges},{...selected,year:2014}),true);
+  assert.equal(resolve(input(product(),{vehicle_brand_id:10,vehicle_model_id:20,vehicle_version_id:30,year:2014})).status,'incomplete');
+});
 function input(p = product(), selection = selected, coverage = 'complete_public') {
   return { profile, snapshot: catalogSnapshot(p, 'r1', coverage), expectedRequestKey: 'r1', selection };
 }

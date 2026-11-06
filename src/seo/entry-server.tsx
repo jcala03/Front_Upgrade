@@ -7,6 +7,7 @@ import { Transformation } from "../components/sections/Transformation";
 import { FeaturedProducts } from "../components/sections/FeaturedProducts";
 import { Atelier } from "../components/sections/Atelier";
 import { Contact } from "../components/sections/Contact";
+import { bookingDateSnapshot } from "../components/sections/Contact/publicBooking";
 import { LegalPage } from "../pages/Legal/LegalPage";
 import { ShopPage } from "../pages/Shop";
 import { ProductDetailPage } from "../pages/ProductDetail";
@@ -73,8 +74,9 @@ export async function renderRequest(requestUrl: string, template: string, option
   const seo = createSeo(path, origin, { product, query: url.search, status, image: new URL(logo, origin).href });
   headers["X-Robots-Tag"] = seo.robots;
   if (status === 503) headers["Retry-After"] = "60";
-  const bootstrap: PublicBootstrap = { path, seo, ...((path === "/tienda" || product) ? { query: serializeShopFilters(parseShopFilters(url.search)) } : {}), ...(product ? { product } : {}), ...(products ? { products } : {}), ...(homeCatalogUnavailable ? { homeCatalogUnavailable: true } : {}) };
-  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact /></main> : path === "/politica-de-datos" || path === "/terminos-y-condiciones" ? <LegalPage terms={path === "/terminos-y-condiciones"} /> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} query={url.search} />}</Layout> : null;
+  const bookingDate = path === "/" ? bookingDateSnapshot() : undefined;
+  const bootstrap: PublicBootstrap = { path, seo, ...(bookingDate ? { bookingDate } : {}), ...((path === "/tienda" || product) ? { query: serializeShopFilters(parseShopFilters(url.search)) } : {}), ...(product ? { product } : {}), ...(products ? { products } : {}), ...(homeCatalogUnavailable ? { homeCatalogUnavailable: true } : {}) };
+  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact initialDate={bookingDate} /></main> : path === "/politica-de-datos" || path === "/terminos-y-condiciones" ? <LegalPage terms={path === "/terminos-y-condiciones"} /> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} query={url.search} />}</Layout> : null;
   const content = privateRoute ? <main><p>Área privada. Cargando aplicación…</p></main> :
     <CartProvider><Suspense fallback={null}>{publicPage}</Suspense></CartProvider>;
   // Mismos componentes y datos públicos para humanos y crawlers, sin detectar User-Agent.

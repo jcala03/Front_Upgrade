@@ -4,7 +4,7 @@ import type { ProductCategoryField } from "../../types/productCategory";
 // Narrow structural public contracts: no costs, margins, commissions or admin stock.
 export type CompatibilityRow = Pick<ProductVariantCompatibility,
   "vehicle_brand_id" | "vehicle_model_id" | "vehicle_version_id"> &
-  Partial<Pick<ProductVariantCompatibility, "vehicle_multimedia_system_id" | "year_from" | "year_to" |
+  Partial<Pick<ProductVariantCompatibility, "vehicle_multimedia_system_id" | "year_from" | "year_to" | "oem_year_ranges" |
     "vehicle_brand" | "vehicle_model" | "vehicle_version" | "vehicle_multimedia_system">>;
 export type FieldDefinition = Pick<ProductCategoryField, "field_key" | "type" | "scope" | "filter_unit" | "is_active">;
 export type ConfiguratorVariant = Pick<ProductVariant, "id" | "product_id" | "name" | "sku" | "price" | "stock" |

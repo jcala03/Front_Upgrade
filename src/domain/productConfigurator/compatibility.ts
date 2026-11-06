@@ -1,4 +1,5 @@
 import type { CompatibilityRow, ConfiguratorProduct, ConfiguratorVariant, Selection } from "./types";
+import { yearWithinOemCoverage } from "../../utils/oemYearCoverage";
 
 export const positiveId = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 export const vehicleKeys = ["vehicle_brand_id", "vehicle_model_id", "vehicle_version_id"] as const;
@@ -33,6 +34,7 @@ export function matchesRow(row: CompatibilityRow, selection: Selection): boolean
     const range = rowYearRange(row);
     if (!range.known) return "unknown";
     if (range.from !== null && selection.year < range.from || range.to !== null && selection.year > range.to) return false;
+    if (row.oem_year_ranges?.length && !row.oem_year_ranges.some(coverage => yearWithinOemCoverage(selection.year!, coverage))) return false;
   }
   return true;
 }

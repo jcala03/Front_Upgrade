@@ -3,22 +3,7 @@ import { cartItemKey, cartItemPrice, cartItemStock, useCart } from "../../contex
 import "./CartPage.css";
 import { ConfigurationSummary } from "../../components/ConfigurationSummary";
 import { commercialQuantity } from "../../domain/cartLines";
-
-const API_BASE_URL = import.meta.env.DEV
-  ? ""
-  : (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
-
-const getImageUrl = (imageUrl?: string | null) => {
-  if (!imageUrl) {
-    return "";
-  }
-
-  if (imageUrl.startsWith("http")) {
-    return imageUrl;
-  }
-
-  return `${API_BASE_URL}${imageUrl}`;
-};
+import { getProductImageUrl } from "../../utils/getProductImageUrl";
 
 const formatPrice = (value: number) => {
   return new Intl.NumberFormat("es-CO", {
@@ -60,7 +45,8 @@ export const CartPage = () => {
         <section className="cart-layout">
           <div className="cart-items">
             {items.map((item) => {
-              const imageUrl = getImageUrl(item.variant?.image_url ?? item.product.image_url);
+              // Stored paths survive an origin change in historical cart snapshots.
+              const imageUrl = getProductImageUrl(item.variant?.main_image || item.variant?.image_url || item.product.main_image || item.product.image_url);
               const availableStock = cartItemStock(item);
 
               return (
