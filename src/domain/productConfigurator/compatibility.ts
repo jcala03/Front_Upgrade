@@ -49,3 +49,24 @@ export function validVehicleRow(row: CompatibilityRow): boolean {
   if ([row.vehicle_brand, row.vehicle_model, row.vehicle_version].some(entity => entity?.is_active === false)) return false;
   return rowYearRange(row).known || row.year_from == null && row.year_to == null;
 }
+
+/** Require a real year only when recorded coverage is narrower than the generation.
+ * A union of intervals may cover the generation; never manufacture a representative year.
+ */
+export function rowRequiresYear(row: CompatibilityRow): boolean {
+  const generation = row.vehicle_version;
+  if (generation?.year_from == null) return row.year_from != null || row.year_to != null || Boolean(row.oem_year_ranges?.length);
+  const from = generation.year_from, to = generation.year_to ?? Infinity;
+  const range = rowYearRange(row);
+  if (!range.known || (range.from ?? -Infinity) > from || (range.to ?? Infinity) < to) return true;
+  if (!row.oem_year_ranges?.length) return false;
+  let coveredUntil = from - 1;
+  for (const interval of [...row.oem_year_ranges].sort((a, b) => (a.year_from ?? -Infinity) - (b.year_from ?? -Infinity))) {
+    const start = interval.year_from ?? -Infinity, end = interval.year_to ?? Infinity;
+    if (end < from) continue;
+    if (start > coveredUntil + 1) return true;
+    coveredUntil = Math.max(coveredUntil, end);
+    if (coveredUntil >= to) return false;
+  }
+  return true;
+}

@@ -2,6 +2,7 @@ import { useId } from "react";
 import type { Product } from "../../types/product";
 import type { ProductConfiguratorModel } from "./useProductConfigurator";
 import { ConfigurationOptions } from "./ConfigurationOptions";
+import { ConfiguratorVehicleFields } from "./ConfiguratorVehicleFields";
 
 const messages = {
   not_applicable: "No hay variantes preparadas para configurar este producto. Consulta con el taller.",
@@ -13,7 +14,7 @@ const messages = {
   ambiguous: "Hay varias referencias para esta configuración. Elige la referencia comercial correspondiente.",
   valid: "Configuración identificada.",
 };
-export function ProductConfigurator({ model, interactive }: { model: ProductConfiguratorModel; product: Product; interactive: boolean }) {
+export function ProductConfigurator({ model, product, interactive }: { model: ProductConfiguratorModel; product: Product; interactive: boolean }) {
   const id = useId();
   const { selection, resolution } = model;
   const selectedVehicle = model.vehicleContext.status === "resolved" && resolution.options.vehicles.some(row =>
@@ -24,23 +25,31 @@ export function ProductConfigurator({ model, interactive }: { model: ProductConf
   const memories = selectedVehicle ? model.vehicleMemoryOptions : [];
   const busy = model.loadStatus === "loading" || model.loadStatus === "idle";
   const disabled = !interactive || busy;
+  const memoryProfile = model.profile?.technicalSelection !== "reference";
+  const multipleVehicles = new Set(resolution.options.vehicles.map(row => [row.vehicle_brand_id, row.vehicle_model_id, row.vehicle_version_id].join(":"))).size > 1;
   const failureStatus = model.failure === "configuration" ? "insufficient_data" : model.failure === "unavailable" ? "unavailable" : "connection_error";
   const statusMessage = model.loadStatus === "error" ? model.failure === "configuration"
     ? "No pudimos verificar los datos de configuración de este producto. Consulta con el taller."
     : model.failure === "unavailable" ? "Este producto ya no está disponible en el catálogo público."
     : "No pudimos consultar las configuraciones. Comprueba tu conexión y vuelve a intentarlo."
-    : busy ? "Consultando todas las configuraciones disponibles…" : messages[resolution.status];
+    : busy ? "Consultando todas las configuraciones disponibles…"
+    : resolution.status === "incomplete" && !memoryProfile ? "Completa el vehículo y el sistema original para identificar tu referencia."
+    : messages[resolution.status];
 
   if (!model.uiEnabled) return <section className="product-configurator" aria-label="Configuración del producto"><h2>Configuración requerida</h2><p role="status">Este producto requiere verificar su configuración con el taller. La compra online no está disponible por el momento.</p></section>;
 
   return <section className="product-configurator" aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <header className="product-configurator__header"><h2 id={`${id}-title`}>Configura tu producto</h2><span>2 pasos</span></header>
-    <p className="product-configurator__intro">Elige el sistema original y la capacidad que necesitas.</p>
+    <header className="product-configurator__header"><h2 id={`${id}-title`}>Configura tu producto</h2><span>Selección guiada</span></header>
+    <p className="product-configurator__intro">{memoryProfile
+      ? "Primero identifica el sistema original de tu vehículo. Después elige la RAM y el almacenamiento de la pantalla nueva."
+      : "Identifica el sistema original de tu vehículo y elige una referencia compatible. No necesitas seleccionar memoria si el producto no la ofrece."}</p>
+    {!busy && model.loadStatus !== "error" && (multipleVehicles || model.yearRequired || selection.year != null) ?
+      <ConfiguratorVehicleFields model={model} product={product} disabled={disabled} /> : null}
     {!busy && model.loadStatus !== "error" && !selectedVehicle ? <p className="product-configurator__hint" role="status" data-vehicle-context={model.vehicleContext.status}>
       {model.vehicleContext.status === "ambiguous"
-        ? "Esta pantalla tiene compatibilidades con varios vehículos. Abre su ficha desde los filtros de tu vehículo o consulta con el taller."
+        ? "Esta pantalla tiene compatibilidades con varios vehículos. Selecciona tu vehículo para ver sus sistemas originales."
         : model.vehicleContext.status === "year_required"
-          ? "Esta referencia necesita un año verificado. Revisa la compatibilidad desde los filtros de la tienda o consulta con el taller."
+          ? "Esta referencia necesita un año verificado. Indica el año real de tu vehículo para continuar."
           : "No pudimos confirmar un vehículo compatible para esta configuración. Revisa los filtros o consulta con el taller."}
       {" "}<a href="/tienda">Verificar compatibilidad en la tienda</a>
     </p> : null}
@@ -53,7 +62,7 @@ export function ProductConfigurator({ model, interactive }: { model: ProductConf
         emptyMessage={selectedVehicle ? "No hay sistemas registrados para esta compatibilidad. Revisa los filtros o consulta con el taller." : "Las opciones estarán disponibles al confirmar la compatibilidad del artículo."} />
       <details className="product-configurator__help"><summary>¿No sabes qué sistema original tiene tu vehículo?</summary><p>Consulta con el taller y comparte una fotografía del menú original y las conexiones del vehículo. El año por sí solo no identifica el sistema. No selecciones uno por aproximación.</p></details>
     </fieldset>
-    <fieldset disabled={disabled || !selectedVehicle || !oem}><legend>2 · RAM y almacenamiento</legend>
+    {memoryProfile ? <fieldset disabled={disabled || !selectedVehicle || !oem}><legend>2 · RAM y almacenamiento</legend>
       <ConfigurationOptions label="Configuración de memoria" value={memoryValue}
         options={memories.map(memory => {
           const compatible = resolution.options.memories.find(option => option.ram_gb === memory.ram_gb && option.almacenamiento_gb === memory.almacenamiento_gb);
@@ -66,7 +75,7 @@ export function ProductConfigurator({ model, interactive }: { model: ProductConf
           const memory = resolution.options.memories.find(option => `${option.ram_gb}/${option.almacenamiento_gb}` === value);
           if (memory) model.select({ ram_gb: memory.ram_gb, almacenamiento_gb: memory.almacenamiento_gb });
         }} emptyMessage="No hay memorias verificadas para esta compatibilidad." />
-    </fieldset>
+    </fieldset> : null}
     {model.referenceOptions.length > 1 || selection.variant_id != null ? <fieldset disabled={disabled}><legend>Referencia comercial</legend>
       <ConfigurationOptions label="Elige la referencia exacta" value={String(selection.variant_id ?? "")}
         options={(model.referenceOptions.length ? model.referenceOptions : resolution.candidates).map(candidate => ({ value: String(candidate.variant_id),
@@ -84,11 +93,16 @@ export function ProductConfigurator({ model, interactive }: { model: ProductConf
 export function ProductConfigurationSummary({ model }: { model: ProductConfiguratorModel }) {
   const { selection, resolution } = model;
   const oem = resolution.options.oems.find(option => option.vehicle_multimedia_system_id === selection.vehicle_multimedia_system_id);
-  const parts = [oem?.name, selection.ram_gb != null && selection.almacenamiento_gb != null
+  const row = model.fullProduct?.variants?.flatMap(variant => variant.vehicle_compatibilities ?? []).find(row =>
+    row.vehicle_brand_id === selection.vehicle_brand_id && row.vehicle_model_id === selection.vehicle_model_id && row.vehicle_version_id === selection.vehicle_version_id);
+  const vehicleName = [row?.vehicle_brand?.name, row?.vehicle_model?.name, row?.vehicle_version?.name ?? row?.vehicle_version?.display_name].filter(Boolean).join(" ");
+  const parts = [vehicleName, oem?.name, selection.ram_gb != null && selection.almacenamiento_gb != null
     ? `${selection.ram_gb} GB / ${selection.almacenamiento_gb} GB` : null,
     selection.year != null ? `Año ${selection.year}` : null].filter(Boolean);
   return <div className="product-configurator__summary">
     <h2>3 · Configuración seleccionada</h2>
-    <p>{parts.length ? parts.join(" · ") : "Elige sistema original y memoria para completar tu configuración."}</p>
+    <p>{parts.length ? parts.join(" · ") : model.profile?.technicalSelection === "reference"
+      ? "Elige el sistema original para identificar las referencias compatibles."
+      : "Elige sistema original y memoria para completar tu configuración."}</p>
   </div>;
 }

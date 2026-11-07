@@ -1,15 +1,21 @@
+import type { ProductConfiguration } from "./product";
+
+export const configurationAllowsVariant = (configuration: ProductConfiguration | null | undefined, variantId?: number | null): boolean =>
+  configuration?.purchase_enabled === true && (configuration.purchasable_variant_ids === undefined
+    || Array.isArray(configuration.purchasable_variant_ids) && variantId != null && configuration.purchasable_variant_ids.includes(variantId));
+
 /** Purchase DTO: prices, labels, SKU and stock are deliberately not accepted here. */
 export type PurchaseConfiguration = {
   schema_version: 1;
-  profile_id: "vehicle-oem-memory-v1";
+  profile_id: "vehicle-oem-memory-v1" | "vehicle-oem-reference-v1";
   profile_version: 1;
   vehicle_brand_id: number;
   vehicle_model_id: number;
   vehicle_version_id: number;
   vehicle_multimedia_system_id: number;
   year: number | null;
-  ram_gb: number;
-  almacenamiento_gb: number;
+  ram_gb?: number;
+  almacenamiento_gb?: number;
 };
 
 /** Labels in the cart are presentation only; the backend rebuilds its own snapshot. */
@@ -27,12 +33,13 @@ export const purchaseConfiguration = (context: ConfigurationContext): PurchaseCo
   schema_version: context.schema_version, profile_id: context.profile_id, profile_version: context.profile_version,
   vehicle_brand_id: context.vehicle_brand_id, vehicle_model_id: context.vehicle_model_id,
   vehicle_version_id: context.vehicle_version_id, vehicle_multimedia_system_id: context.vehicle_multimedia_system_id,
-  year: context.year ?? null, ram_gb: context.ram_gb, almacenamiento_gb: context.almacenamiento_gb,
+  year: context.year ?? null,
+  ...(context.profile_id === "vehicle-oem-memory-v1" ? { ram_gb: context.ram_gb, almacenamiento_gb: context.almacenamiento_gb } : {}),
 });
 
 export const configurationKey = (context?: ConfigurationContext | null) => context
   ? JSON.stringify(purchaseConfiguration(context)) : "";
 
 export const configurationSummary = (context?: ConfigurationContext | null): string | null => context
-  ? `${[context.vehicle_brand_name, context.vehicle_model_name, context.vehicle_version_name].filter(Boolean).join(" · ") || `Vehículo #${context.vehicle_version_id}`}${context.year ? ` · ${context.year}` : ""} · Sistema OEM: ${context.vehicle_multimedia_system_name || `#${context.vehicle_multimedia_system_id}`} · RAM: ${context.ram_gb} GB · Almacenamiento: ${context.almacenamiento_gb} GB`
+  ? `${[context.vehicle_brand_name, context.vehicle_model_name, context.vehicle_version_name].filter(Boolean).join(" · ") || `Vehículo #${context.vehicle_version_id}`}${context.year ? ` · ${context.year}` : ""} · Sistema OEM: ${context.vehicle_multimedia_system_name || `#${context.vehicle_multimedia_system_id}`}${context.profile_id === "vehicle-oem-memory-v1" ? ` · RAM: ${context.ram_gb} GB · Almacenamiento: ${context.almacenamiento_gb} GB` : ""}`
   : null;

@@ -27,11 +27,17 @@ export type ConfiguratorProfile = {
   ramKey: string;
   storageKey: string;
   unit: "GB";
+  technicalSelection?: "memory" | "reference";
   requireYear?: boolean;
 };
 export const MEMORY_OEM_PROFILE: Readonly<ConfiguratorProfile> = Object.freeze({
   id: "vehicle-oem-memory-v1", compatibility: "vehicle_oem", ramKey: "ram_gb", storageKey: "almacenamiento_gb", unit: "GB",
 });
+/** Kits without published memory attributes: never infer RAM/ROM from Linux or a name. */
+export const REFERENCE_OEM_PROFILE: Readonly<ConfiguratorProfile> = Object.freeze({
+  ...MEMORY_OEM_PROFILE, id: "vehicle-oem-reference-v1", technicalSelection: "reference",
+});
+export const profileUsesMemory = (profile: ConfiguratorProfile): boolean => profile.technicalSelection !== "reference";
 export type Selection = {
   vehicle_brand_id?: number | null;
   vehicle_model_id?: number | null;
@@ -83,6 +89,7 @@ export type MemoryOption = OptionAvailability & { ram_gb: number; almacenamiento
 export type ResolutionStatus = "not_applicable" | "incomplete" | "nonexistent" | "out_of_stock" |
   "unavailable" | "insufficient_data" | "ambiguous" | "valid";
 export type Resolution = {
+  yearRequired: boolean;
   status: ResolutionStatus;
   reasons: Issue[];
   candidates: Candidate[];

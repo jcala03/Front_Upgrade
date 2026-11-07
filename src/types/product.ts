@@ -203,6 +203,8 @@ export type ProductConfiguration = {
   profile_version: number | null;
   ui_enabled: boolean;
   purchase_enabled: boolean;
+  /** Optional public allowlist supplied by server for production SKU approvals. */
+  purchasable_variant_ids?: number[];
 };
 
 export type Product = {

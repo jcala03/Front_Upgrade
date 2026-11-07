@@ -1,6 +1,7 @@
 // Hydrates the real ProductDetailPage + CartProvider with synthetic SSR/API data.
 // Order writes in Stage E are intercepted synthetic responses; all other writes/external
-// requests are blocked. Persistence against MySQL is covered separately by Laravel tests.
+// requests are blocked. Real SQL persistence is covered separately by
+// verify-multimedia-sql.mjs and Laravel tests/Isolated (SQLite :memory:).
 import assert from 'node:assert/strict';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -16,9 +17,24 @@ const artifacts = await mkdtemp(join(tmpdir(), 'upgrade79-configurator-view.'));
 const scenarioProduct = scenario => {
   if (scenario === 'traditional') return traditionalProduct();
   if (scenario === 'simple') return traditionalProduct(true);
-  const product = configurableProduct(scenario === 'purchase' ? 'multi-oem' : scenario);
+  const product = structuredClone(configurableProduct(scenario === 'purchase' ? 'multi-oem' : scenario));
   if (scenario === 'single-vehicle') product.variants = product.variants.filter(v => v.vehicle_compatibilities.every(row => row.vehicle_brand_id === 10));
   if (scenario === 'purchase') product.configuration.purchase_enabled = true;
+  if (scenario === 'unapproved') {
+    product.configuration.purchase_enabled = true;
+    product.configuration.purchasable_variant_ids = [999999];
+  }
+  if (scenario === 'linux') {
+    product.name='Pantalla Linux · fixture aislada';
+    product.configuration={...product.configuration,profile_id:'vehicle-oem-reference-v1',purchase_enabled:true};
+    product.product_category.fields=[];
+    product.variants=product.variants.slice(0,2).map(v=>({...v,specs:{},spec_values:[]}));
+  }
+  if (scenario === 'partial-year') {
+    product.variants=product.variants.filter(v=>v.vehicle_compatibilities.every(r=>r.vehicle_brand_id===10));
+    for(const variant of product.variants) for(const row of variant.vehicle_compatibilities)
+      row.oem_year_ranges=[{year_from:2012,year_to:row.vehicle_multimedia_system_id===40?2013:2015}];
+  }
   return product;
 };
 const client = `
@@ -92,7 +108,7 @@ try {
     if (request.method() !== 'GET') { writes.push(request.method()+' '+url.pathname); return route.abort(); }
     if(url.pathname.endsWith('/sanctum/csrf-cookie'))return route.fulfill({status:204});
     if(url.pathname.includes('/api/checkout/orders/qa-local-only-token'))return route.fulfill({json:{data:url.pathname.endsWith('/pickup-branches')?{branches:[]}:simulatedOrder}});
-    if (url.pathname.startsWith('/__qa-image-')) return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#171a1e"/><text x="50" y="300" fill="#a6c9db" font-size="24">Imagen sintética de prueba</text></svg>' });
+    if (/^\/(?:storage\/)?__qa-image-/.test(url.pathname)) return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#171a1e"/><text x="50" y="300" fill="#a6c9db" font-size="24">Imagen sintética de prueba</text></svg>' });
     if (url.pathname.includes('/api/products/')) {
       reads.push(url.pathname + url.search);
       if (rejectNext) { rejectNext=false;pendingExpectedHttpErrors++;return route.fulfill({ status:503,json:{message:'Prueba de conexión'} }); }
@@ -131,6 +147,7 @@ try {
     assert.match(await page.locator('.product-detail__sku').innerText(),/QA-CONFIG-2/);
     assert.match(await page.locator('.product-detail__price').innerText(),/1\.200\.000/);
     assert.match(await page.locator('.product-detail__media img').getAttribute('src'),/__qa-image-2/);
+    await page.waitForFunction(()=>{const i=document.querySelector('.product-detail__media img');return i?.complete&&i.naturalWidth>0;});
     await press(controls().oem,'41'); await status('valid');
     assert.match(await page.locator('.product-detail__sku').innerText(),/QA-CONFIG-3/);
     await press(controls().memory,'8/256'); await status('valid');
@@ -159,6 +176,7 @@ try {
     if([1440,390].includes(width)) await page.screenshot({path:join(artifacts,`configurator-${width}.png`),fullPage:true});
     results.push({width,responsive:'PASS',vehicleOemMemory:'PASS',priceSkuImage:'PASS',purchaseBlocked:true});
   }
+  await open('unapproved');await choose();await status('valid');await checkProtected();
   await open('single-vehicle');await choose();await status('valid');
   assert.equal(await page.locator('.product-configurator select,.product-configurator input').count(),0);
   assert.match(await page.locator('.product-detail__sku').innerText(),/QA-CONFIG-2/);await checkProtected();
@@ -252,7 +270,42 @@ try {
   await switchView('confirmation');await page.locator('.order-confirmation-product').first().waitFor();
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('upgrade79_cart')).length),0);
   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);assert.deepEqual(unexpected,[]);
-  const report={results,stageEResults,internalVehicle:'PASS',multipleVehiclesBlocked:'PASS',invalidVehicleBlocked:'PASS',simulatedOrderRequests:simulatedOrderRequests.length,simulatedOrderPersistence:false,backendValidationRecovery:'PASS',paidReconciliationOnce:'PASS',filteredEntry:'PASS',ambiguity:'PASS',outOfStock:'PASS',multiOem:'PASS',errorsRetry:'PASS',staleResponses:'PASS',traditionalCart:'PASS',hydrationErrors:errors,expectedHttpErrors,writes,externalRequests:unexpected,artifacts};
+  const multimediaResults=[];
+  await page.evaluate(()=>{localStorage.clear();sessionStorage.clear();});
+  await page.setViewportSize({width:1440,height:1000});await open('multi-vehicle');
+  await page.getByLabel('Marca del vehículo',{exact:true}).selectOption('11');
+  await choose('42','8/256');await status('valid');
+  assert.match(await page.locator('.product-configurator__summary').innerText(),/Toyota Corolla E170/);
+  multimediaResults.push({case:'explicit-multiple-vehicle-selection',result:'PASS'});
+  await open('partial-year');await page.getByLabel('Año del vehículo',{exact:true}).fill('2013');
+  await choose();await status('valid');
+  await page.getByLabel('Año del vehículo',{exact:true}).fill('2014');await status('incomplete');
+  assert.equal(await pressed(controls().oem),'');assert.equal(await pressed(controls().memory),'');
+  multimediaResults.push({case:'partial-year-clears-invalid-oem-and-memory',result:'PASS'});
+  for(const width of [1440,768,430,390,360]){
+    await page.evaluate(()=>{localStorage.clear();sessionStorage.clear();});
+    await page.setViewportSize({width,height:1000});await open('linux');
+    await press(controls().oem,'40');await status('ambiguous');await reference('2');await status('valid');
+    assert.equal(await page.getByRole('group',{name:'Configuración de memoria',exact:true}).count(),0);
+    assert.match(await page.locator('.product-detail__sku').innerText(),/QA-CONFIG-2/);
+    assert.match(await page.locator('.product-detail__media img').getAttribute('src'),/__qa-image-2/);
+    await page.waitForFunction(()=>[...document.querySelectorAll('.product-detail__media img,.product-detail__thumbnails img')].every(i=>i.complete&&i.naturalWidth>0));
+    await page.waitForFunction(()=>{const i=document.querySelector('.product-detail__media img');return i?.complete&&i.naturalWidth>0;});
+    await noOverflow();
+    if([1440,390,360].includes(width))await page.screenshot({path:join(artifacts,`linux-${width}.png`),fullPage:true});
+    await page.getByRole('button',{name:'Agregar al carrito',exact:true}).click();
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('upgrade79_cart')||'[]').length===1);
+    const line=await page.evaluate(()=>JSON.parse(localStorage.getItem('upgrade79_cart'))[0]);
+    assert.equal(line.configuration_context.profile_id,'vehicle-oem-reference-v1');
+    assert.ok(!('ram_gb' in line.configuration_context));
+    await switchView('cart');await page.getByRole('heading',{name:'Carrito',exact:true}).waitFor();await noOverflow();
+    assert.ok(!(await page.locator('.configuration-summary').innerText()).includes('undefined'));
+    await switchView('checkout');await page.getByRole('heading',{name:'Finalizar compra',exact:true}).waitFor();await noOverflow();
+    assert.equal(await page.locator('.configuration-summary').count(),1);
+    multimediaResults.push({case:'linux-oem-kit-cart-checkout',width,result:'PASS'});
+  }
+  assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);assert.deepEqual(unexpected,[]);
+  const report={results,stageEResults,multimediaResults,unapprovedReferenceBlocked:true,internalVehicle:'PASS',multipleVehiclesBlockedUntilSelected:'PASS',invalidVehicleBlocked:'PASS',simulatedOrderRequests:simulatedOrderRequests.length,simulatedOrderPersistence:false,backendValidationRecovery:'PASS',paidReconciliationOnce:'PASS',filteredEntry:'PASS',ambiguity:'PASS',outOfStock:'PASS',multiOem:'PASS',errorsRetry:'PASS',staleResponses:'PASS',traditionalCart:'PASS',hydrationErrors:errors,expectedHttpErrors,writes,externalRequests:unexpected,artifacts};
   await writeFile(join(artifacts,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 } catch(error) {
   console.error(error);

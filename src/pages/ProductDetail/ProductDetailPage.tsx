@@ -452,7 +452,7 @@ export const ProductDetailPage = ({
               ? `${visibleTotal} productos en tu carrito.`
               : "La disponibilidad se verifica nuevamente antes de confirmar tu compra."}
           </p>
-          {configuration.required && !configuration.purchaseEnabled ? <p className="product-detail__preview-note">Vista previa de configuración. La compra online de este producto todavía no está habilitada.</p> : null}
+          {configuration.required && !configuration.purchaseEnabled ? <p className="product-detail__preview-note">Consulta disponibilidad y compatibilidad con el taller. La compra online de este producto todavía no está habilitada.</p> : null}
           <a className="product-detail__cart-link" href="/carrito">
             Ver carrito <span aria-hidden="true">→</span>
           </a>

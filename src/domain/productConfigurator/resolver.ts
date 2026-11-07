@@ -1,5 +1,6 @@
 import { isValidMemoryGb } from "../../utils/memoryGb";
-import { effectiveCompatibility, matchesRow, positiveId, rowYearRange, validVehicleRow, vehicleKeys } from "./compatibility";
+import { profileUsesMemory } from "./types";
+import { effectiveCompatibility, matchesRow, positiveId, rowYearRange, rowRequiresYear, validVehicleRow, vehicleKeys } from "./compatibility";
 import type { Availability, Candidate, CompatibilityRow, ConfiguratorProduct, ConfiguratorProfile,
   ConfiguratorVariant, Issue, MemoryOption, OemOption, OptionAvailability, Resolution, ResolverInput, Selection, VehicleOption } from "./types";
 
@@ -34,7 +35,7 @@ function entryFor(product: ConfiguratorProduct, variant: ConfiguratorVariant, pr
   const effective = effectiveCompatibility(product, variant);
   const issues: Issue[] = [];
   const values = [variant.specs?.[profile.ramKey], variant.specs?.[profile.storageKey]];
-  for (const [index, key] of [profile.ramKey, profile.storageKey].entries()) {
+  for (const [index, key] of (profileUsesMemory(profile) ? [profile.ramKey, profile.storageKey] : []).entries()) {
     if (!isValidMemoryGb(values[index])) issues.push({ code: "invalid_or_missing_memory", field: key, variant_id: variant.id });
     const definitions = [...product.product_category?.fields ?? [], ...variant.spec_values?.flatMap(value => value.field ? [value.field] : []) ?? []].filter(field => field.field_key === key);
     if (!definitions.length || definitions.some(field => field.scope !== "variant" || field.type !== "number" || !field.is_active || field.filter_unit !== profile.unit))
@@ -44,8 +45,8 @@ function entryFor(product: ConfiguratorProduct, variant: ConfiguratorVariant, pr
   return { variant, rows: effective.rows, kind: effective.type, issues,
     candidate: { product_id: product.id, variant_id: variant.id, name: variant.name, sku: variant.sku,
       price: variant.price, image_url: variant.image_url,
-      ram_gb: isValidMemoryGb(values[0]) ? Number(values[0]) : null,
-      almacenamiento_gb: isValidMemoryGb(values[1]) ? Number(values[1]) : null,
+      ram_gb: profileUsesMemory(profile) && isValidMemoryGb(values[0]) ? Number(values[0]) : null,
+      almacenamiento_gb: profileUsesMemory(profile) && isValidMemoryGb(values[1]) ? Number(values[1]) : null,
       availability: catalogAvailability(variant) } };
 }
 
@@ -106,6 +107,7 @@ function buildOptions(entries: Entry[], profile: ConfiguratorProfile, selection:
         addIdentity(oem, entry); oems.set(id, oem);
       }
     }
+    if (!profileUsesMemory(profile)) continue;
     const withoutMemory = { ...selection, ram_gb: null, almacenamiento_gb: null };
     if (entryMatches(entry, withoutMemory, profile) !== true) continue;
     const ram = entry.candidate.ram_gb!, storage = entry.candidate.almacenamiento_gb!;
@@ -122,7 +124,7 @@ function buildOptions(entries: Entry[], profile: ConfiguratorProfile, selection:
 }
 
 export function resolveConfiguration({ profile, snapshot, expectedRequestKey, selection }: ResolverInput): Resolution {
-  const result: Resolution = { status: "insufficient_data", reasons: [], candidates: [], variant: null,
+  const result: Resolution = { yearRequired: false, status: "insufficient_data", reasons: [], candidates: [], variant: null,
     canSelectForPurchase: false, options: { vehicles: [], oems: [], memories: [] }, differentiators: [], coverage: snapshot.coverage };
   const finish = (status: Resolution["status"], code: string): Resolution => ({ ...result, status, reasons: [...result.reasons, { code }] });
   if (!profile) return finish("not_applicable", "profile_not_enabled");
@@ -141,6 +143,8 @@ export function resolveConfiguration({ profile, snapshot, expectedRequestKey, se
   if (!profile.id || !profile.ramKey || !profile.storageKey || profile.ramKey === profile.storageKey || !["vehicle", "vehicle_oem", "universal"].includes(profile.compatibility) || profile.unit !== "GB" || product.product_category?.requires_oem_compatibility && profile.compatibility !== "vehicle_oem")
     return finish("insufficient_data", "invalid_profile");
   const invalidSelection = selectionIssues(selection);
+  if (!profileUsesMemory(profile) && memoryKeys.some(key => selection[key] != null))
+    invalidSelection.push({ code: "unexpected_memory_selection" });
   if (invalidSelection.length) return { ...result, reasons: invalidSelection };
   const variants = new Map<number, ConfiguratorVariant>();
   for (const variant of product.variants ?? []) {
@@ -150,6 +154,11 @@ export function resolveConfiguration({ profile, snapshot, expectedRequestKey, se
     variants.set(variant.id, variant);
   }
   const entries = [...variants.values()].sort((a, b) => a.id - b.id).map(variant => entryFor(product, variant, profile));
+  result.yearRequired = Boolean(profile.requireYear || profile.compatibility !== "universal" && entries.some(entry =>
+    entry.variant.is_active && entry.variant.is_visible && entry.rows.some(row =>
+      vehicleKeys.every(key => selection[key] == null || row[key] === selection[key])
+      && (selection.vehicle_multimedia_system_id == null || row.vehicle_multimedia_system_id === selection.vehicle_multimedia_system_id)
+      && rowRequiresYear(row))));
   result.options = buildOptions(entries, profile, selection);
   const matches: Entry[] = [], unknown: Entry[] = [];
   for (const entry of entries) {
@@ -161,8 +170,8 @@ export function resolveConfiguration({ profile, snapshot, expectedRequestKey, se
   result.candidates = [...matches, ...unknown].map(entry => entry.candidate).sort((a, b) => a.variant_id - b.variant_id);
   result.reasons = unknown.flatMap(entry => entry.issues.length ? entry.issues : [{ code: "incomplete_compatibility", variant_id: entry.variant.id }]);
   if (snapshot.coverage !== "complete_public") return finish("insufficient_data", "full_public_catalog_required");
-  const required = [...memoryKeys, ...(profile.compatibility === "universal" ? [] : vehicleKeys),
-    ...(profile.compatibility === "vehicle_oem" ? ["vehicle_multimedia_system_id" as const] : []), ...(profile.requireYear ? ["year" as const] : [])];
+  const required = [...(profileUsesMemory(profile) ? memoryKeys : []), ...(profile.compatibility === "universal" ? [] : vehicleKeys),
+    ...(profile.compatibility === "vehicle_oem" ? ["vehicle_multimedia_system_id" as const] : []), ...(result.yearRequired ? ["year" as const] : [])];
   const missing = required.filter(key => selection[key] == null);
   if (missing.length) return { ...result, status: "incomplete", reasons: [...result.reasons, ...missing.map(field => ({ code: "selection_required", field }))] };
   if (unknown.length) return finish("insufficient_data", "potential_candidates_have_missing_data");

@@ -1,5 +1,5 @@
 import type { Product, ProductVariant } from "../types/product";
-import { configurationKey, type ConfigurationContext } from "../types/productConfiguration";
+import { configurationAllowsVariant, configurationKey, type ConfigurationContext } from "../types/productConfiguration";
 
 export type CartItem = { product: Product; variant: ProductVariant | null; quantity: number; configuration_context?: ConfigurationContext };
 export type CartLineQuantity = { productId: number; variantId: number | null; quantity: number; configuration_context?: ConfigurationContext };
@@ -16,7 +16,7 @@ export const commercialQuantity = (items: CartItem[], productId: number, variant
 export function addCartItem(items: CartItem[], product: Product, quantity: number, variant: ProductVariant | null, context?: ConfigurationContext): CartItem[] {
   if (!Number.isInteger(quantity) || quantity <= 0 || (product.has_variants || product.variants?.length) && !variant) return items;
   if (variant && variant.product_id !== product.id) return items;
-  if (product.configuration?.required && (!context || !product.configuration.purchase_enabled)) return items;
+  if (product.configuration?.required && (!context || !configurationAllowsVariant(product.configuration, variant?.id))) return items;
   const stock = Number(variant?.stock ?? product.stock ?? 0);
   const available = Math.max(0, stock - commercialQuantity(items, product.id, variant?.id));
   const increment = Math.min(quantity, available);

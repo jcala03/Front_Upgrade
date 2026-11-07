@@ -59,7 +59,11 @@ export function reconcileSelection(input: Omit<ResolverInput, "selection"> & { p
     if (selection.vehicle_model_id == null || selection.vehicle_version_id != null && !options.vehicles.some(row => row.vehicle_brand_id === selection.vehicle_brand_id && row.vehicle_model_id === selection.vehicle_model_id && row.vehicle_version_id === selection.vehicle_version_id)) clear("vehicle_version_id");
     const vehicleSelection = { ...selection, vehicle_multimedia_system_id: null, ram_gb: null, almacenamiento_gb: null, variant_id: null };
     options = resolveConfiguration({ ...input, selection: vehicleSelection }).options;
-    if (selection.vehicle_version_id == null || selection.vehicle_multimedia_system_id != null && !options.oems.some(row => row.vehicle_multimedia_system_id === selection.vehicle_multimedia_system_id)) clear("vehicle_multimedia_system_id");
+    if (selection.vehicle_version_id == null || selection.vehicle_multimedia_system_id != null && !options.oems.some(row => row.vehicle_multimedia_system_id === selection.vehicle_multimedia_system_id)) {
+      clear("vehicle_multimedia_system_id");
+      clear("ram_gb");
+      clear("almacenamiento_gb");
+    }
     options = resolveConfiguration({ ...input, selection: { ...selection, variant_id: null } }).options;
     const hasPair = options.memories.some(row => row.ram_gb === Number(selection.ram_gb) && row.almacenamiento_gb === Number(selection.almacenamiento_gb));
     if (!hasPair) {
