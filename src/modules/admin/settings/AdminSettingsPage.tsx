@@ -1,3 +1,4 @@
+import { validateNumericInputs, type NumericDraft } from "../../../utils/numericInput";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Building2, FileText, Save, UsersRound } from "lucide-react";
 import { getSettings, SettingsApiError, updateSettings } from "../../../api/settings";
@@ -6,6 +7,7 @@ import { hasPermission } from "../../../utils/authStorage";
 import { UsersSection } from "./UsersSection";
 import "./AdminSettingsPage.css";
 
+type SettingsDraft = Omit<UpdateSettingsPayload, "sales"> & { sales: Omit<UpdateSettingsPayload["sales"], "quotation_validity_days"> & { quotation_validity_days: NumericDraft } };
 type Section = "general" | "sales" | "users";
 const empty: UpdateSettingsPayload = {
   business: { business_name: "", legal_name: null, tax_id: null, phone: null, email: null, whatsapp: null, address: null, city: null },
@@ -20,7 +22,7 @@ export const AdminSettingsPage = () => {
   const canViewUsers = hasPermission("users.view");
   const [section, setSection] = useState<Section>("general");
   const [settings, setSettings] = useState<SettingsData | null>(null);
-  const [draft, setDraft] = useState<UpdateSettingsPayload>(empty);
+  const [draft, setDraft] = useState<SettingsDraft>(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -38,14 +40,14 @@ export const AdminSettingsPage = () => {
   const dirty = useMemo(() => settings ? JSON.stringify(draft) !== JSON.stringify(editable(settings)) : false, [draft, settings]);
 
   const business = (key: keyof UpdateSettingsPayload["business"], value: string) => setDraft((current) => ({ ...current, business: { ...current.business, [key]: key === "business_name" ? value : clean(value) } }));
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!canUpdate || !dirty || lock.current) return;
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); if (!validateNumericInputs(event.currentTarget)) return; if (!canUpdate || !dirty || lock.current) return;
     const days = Number(draft.sales.quotation_validity_days);
     if (!Number.isInteger(days) || days < 1 || days > 365) { setErrors({ "sales.quotation_validity_days": ["La vigencia debe ser un número entero entre 1 y 365."] }); return; }
     if (draft.business.email && !/^\S+@\S+\.\S+$/.test(draft.business.email)) { setErrors({ "business.email": ["Ingresa un email de contacto válido."] }); return; }
     if (draft.sales.order_notification_email && !/^\S+@\S+\.\S+$/.test(draft.sales.order_notification_email)) { setErrors({ "sales.order_notification_email": ["Ingresa un email de notificación válido."] }); return; }
     lock.current = true; setSaving(true); setError(""); setSuccess(""); setErrors({});
-    try { const result = await updateSettings(draft); setSettings(result); setDraft(editable(result)); setSuccess("Configuración guardada correctamente."); }
+    try { const result = await updateSettings({ ...draft, sales: { ...draft.sales, quotation_validity_days: days } }); setSettings(result); setDraft(editable(result)); setSuccess("Configuración guardada correctamente."); }
     catch (cause) { if (cause instanceof SettingsApiError) setErrors(cause.errors); setError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración."); }
     finally { lock.current = false; setSaving(false); }
   };
@@ -72,7 +74,7 @@ export const AdminSettingsPage = () => {
           </> : <>
             <header className="settings-section-title"><h3>Ventas y cotizaciones</h3><p>Valores predeterminados para la operación comercial.</p></header>
             <div className="settings-form-grid settings-form-grid--single">
-              <label><span>Vigencia predeterminada de cotizaciones</span><div className="settings-number"><input type="number" min="1" max="365" step="1" value={draft.sales.quotation_validity_days} disabled={!canUpdate || saving} aria-invalid={Boolean(fieldError(errors, "sales.quotation_validity_days"))} onChange={(event) => setDraft((current) => ({ ...current, sales: { ...current.sales, quotation_validity_days: Number(event.target.value) } }))} /><span>días</span></div><small>Afecta solamente nuevas cotizaciones sin fecha de vigencia definida explícitamente.</small>{fieldError(errors, "sales.quotation_validity_days") ? <small className="field-error">{fieldError(errors, "sales.quotation_validity_days")}</small> : null}</label>
+              <label><span>Vigencia predeterminada de cotizaciones</span><div className="settings-number"><input required inputMode="numeric" type="number" min="1" max="365" step="1" value={draft.sales.quotation_validity_days} disabled={!canUpdate || saving} aria-invalid={Boolean(fieldError(errors, "sales.quotation_validity_days"))} onChange={(event) => setDraft((current) => ({ ...current, sales: { ...current.sales, quotation_validity_days: event.target.value } }))} /><span>días</span></div><small>Afecta solamente nuevas cotizaciones sin fecha de vigencia definida explícitamente.</small>{fieldError(errors, "sales.quotation_validity_days") ? <small className="field-error">{fieldError(errors, "sales.quotation_validity_days")}</small> : null}</label>
               <label><span>Email para nuevas órdenes ecommerce</span><input type="email" value={draft.sales.order_notification_email ?? ""} disabled={!canUpdate || saving} aria-invalid={Boolean(fieldError(errors, "sales.order_notification_email"))} onChange={(event) => setDraft((current) => ({ ...current, sales: { ...current.sales, order_notification_email: clean(event.target.value) } }))} /><small>Destinatario interno cuando ingresa una nueva orden ecommerce. Puede dejarse vacío.</small>{fieldError(errors, "sales.order_notification_email") ? <small className="field-error">{fieldError(errors, "sales.order_notification_email")}</small> : null}</label>
             </div>
           </>}

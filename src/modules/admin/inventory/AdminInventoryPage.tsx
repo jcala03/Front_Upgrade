@@ -1,3 +1,4 @@
+import { numericPayload, validateNumericInputs, type NumericDraft } from "../../../utils/numericInput";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ArrowLeftRight, Boxes, ChevronLeft, ChevronRight, CircleAlert, Pencil, Plus, Search, Truck, X } from "lucide-react";
 import { listAllBranches } from "../../../api/branches";
@@ -367,11 +368,11 @@ const StocksView = ({ branches }: { branches: Branch[] }) => {
 </>;
 };
 
-const MinimumForm = ({ stock, onBusyChange, onClose, onSaved }: { stock: InventoryStock | null; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: (stock: InventoryStock) => void }) => { const [value, setValue] = useState(stock?.minimum_quantity ?? 0);
+const MinimumForm = ({ stock, onBusyChange, onClose, onSaved }: { stock: InventoryStock | null; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: (stock: InventoryStock) => void }) => { const [value, setValue] = useState<NumericDraft>(stock?.minimum_quantity ?? 0);
   const [saving, setSaving] = useState(false);
   const submitLock = useRef(false);
   const [error, setError] = useState(""); if (!stock) return null;
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (submitLock.current) return; submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); try { onSaved(await updateInventoryMinimum({ branch_id: stock.branch_id, product_id: stock.product_id, product_variant_id: stock.product_variant_id, minimum_quantity: value })); } catch (cause) { setError(errorMessage(cause, "No se pudo actualizar el mínimo.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog" onSubmit={submit}>
+  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!validateNumericInputs(event.currentTarget)) return; if (submitLock.current) return; submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); try { onSaved(await updateInventoryMinimum({ branch_id: stock.branch_id, product_id: stock.product_id, product_variant_id: stock.product_variant_id, minimum_quantity: numericPayload(value) })); } catch (cause) { setError(errorMessage(cause, "No se pudo actualizar el mínimo.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog" onSubmit={submit}>
 <DialogHeader title="Stock mínimo" id="minimum-title" onClose={onClose} disabled={saving} />
 <div className="inventory-dialog__body">
 <p>
@@ -379,7 +380,7 @@ const MinimumForm = ({ stock, onBusyChange, onClose, onSaved }: { stock: Invento
 <br />{stock.branch?.name}</p>
 <label>
 <span>Mínimo por sede</span>
-<input autoFocus required type="number" min="0" step="1" value={value} onChange={(event) => setValue(Number(event.target.value))} />
+<input autoFocus required inputMode="numeric" type="number" min="0" step="1" value={value} onChange={(event) => setValue(event.target.value)} />
 </label>{error ? <p role="alert" className="inventory-form-error">{error}</p> : null}</div>
 <DialogFooter onClose={onClose} saving={saving} label="Guardar mínimo" />
 </form>; };
@@ -393,15 +394,15 @@ const StockPicker = ({ options, value, loading, onChange, onSearch }: { options:
 
 const MovementForm = ({ stock, onBusyChange, onClose, onSaved }: { stock: InventoryStock | null; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: () => void }) => {
   const [type, setType] = useState<ManualInventoryMovementType>("entry");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<NumericDraft>(1);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const submitLock = useRef(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({}); if (!stock) return null;
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (submitLock.current) return; submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); setErrors({});
-  const payload: InventoryMovementPayload = { branch_id: stock.branch_id, product_id: stock.product_id, product_variant_id: stock.product_variant_id, type, reason: reason.trim(), notes: notes.trim() || null, ...(type === "adjustment" ? { new_stock: quantity } : { quantity }) }; try { await createInventoryMovement(payload); onSaved(); } catch (cause) { if (cause instanceof ApiError) setErrors(cause.errors); setError(errorMessage(cause, "No se pudo registrar el movimiento.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog" onSubmit={submit}>
+  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!validateNumericInputs(event.currentTarget)) return; if (submitLock.current) return; submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); setErrors({});
+  const payload: InventoryMovementPayload = { branch_id: stock.branch_id, product_id: stock.product_id, product_variant_id: stock.product_variant_id, type, reason: reason.trim(), notes: notes.trim() || null, ...(type === "adjustment" ? { new_stock: numericPayload(quantity) } : { quantity: numericPayload(quantity) }) }; try { await createInventoryMovement(payload); onSaved(); } catch (cause) { if (cause instanceof ApiError) setErrors(cause.errors); setError(errorMessage(cause, "No se pudo registrar el movimiento.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog" onSubmit={submit}>
 <DialogHeader title="Movimiento manual" id="movement-title" onClose={onClose} disabled={saving} />
 <div className="inventory-dialog__body">
 <p>
@@ -419,7 +420,7 @@ const MovementForm = ({ stock, onBusyChange, onClose, onSaved }: { stock: Invent
 </label>
 <label>
 <span>{type === "adjustment" ? "Nueva existencia" : "Cantidad"} *</span>
-<input required type="number" min={type === "adjustment" ? 0 : 1} step="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />{errors.quantity?.[0] || errors.new_stock?.[0] ? <small>{errors.quantity?.[0] ?? errors.new_stock?.[0]}</small> : null}</label>
+<input required inputMode="numeric" type="number" min={type === "adjustment" ? 0 : 1} step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />{errors.quantity?.[0] || errors.new_stock?.[0] ? <small>{errors.quantity?.[0] ?? errors.new_stock?.[0]}</small> : null}</label>
 <label>
 <span>Motivo *</span>
 <input required maxLength={255} value={reason} onChange={(e) => setReason(e.target.value)} />{errors.reason?.[0] ? <small>{errors.reason[0]}</small> : null}</label>
@@ -452,7 +453,7 @@ const InventoryEntryForm = ({ branches, initialProduct, onBusyChange, onClose, o
   const [products, setProducts] = useState<InventoryCatalogProduct[]>([]);
   const [itemKey, setItemKey] = useState("");
   const [search, setSearch] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<NumericDraft>(1);
   const [reason, setReason] = useState("Ingreso de mercancía");
   const [notes, setNotes] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -499,11 +500,12 @@ const InventoryEntryForm = ({ branches, initialProduct, onBusyChange, onClose, o
     return () => controller.abort();
   }, [branchId, selected?.key]);
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!validateNumericInputs(event.currentTarget)) return;
     if (submitLock.current || !selected) return;
     submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); setErrors({});
-    const payload: InventoryMovementPayload = { branch_id: Number(branchId), product_id: selected.productId, product_variant_id: selected.variantId, type: "entry", quantity, reason: reason.trim(), notes: notes.trim() || null };
+    const payload: InventoryMovementPayload = { branch_id: Number(branchId), product_id: selected.productId, product_variant_id: selected.variantId, type: "entry", quantity: numericPayload(quantity), reason: reason.trim(), notes: notes.trim() || null };
     try { await createInventoryMovement(payload); onSaved(); }
     catch (cause) { if (cause instanceof ApiError) setErrors(cause.errors); setError(errorMessage(cause, "No se pudo ingresar el inventario.")); }
     finally { submitLock.current = false; setSaving(false); onBusyChange(false); }
@@ -518,7 +520,7 @@ const InventoryEntryForm = ({ branches, initialProduct, onBusyChange, onClose, o
 {!initialProduct ? <label><span>Buscar producto o SKU</span><div className="inventory-search"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Producto, variante o SKU" /><button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearch("")}><X size={16} /></button></div></label> : null}
 <label className="is-wide"><span>Producto / Variante *</span><select required value={itemKey} disabled={catalogLoading || Boolean(catalogError)} onChange={(event) => setItemKey(event.target.value)}><option value="">{catalogLoading ? "Cargando artículos..." : visibleOptions.length ? "Selecciona un artículo" : "Sin coincidencias"}</option>{visibleOptions.map((option) => <option value={option.key} key={option.key}>{option.name}{option.sku ? ` · SKU ${option.sku}` : ""}{option.isActive ? "" : " · Inactivo"}</option>)}</select>{errors.product_id?.[0] ? <small>{errors.product_id[0]}</small> : null}{errors.product_variant_id?.[0] ? <small>{errors.product_variant_id[0]}</small> : null}</label>
 {catalogError ? <p className="inventory-form-error is-wide" role="alert">{catalogError}</p> : null}
-<label><span>Cantidad *</span><input required type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />{errors.quantity?.[0] ? <small>{errors.quantity[0]}</small> : null}</label>
+<label><span>Cantidad *</span><input required inputMode="numeric" type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} />{errors.quantity?.[0] ? <small>{errors.quantity[0]}</small> : null}</label>
 <div className="inventory-current-stock"><span>Stock actual en sede</span><strong>{!selected || !branchId ? "Selecciona sede y artículo" : stockLoading ? "Consultando..." : currentStock === null ? "No disponible" : currentStock}</strong></div>
 <label className="is-wide"><span>Motivo *</span><input required maxLength={255} value={reason} onChange={(event) => setReason(event.target.value)} />{errors.reason?.[0] ? <small>{errors.reason[0]}</small> : null}</label>
 <label className="is-wide"><span>Notas</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} />{errors.notes?.[0] ? <small>{errors.notes[0]}</small> : null}</label>
@@ -803,7 +805,7 @@ const TransfersView = ({ branches }: { branches: Branch[] }) => { const canCreat
 </CrmDialog>
 </>; };
 
-type TransferDraftItem = { stock: InventoryStock; quantity: number };
+type TransferDraftItem = { stock: InventoryStock; quantity: NumericDraft };
 const TransferForm = ({ branches, onBusyChange, onClose, onSaved }: { branches: Branch[]; onBusyChange: (busy: boolean) => void; onClose: () => void; onSaved: (transfer: InventoryTransfer) => void }) => { const activeBranches = branches.filter((branch) => branch.is_active);
   const [sourceId, setSourceId] = useState(String(activeBranches[0]?.id ?? ""));
   const [destinationId, setDestinationId] = useState(String(activeBranches[1]?.id ?? ""));
@@ -836,7 +838,7 @@ const TransferForm = ({ branches, onBusyChange, onClose, onSaved }: { branches: 
   useEffect(() => { setItems([]); setStockId(""); setStockSearch(""); }, [sourceId]);
   const options = useMemo(() => stocks.filter((stock) => !items.some((item) => item.stock.inventory_item_id === stock.inventory_item_id)), [items, stocks]);
   const add = () => { const stock = stocks.find((item) => item.id === Number(stockId)); if (!stock) return; setItems((current) => [...current, { stock, quantity: 1 }]); setStockId(""); };
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (submitLock.current) return; if (sourceId === destinationId) { setError("La sede destino debe ser diferente de la sede origen."); return; } if (!items.length) { setError("Agrega al menos un artículo."); return; } submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); setErrors({}); try { const response = await createInventoryTransfer({ source_branch_id: Number(sourceId), destination_branch_id: Number(destinationId), items: items.map(({ stock, quantity }) => ({ product_id: stock.product_id, product_variant_id: stock.product_variant_id, quantity })), notes: notes.trim() || null, client_request_key: requestKey.current }); onSaved(response.data); } catch (cause) { if (cause instanceof ApiError) setErrors(cause.errors); setError(errorMessage(cause, "No se pudo solicitar la transferencia.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog is-wide" onSubmit={submit}>
+  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!validateNumericInputs(event.currentTarget)) return; if (submitLock.current) return; if (sourceId === destinationId) { setError("La sede destino debe ser diferente de la sede origen."); return; } if (!items.length) { setError("Agrega al menos un artículo."); return; } submitLock.current = true; setSaving(true); onBusyChange(true); setError(""); setErrors({}); try { const response = await createInventoryTransfer({ source_branch_id: Number(sourceId), destination_branch_id: Number(destinationId), items: items.map(({ stock, quantity }) => ({ product_id: stock.product_id, product_variant_id: stock.product_variant_id, quantity: numericPayload(quantity) })), notes: notes.trim() || null, client_request_key: requestKey.current }); onSaved(response.data); } catch (cause) { if (cause instanceof ApiError) setErrors(cause.errors); setError(errorMessage(cause, "No se pudo solicitar la transferencia.")); } finally { submitLock.current = false; setSaving(false); onBusyChange(false); } }; return <form className="inventory-dialog is-wide" onSubmit={submit}>
 <DialogHeader id="transfer-create-title" title="Nueva transferencia" onClose={onClose} disabled={saving} />
 <div className="inventory-dialog__body">
 <p>La solicitud no descuenta existencias. El stock sale del origen únicamente al despachar.</p>
@@ -861,7 +863,7 @@ const TransferForm = ({ branches, onBusyChange, onClose, onSaved }: { branches: 
 </div>
 <label>
 <span>Cantidad</span>
-<input required type="number" min="1" step="1" value={item.quantity} onChange={(e) => setItems((current) => current.map((row) => row.stock.inventory_item_id === item.stock.inventory_item_id ? { ...row, quantity: Number(e.target.value) } : row))} />
+<input required inputMode="numeric" type="number" min="1" step="1" value={item.quantity} onChange={(e) => setItems((current) => current.map((row) => row.stock.inventory_item_id === item.stock.inventory_item_id ? { ...row, quantity: e.target.value } : row))} />
 </label>
 <button type="button" aria-label={`Quitar ${itemName(item.stock)}`} onClick={() => setItems((current) => current.filter((row) => row.stock.inventory_item_id !== item.stock.inventory_item_id))}>
 <X size={17} />

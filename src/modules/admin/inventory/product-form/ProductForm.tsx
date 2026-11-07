@@ -1,3 +1,4 @@
+import { parseNumericDraft, validateNumericInputs } from "../../../../utils/numericInput";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createProduct, ProductApiError, updateProduct } from "../../../../api/products";
 import { hasPermission } from "../../../../utils/authStorage";
@@ -357,6 +358,19 @@ export const ProductForm = ({
 
   const validate = () => {
     const nextErrors: ProductFormErrors = {};
+    // Validate the draft even when optional/advanced controls are collapsed.
+    const validatePricingDraft = (draft: ProductFormState | ProductVariantDraft, key: string) => {
+      for (const field of ["price", "cost_price", "tax_amount", "extra_charges"] as const) {
+        const value = draft[field];
+        if (value !== "" && (parseNumericDraft(value) === null || Number(value) < 0)) {
+          nextErrors[key] = "Ingresa importes numéricos válidos, mayores o iguales a cero.";
+        }
+      }
+      if (draft.pricing_mode !== "manual" && (parseNumericDraft(draft.target_profit_percent) === null || Number(draft.target_profit_percent) < 0)) {
+        nextErrors[key] = "Ingresa un porcentaje numérico válido, mayor o igual a cero.";
+      }
+    };
+    validatePricingDraft(form, "pricing");
     if (requiresOem && !variants.length) nextErrors.variants = "Esta categoría necesita variantes con compatibilidad OEM.";
     if (!form.name.trim()) nextErrors.name = "El nombre es obligatorio.";
     if (form.is_visible && (!images.length || images.filter((image) => image.primary).length !== 1)) nextErrors.gallery = "Para publicar necesitas al menos una imagen y exactamente una principal.";
@@ -376,6 +390,7 @@ export const ProductForm = ({
 
     const seenSkus = new Set<string>();
     variants.forEach((variant, index) => {
+      validatePricingDraft(variant, `variants.${index}.pricing`);
       const resolvedName = variant.name.trim() || suggestVariantName(variantFields, variant.specs);
       if (!resolvedName) nextErrors[`variants.${index}.name`] = "Indica un nombre o completa los detalles de la variante.";
       variantFields.filter((field) => field.is_required).forEach((field) => {
@@ -421,7 +436,7 @@ export const ProductForm = ({
     event.preventDefault();
     if (submitLock.current) return;
     setSubmitError("");
-    if (!validate()) return;
+    if (!validate() || !validateNumericInputs(event.currentTarget)) return;
 
     submitLock.current = true;
     const requestedAction = submitIntent.current;
@@ -500,7 +515,7 @@ export const ProductForm = ({
 
         <section className="smart-product-form__section" aria-labelledby="product-pricing-title">
           <div className="smart-product-form__section-heading"><span>04</span><div><h3 id="product-pricing-title">Precio</h3><p>Valores comerciales base del producto.</p></div></div>
-          <div className="smart-product-form__grid"><label className="smart-product-form__field"><span>Precio de venta</span><input type="number" min="0" value={form.price} onChange={(event) => updateForm("price", event.target.value)} /></label></div>
+          <div className="smart-product-form__grid"><label className="smart-product-form__field"><span>Precio de venta</span><input type="number" inputMode="decimal" step="any" min="0" value={form.price} onChange={(event) => updateForm("price", event.target.value)} /></label></div>
           <InventoryNotice canViewInventory={canViewInventory} />
         </section>
 
@@ -599,9 +614,9 @@ const InventoryNotice = ({ canViewInventory }: { canViewInventory: boolean }) =>
 const PricingFields = <T extends ProductFormState | ProductVariantDraft>({ draft, update, preview, error, advancedOnly = false }: PricingFieldsProps<T>) => (
   <>
     <div className="smart-product-form__grid smart-product-form__pricing-grid">
-      {(["cost_price", "tax_amount", "extra_charges"] as const).map((key) => <label className="smart-product-form__field" key={key}><span>{key === "cost_price" ? "Costo" : key === "tax_amount" ? "Impuestos" : "Cargos extra"}</span><input type="number" min="0" value={draft[key]} onChange={(event) => update(key, event.target.value as T[typeof key])} /></label>)}
+      {(["cost_price", "tax_amount", "extra_charges"] as const).map((key) => <label className="smart-product-form__field" key={key}><span>{key === "cost_price" ? "Costo" : key === "tax_amount" ? "Impuestos" : "Cargos extra"}</span><input type="number" inputMode="decimal" step="any" min="0" value={draft[key]} onChange={(event) => update(key, event.target.value as T[typeof key])} /></label>)}
       <label className="smart-product-form__field"><span>Modo de precio</span><select value={draft.pricing_mode} onChange={(event) => update("pricing_mode", event.target.value as T["pricing_mode"])}><option value="manual">Manual</option><option value="markup">Ganancia sobre costo</option><option value="margin">Margen real</option></select></label>
-      {draft.pricing_mode === "manual" ? (advancedOnly ? null : <label className="smart-product-form__field"><span>Precio de venta</span><input type="number" min="0" value={draft.price} onChange={(event) => update("price", event.target.value as T["price"])} /></label>) : <label className="smart-product-form__field"><span>{draft.pricing_mode === "markup" ? "Ganancia sobre costo %" : "Margen deseado %"}</span><input data-error-key="pricing" type="number" min="0" max={draft.pricing_mode === "margin" ? 99 : undefined} value={draft.target_profit_percent} onChange={(event) => update("target_profit_percent", event.target.value as T["target_profit_percent"])} /></label>}
+      {draft.pricing_mode === "manual" ? (advancedOnly ? null : <label className="smart-product-form__field"><span>Precio de venta</span><input type="number" inputMode="decimal" step="any" min="0" value={draft.price} onChange={(event) => update("price", event.target.value as T["price"])} /></label>) : <label className="smart-product-form__field"><span>{draft.pricing_mode === "markup" ? "Ganancia sobre costo %" : "Margen deseado %"}</span><input data-error-key="pricing" type="number" step="any" inputMode="decimal" min="0" value={draft.target_profit_percent} onChange={(event) => update("target_profit_percent", event.target.value as T["target_profit_percent"])} /></label>}
     </div>
     {error ? <p className="smart-product-form__section-error">{error}</p> : null}
     <div className="smart-product-form__pricing-preview"><span>Costo total <strong>{formatCurrency(preview.totalCost)}</strong></span><span>Venta <strong>{formatCurrency(preview.price)}</strong></span><span>Ganancia <strong>{formatCurrency(preview.profitAmount)}</strong></span><span>Margen <strong>{preview.profitMarginPercent.toFixed(2)}%</strong></span></div>

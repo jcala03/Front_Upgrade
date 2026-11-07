@@ -69,7 +69,8 @@ export const ProductDynamicFields = ({
                 data-error-key={errorKey}
                 type={field.type === "number" ? "number" : "text"}
                 min={variantMemory && field.field_key in memoryFields ? 1 : undefined}
-                step={variantMemory && field.field_key in memoryFields ? 1 : undefined}
+                step={variantMemory && field.field_key in memoryFields ? 1 : "any"}
+                inputMode={field.type === "number" ? (variantMemory && field.field_key in memoryFields ? "numeric" : "decimal") : undefined}
                 value={typeof value === "string" || typeof value === "number" ? value : ""}
                 onChange={(event) => onChange(field, event.target.value)}
                 required={field.is_required}
