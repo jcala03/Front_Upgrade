@@ -205,6 +205,8 @@ export type ProductConfiguration = {
   purchase_enabled: boolean;
   /** Optional public allowlist supplied by server for production SKU approvals. */
   purchasable_variant_ids?: number[];
+  /** Server-reviewed physical references identifiable by OEM without an inferred year. */
+  year_optional_variant_ids?: number[];
 };
 
 export type Product = {

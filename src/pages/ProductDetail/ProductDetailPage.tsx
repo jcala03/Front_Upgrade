@@ -435,7 +435,8 @@ export const ProductDetailPage = ({
               onClick={handleAdd}
             >
               <ShoppingBag size={18} aria-hidden="true" />
-              {configurationBlocked ? configuration.purchaseEnabled ? "Completa tu configuración" : "Compra online no habilitada" : isAdding
+              {configuration.required && selectedVariant && availableStock <= 0 ? "Agotado"
+                : configurationBlocked ? configuration.purchaseEnabled ? "Completa tu configuración" : "Compra online no habilitada" : isAdding
                 ? "Agregando…"
                 : remainingStock <= 0 && availableStock > 0
                 ? "Stock máximo en carrito"

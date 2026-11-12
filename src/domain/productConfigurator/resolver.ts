@@ -154,11 +154,20 @@ export function resolveConfiguration({ profile, snapshot, expectedRequestKey, se
     variants.set(variant.id, variant);
   }
   const entries = [...variants.values()].sort((a, b) => a.id - b.id).map(variant => entryFor(product, variant, profile));
+  const optionalYears = product.configuration?.purchase_enabled === true && profileUsesMemory(profile)
+    && Array.isArray(product.configuration.year_optional_variant_ids)
+    ? product.configuration.year_optional_variant_ids : [];
+  const approvedIds = product.configuration?.purchasable_variant_ids;
   result.yearRequired = Boolean(profile.requireYear || profile.compatibility !== "universal" && entries.some(entry =>
-    entry.variant.is_active && entry.variant.is_visible && entry.rows.some(row =>
+    entry.variant.is_active && entry.variant.is_visible
+    && (selection.variant_id == null || entry.variant.id === selection.variant_id)
+    && memoryKeys.every(key => selection[key] == null || entry.candidate[key] === Number(selection[key]))
+    && entry.rows.some(row =>
       vehicleKeys.every(key => selection[key] == null || row[key] === selection[key])
       && (selection.vehicle_multimedia_system_id == null || row.vehicle_multimedia_system_id === selection.vehicle_multimedia_system_id)
-      && rowRequiresYear(row))));
+      && rowRequiresYear(row)
+      && !(optionalYears.includes(entry.variant.id) && (approvedIds === undefined || approvedIds?.includes(entry.variant.id))
+        && row.year_from == null && row.year_to == null))));
   result.options = buildOptions(entries, profile, selection);
   const matches: Entry[] = [], unknown: Entry[] = [];
   for (const entry of entries) {

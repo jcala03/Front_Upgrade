@@ -61,7 +61,7 @@ const vite = await createServer({ root, configFile: false, cacheDir: join(artifa
     configureServer(server) { server.middlewares.use(async (req, res, next) => {
       if (!req.url.startsWith('/tienda/')) return next();
       try {
-        const props = { slug: currentProduct.slug, initialProduct: currentProduct, query: '' };
+        const props = { slug: currentProduct.slug, initialProduct: currentProduct, query: new URL(req.url, 'http://localhost').search };
         const html = renderToString(createElement(StrictMode, null, createElement(CartProvider, null, createElement(ProductDetailPage, props))));
         const data = JSON.stringify(props).replaceAll('<', '\\u003c');
         const document = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root">'+html+'</div><script type="application/json" id="fixture">'+data+'</script><script type="module" src="/__sql-qa.js"></script></body></html>';
@@ -76,7 +76,8 @@ try {
   ({ CartProvider } = await vite.ssrLoadModule('/src/context/CartContext.tsx'));
   const origin = vite.resolvedUrls.local[0].replace(/\/$/, '');
   browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', headless: true, args: ['--no-sandbox'] });
-  for (const profile of ['memory', 'reference']) for (const width of [1440, 390]) {
+  for (const profile of ['memory', 'memory-reviewed', 'reference']) for (const width of [1440, 390]) {
+    console.log('Isolated SQL browser scenario:', profile, width);
     ready = await startBridge(profile);
     assert.equal(ready.database, ':memory:'); assert.equal(ready.driver, 'sqlite');
     const catalog = await rpc({ method: 'GET', path: '/api/products/' + ready.slug });
@@ -102,10 +103,19 @@ try {
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(origin + '/tienda/' + ready.slug);
     const select = async (oem, year) => {
-      await page.getByLabel('Año del vehículo', { exact: true }).fill(String(year));
-      await page.getByRole('group', { name: 'Sistema OEM', exact: true }).locator(`button[data-option-value="${oem}"]`).click();
-      if (profile === 'memory') await page.getByRole('group', { name: 'Configuración de memoria', exact: true }).locator('button[data-option-value="8/128"]').click();
+      if (profile === 'memory-reviewed') {
+        assert.equal(await page.getByLabel('Año del vehículo', { exact: true }).count(), 0);
+      } else {
+        // Enter the known test year through the existing store filters.
+        const query = new URLSearchParams(Object.fromEntries(['vehicle_brand_id','vehicle_model_id','vehicle_version_id'].map(key => [key, String(ready.context[key])])));
+        query.set('year', String(year));
+        await page.goto(origin + '/tienda/' + ready.slug + '?' + query);
+      }
+      await page.locator('select[aria-label="Sistema OEM"]').selectOption(String(oem));
+      if (profile !== 'reference') await page.locator('select[aria-label="Configuración de memoria"]').selectOption('8/128');
       await page.locator('[data-configuration-status="valid"]').waitFor();
+      assert.equal(await page.getByLabel('Cantidad seleccionada').innerText(), '1');
+      assert.ok(!(await page.locator('main').innerText()).includes('Selecciona una configuración para consultar su disponibilidad'));
       await page.getByRole('button', { name: 'Agregar al carrito', exact: true }).click();
     };
     await select(ready.context.vehicle_multimedia_system_id, 2013);
@@ -133,7 +143,7 @@ try {
       // Commercial lines are canonically sorted by backend, not insertion order.
       const selected = cart.find(line => line.configuration_context.vehicle_multimedia_system_id === saved.vehicle_multimedia_system_id).configuration_context;
       for (const key of ['profile_id', 'vehicle_brand_id', 'vehicle_model_id', 'vehicle_version_id', 'vehicle_multimedia_system_id', 'year']) assert.equal(saved[key], selected[key], key);
-      if (profile === 'memory') { assert.equal(saved.ram_gb, 8); assert.equal(saved.almacenamiento_gb, 128); }
+      if (profile !== 'reference') { assert.equal(saved.ram_gb, 8); assert.equal(saved.almacenamiento_gb, 128); }
       else { assert.equal(saved.ram_gb, undefined); assert.equal(saved.almacenamiento_gb, undefined); }
       assert.equal(saved.variant_id, ready.variant_id); assert.equal(item.unit_price, 1200000);
     }

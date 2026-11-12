@@ -13,7 +13,7 @@ export type ConfiguratorVariant = Pick<ProductVariant, "id" | "product_id" | "na
     spec_values?: readonly { field?: FieldDefinition | null }[];
   };
 export type ConfiguratorProduct = Pick<Product, "id" | "slug" | "is_active" | "is_visible" |
-  "has_variants" | "compatibility_type"> & {
+  "has_variants" | "compatibility_type" | "configuration"> & {
     product_category?: { requires_oem_compatibility?: boolean; fields: readonly FieldDefinition[] } | null;
     vehicle_compatibilities?: readonly (Pick<ProductVehicleCompatibility,
       "vehicle_brand_id" | "vehicle_model_id" | "vehicle_version_id"> & Partial<CompatibilityRow>)[];
