@@ -72,8 +72,20 @@ export function useProductConfigurator(product: Product | null, slug: string, qu
   }, [slug, required, uiEnabled, retry, product?.id, incoming?.profile_id, incoming?.profile_version]);
 
   const rawSelection = draft.slug === slug && draft.query === query ? draft.value : selectionFromShopQuery(query);
-  const yearRequired = resolveConfiguration({ profile, snapshot: currentLoad,
-    expectedRequestKey: currentLoad.requestKey, selection: rawSelection }).yearRequired;
+  // Memory configurations are identified by the product's registered vehicle/OEM
+  // tuple.  The stored OEM coverage ranges remain available to the backend, but
+  // the public ficha must not force a second year selector when the vehicle is
+  // already uniquely determined by the product.  Reference-only profiles keep
+  // their explicit year requirement.
+  const catalogResolution = resolveConfiguration({ profile, snapshot: currentLoad,
+    expectedRequestKey: currentLoad.requestKey, selection: rawSelection });
+  const vehicleTuples = new Set(catalogResolution.options.vehicles.map(vehicle =>
+    [vehicle.vehicle_brand_id, vehicle.vehicle_model_id, vehicle.vehicle_version_id].join(":")));
+  const yearRequired = profile?.technicalSelection === "reference"
+    ? catalogResolution.yearRequired
+    : vehicleTuples.size > 1
+      ? catalogResolution.yearRequired
+      : Boolean(profile?.requireYear);
   const effectiveProfile = useMemo(() => profile ? { ...profile, requireYear: yearRequired } : null, [profile, yearRequired]);
   const model = useMemo(() => {
     const vehicle = productVehicleSelection({ profile: effectiveProfile, snapshot: currentLoad,

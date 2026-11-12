@@ -75,7 +75,7 @@ test('opciones accesibles usan botones de tipo button con selección y bloqueo e
   assert.ok(!html.includes('<select'));
 });
 
-test('panel presenta solo pares reales del resolvedor y deshabilita los incompatibles, sin dropdown OEM/memoria/referencia', () => {
+test('panel presenta solo pares reales del resolvedor y deshabilita los incompatibles en desplegables', () => {
   const product = configurableProduct();
   const vehicle = { vehicle_brand_id: 10, vehicle_model_id: 20, vehicle_version_id: 30 };
   const model = panelModel('valid', { fullProduct: product, selection: { ...vehicle, vehicle_multimedia_system_id: 40, ram_gb: 8, almacenamiento_gb: 128 },
@@ -89,10 +89,11 @@ test('panel presenta solo pares reales del resolvedor y deshabilita los incompat
   assert.match(html, /role="group" aria-label="Sistema OEM"/);
   assert.match(html, /role="group" aria-label="Configuración de memoria"/);
   assert.match(html, /role="group" aria-label="Elige la referencia exacta"/);
-  assert.match(html, /data-option-value="8\/128"[^>]*aria-pressed="true"/);
-  assert.match(html, /data-option-value="8\/256"[^>]*disabled/);
+  assert.match(html, /<select aria-label="Configuración de memoria">/);
+  assert.match(html, /<option value="8\/128" selected/);
+  assert.match(html, /<option value="8\/256" disabled/);
   assert.ok(!html.includes('4 GB / 64 GB')); // Not provided by the resolver for this view.
-  assert.equal((html.match(/<select\b/g) ?? []).length, 0);
+  assert.equal((html.match(/<select\b/g) ?? []).length, 3);
   assert.ok(!html.includes('product-detail__price')); assert.ok(!html.includes('product-detail__sku'));
   assert.ok(!html.includes('product-configurator__facts')); // Commercial information belongs to one parent block.
   assert.ok(!html.includes('data-option-value="2" aria-pressed="true"')); // Ambiguity never auto-picks a kit.

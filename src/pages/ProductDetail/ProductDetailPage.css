@@ -191,6 +191,18 @@
   gap: 10px;
   min-width: 0;
 }
+.product-configurator__options select {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid #3b434b;
+  border-radius: 6px;
+  background: #10151b;
+  color: #e4e8ec;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.product-configurator fieldset:disabled .product-configurator__options select { cursor: not-allowed; opacity: 0.7; }
 .product-configurator__option {
   display: flex;
   align-items: center;

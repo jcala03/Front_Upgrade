@@ -59,7 +59,8 @@ export function ProductConfigurator({ model, product, interactive }: { model: Pr
           label: option.name ?? "Sistema registrado", detail: option.available_variant_ids.length ? undefined : "Sin stock",
           soldOut: !option.available_variant_ids.length }))}
         onSelect={value => model.select({ vehicle_multimedia_system_id: Number(value) })}
-        emptyMessage={selectedVehicle ? "No hay sistemas registrados para esta compatibilidad. Revisa los filtros o consulta con el taller." : "Las opciones estarán disponibles al confirmar la compatibilidad del artículo."} />
+        emptyMessage={selectedVehicle ? "No hay sistemas registrados para esta compatibilidad. Revisa los filtros o consulta con el taller." : "Selecciona una compatibilidad válida para ver los sistemas disponibles."}
+        mode="select" />
       <details className="product-configurator__help"><summary>¿No sabes qué sistema original tiene tu vehículo?</summary><p>Consulta con el taller y comparte una fotografía del menú original y las conexiones del vehículo. El año por sí solo no identifica el sistema. No selecciones uno por aproximación.</p></details>
     </fieldset>
     {memoryProfile ? <fieldset disabled={disabled || !selectedVehicle || !oem}><legend>2 · RAM y almacenamiento</legend>
@@ -74,14 +75,14 @@ export function ProductConfigurator({ model, product, interactive }: { model: Pr
         onSelect={value => {
           const memory = resolution.options.memories.find(option => `${option.ram_gb}/${option.almacenamiento_gb}` === value);
           if (memory) model.select({ ram_gb: memory.ram_gb, almacenamiento_gb: memory.almacenamiento_gb });
-        }} emptyMessage="No hay memorias verificadas para esta compatibilidad." />
+        }} emptyMessage="No hay memorias verificadas para esta compatibilidad." mode="select" />
     </fieldset> : null}
     {model.referenceOptions.length > 1 || selection.variant_id != null ? <fieldset disabled={disabled}><legend>Referencia comercial</legend>
       <ConfigurationOptions label="Elige la referencia exacta" value={String(selection.variant_id ?? "")}
         options={(model.referenceOptions.length ? model.referenceOptions : resolution.candidates).map(candidate => ({ value: String(candidate.variant_id),
           label: candidate.name, detail: `${candidate.sku ?? `Referencia ${candidate.variant_id}`}${candidate.availability.state === "out_of_stock" ? " · Agotada" : ""}`,
           soldOut: candidate.availability.state === "out_of_stock" }))}
-        onSelect={value => model.select({ variant_id: Number(value) })} emptyMessage="No hay referencias disponibles para esta combinación." />
+        onSelect={value => model.select({ variant_id: Number(value) })} emptyMessage="No hay referencias disponibles para esta combinación." mode="select" />
     </fieldset> : null}
     {model.cleared.length ? <p className="product-configurator__hint">Actualizamos las opciones que ya no corresponden a tu selección. Revisa la configuración antes de continuar.</p> : null}
     <p id={`${id}-status`} role={model.loadStatus === "error" ? "alert" : "status"} aria-live="polite" data-configuration-status={model.loadStatus === "error" ? failureStatus : busy ? "loading" : resolution.status}>{statusMessage}</p>
