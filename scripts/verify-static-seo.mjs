@@ -51,6 +51,7 @@ try {
       results.push({ path: page.path, dynamicLaravelRoute: true });
       continue;
     }
+    assert.match(response.headers.get('content-type'), /text\/html;\s*charset=utf-8/i);
     assert.match(html, /<title>/); assert.match(html, /<h1\b/);
     assert.ok(html.includes(`rel="canonical" href="${routes.siteUrl}${page.path}"`));
     assert.doesNotMatch(html, /<!--seo-head-->|<div id="root"><\/div>/);
@@ -63,6 +64,7 @@ try {
   ]) {
     const response = await get(path);
     assert.equal(response.status, 200); assert.match(response.headers.get('content-type'), type);
+    if (path === '/robots.txt') assert.match(response.headers.get('content-type'), /charset=utf-8/i);
     assert.ok((await response.text()).includes(content));
     const head = await get(path, { method: 'HEAD' }); assert.equal(head.status, 200);
     results.push({ path, status: 200, contentType: head.headers.get('content-type') });

@@ -45,22 +45,25 @@ export const Hero = () => {
 
       <div className="container-wide hero__inner">
         <div className="hero__copy">
-          <p className="hero__eyebrow">
-            Personalización automotriz en Barranquilla
-          </p>
-
-          <h1 id="hero-title" className="hero__title">
-            <span className="hero__title-line hero__title-line--soft">
-              Tu carro.
+          <h1 id="hero-title" className="hero__heading">
+            <span className="hero__eyebrow">
+              Personalización automotriz en Barranquilla
             </span>
-            <strong className="hero__title-line hero__title-line--strong">
-              Otra presencia.
-            </strong>
+            {" "}
+            <span className="hero__title">
+              <span className="hero__title-line hero__title-line--soft">
+                Tu carro.
+              </span>
+              {" "}
+              <strong className="hero__title-line hero__title-line--strong">
+                Otra presencia.
+              </strong>
+            </span>
           </h1>
 
           <p className="hero__description">
-            Tecnología, diseño y transformación automotriz para hacer único
-            cada detalle.
+            Personalizamos tu vehículo en Barranquilla con tecnología y diseño.
+            Encuentra pantallas Android y accesorios multimedia en nuestro catálogo.
           </p>
 
           <div className="hero__actions">

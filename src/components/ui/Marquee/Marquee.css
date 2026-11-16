@@ -20,6 +20,15 @@
   white-space: nowrap;
 }
 
+/* Decorative lettering stays in CSS rather than repeating commercial text in
+   the document. Two identical strips retain the existing seamless animation. */
+.marquee__track span::before {
+  content: attr(data-marquee-text) " · " attr(data-marquee-text) " · "
+    attr(data-marquee-text) " · " attr(data-marquee-text) " · "
+    attr(data-marquee-text) " · " attr(data-marquee-text) " · "
+    attr(data-marquee-text) " · " attr(data-marquee-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee__track {
     animation: none;

@@ -124,9 +124,9 @@ export const Atelier = () => {
 
           <Reveal delay={0.16}>
             <p className="atelier__description">
-              En UP GRADE 79 cuidamos cada detalle del fitment, la postura y la
-              selección de componentes para que tu vehículo mantenga elegancia,
-              pero gane carácter.
+              Cuidamos el fitment, la postura y la selección de componentes.
+              Buscamos que cada pieza conserve la elegancia de tu vehículo y
+              refuerce su carácter.
             </p>
           </Reveal>
 

@@ -276,8 +276,8 @@ export const FeaturedProducts = ({
 
           <div className="featured-products__header-aside">
             <p>
-              Piezas, accesorios y upgrades seleccionados para transformar el
-              carácter visual de tu vehículo.
+              Consulta pantallas Android y accesorios para tu vehículo. Revisa
+              la compatibilidad, el precio y la disponibilidad de cada referencia.
             </p>
             <a className="featured-products__store-link" href="/tienda">
               Ver tienda completa

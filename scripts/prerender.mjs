@@ -10,7 +10,8 @@ const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function apacheRules(pages, origin) {
   const host = new URL(origin).hostname;
   const lines = [begin, 'ErrorDocument 404 /seo/404.html', '<IfModule mod_mime.c>',
-    '  AddType text/plain .txt', '  AddType application/xml .xml', '</IfModule>',
+    '  AddType text/plain .txt', '  AddType application/xml .xml',
+    '  AddCharset UTF-8 .html .txt .xml', '</IfModule>',
     '<IfModule mod_headers.c>', '  <FilesMatch "\\.(?:html|txt|xml|webmanifest)$">',
     '    Header set Cache-Control "no-cache"', '  </FilesMatch>',
     '  <Files "sw.js">', '    Header set Cache-Control "no-cache"',
