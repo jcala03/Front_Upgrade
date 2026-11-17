@@ -21,6 +21,11 @@ import { getAuthUser, hasPermission } from "./utils/authStorage";
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { publicBootstrap, updatePublicSeo } from "./seo/client";
 import { PublicNotFound } from "./pages/PublicNotFound";
+import { LEGAL_RELEASE_READY, legalRoute } from "./privacy/config";
+
+// Review documents are eliminated from the production bundle while unapproved.
+const LegalCenterPage = import.meta.env.DEV || LEGAL_RELEASE_READY
+  ? lazy(() => import("./pages/Legal/LegalCenterPage")) : null;
 
 const AdminInventoryPage = lazy(() => import("./modules/admin/inventory").then(module => ({ default: module.AdminInventoryPage })));
 const AdminDashboardPage = lazyNamed(() => import("./modules/admin/dashboard"), "AdminDashboardPage");
@@ -729,6 +734,10 @@ const AppContent = () => {
     );
   }
 
+  const legal = legalRoute(pathname);
+  if (legal && LegalCenterPage) {
+    return <Layout pathname={pathname}><Suspense fallback={null}><LegalCenterPage {...legal} /></Suspense></Layout>;
+  }
   if (pathname === "/politica-de-datos" || pathname === "/terminos-y-condiciones") {
     return <Layout><LegalPage terms={pathname === "/terminos-y-condiciones"} /></Layout>;
   }

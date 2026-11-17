@@ -9,6 +9,8 @@ import { Atelier } from "../components/sections/Atelier";
 import { Contact } from "../components/sections/Contact";
 import { bookingDateSnapshot } from "../components/sections/Contact/publicBooking";
 import { LegalPage } from "../pages/Legal/LegalPage";
+import { LEGAL_RELEASE_READY, legalRoute } from "../privacy/config";
+export { publicLegalPaths as legalPrerenderPaths } from "../privacy/config";
 import { ShopPage } from "../pages/Shop";
 import { ProductDetailPage } from "../pages/ProductDetail";
 import { PublicNotFound } from "../pages/PublicNotFound";
@@ -52,6 +54,9 @@ export async function renderRequest(requestUrl: string, template: string, option
     } catch { return { status: 503, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8", "Retry-After": "60", "X-Robots-Tag": "noindex, nofollow" }, body: "Sitemap temporalmente no disponible." }; }
   }
   const privateRoute = /^(\/crm(?:\/|$)|\/admin(?:\/|$)|\/login$|\/carrito$|\/checkout(?:\/|$)|\/orden-confirmada$)/.test(path);
+  const legal = legalRoute(path);
+  const LegalCenterPage = (import.meta.env.DEV || LEGAL_RELEASE_READY) && legal
+    ? (await import("../pages/Legal/LegalCenterPage")).default : null;
   let product: Product | undefined;
   let products: Product[] | undefined;
   let homeCatalogUnavailable = false;
@@ -64,7 +69,7 @@ export async function renderRequest(requestUrl: string, template: string, option
     } else if (/^\/tienda\/[^/]+$/.test(path)) {
       product = await publicApi(`/${encodeURIComponent(decodeURIComponent(path.slice(8)))}${vehicleSelectionQuery(url.search) ? "?" + vehicleSelectionQuery(url.search) : ""}`, options) ?? undefined;
       if (!product || !publicProductReadable(product)) { product = undefined; status = 404; }
-    } else if (!privateRoute && path !== "/politica-de-datos" && path !== "/terminos-y-condiciones") status = 404;
+    } else if (!privateRoute && !legal && path !== "/politica-de-datos" && path !== "/terminos-y-condiciones") status = 404;
   } catch (error) {
     // Home remains useful without its catalog preview. Keep failures local to that
     // section; catalog-dependent routes retain their existing HTTP error handling.
@@ -76,7 +81,7 @@ export async function renderRequest(requestUrl: string, template: string, option
   if (status === 503) headers["Retry-After"] = "60";
   const bookingDate = path === "/" ? bookingDateSnapshot() : undefined;
   const bootstrap: PublicBootstrap = { path, seo, ...(bookingDate ? { bookingDate } : {}), ...((path === "/tienda" || product) ? { query: serializeShopFilters(parseShopFilters(url.search)) } : {}), ...(product ? { product } : {}), ...(products ? { products } : {}), ...(homeCatalogUnavailable ? { homeCatalogUnavailable: true } : {}) };
-  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact initialDate={bookingDate} /></main> : path === "/politica-de-datos" || path === "/terminos-y-condiciones" ? <LegalPage terms={path === "/terminos-y-condiciones"} /> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} query={url.search} />}</Layout> : null;
+  const publicPage = !privateRoute ? <Layout pathname={path}>{status >= 400 ? <PublicNotFound unavailable={status === 503} /> : legal && LegalCenterPage ? <Suspense fallback={null}><LegalCenterPage {...legal} /></Suspense> : path === "/" ? <main><Hero /><Transformation /><FeaturedProducts initialProducts={products} initialError={homeCatalogUnavailable} /><Atelier /><Contact initialDate={bookingDate} /></main> : path === "/politica-de-datos" || path === "/terminos-y-condiciones" ? <LegalPage terms={path === "/terminos-y-condiciones"} /> : path === "/tienda" ? <ShopPage initialProducts={products} query={url.search} /> : <ProductDetailPage slug={product!.slug} initialProduct={product} query={url.search} />}</Layout> : null;
   const content = privateRoute ? <main><p>Área privada. Cargando aplicación…</p></main> :
     <CartProvider><Suspense fallback={null}>{publicPage}</Suspense></CartProvider>;
   // Mismos componentes y datos públicos para humanos y crawlers, sin detectar User-Agent.

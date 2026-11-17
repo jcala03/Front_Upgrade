@@ -1,5 +1,6 @@
 import type { Product } from "../types/product";
 import { brand } from "../data/brand.ts";
+import { legalRoute, legalDocumentTitle, legalDescriptions, publicLegalPaths } from "../privacy/config.ts";
 
 export type Seo = {
   title: string; description: string; canonical: string | null;
@@ -60,6 +61,12 @@ export function createSeo(path: string, origin: string, options: { product?: Pro
       { "@context": schema, "@type": "Organization", "@id": `${site}/#organization`, name: brand.name, url: `${site}/`, ...(options.image ? { logo: options.image } : {}), telephone: brand.phone, sameAs: [brand.instagramUrl] },
       { "@context": schema, "@type": "WebSite", "@id": `${site}/#website`, name: brand.name, url: `${site}/`, inLanguage: "es-CO" },
     ];
+  } else if (legalRoute(path)) {
+    const legal = legalRoute(path)!;
+    base.title = `${legalDocumentTitle(legal.slug)} | ${brand.name}`;
+    base.description = legalDescriptions[legal.slug];
+    base.canonical = legal.review ? null : site + path;
+    base.robots = legal.review ? "noindex, nofollow" : legal.slug === "terminos-y-condiciones" ? "noindex, follow" : "index, follow";
   } else if (path === "/politica-de-datos" || path === "/terminos-y-condiciones") {
     const terms = path === "/terminos-y-condiciones";
     base.title = (terms ? "Términos y Condiciones" : "Política de Tratamiento de Datos Personales") + " | " + brand.name;
@@ -118,6 +125,6 @@ export function seoHead(seo: Seo) {
 
 export function sitemapXml(products: Product[], siteUrl: string) {
   const origin = siteOrigin(siteUrl);
-  const paths = ["/", "/tienda", "/politica-de-datos", ...products.filter(indexableProduct).map(productPath)];
+  const paths = ["/", "/tienda", "/politica-de-datos", ...publicLegalPaths().filter(path => path !== "/terminos-y-condiciones"), ...products.filter(indexableProduct).map(productPath)];
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...new Set(paths)].map(path => `<url><loc>${escapeHtml(origin + path)}</loc></url>`).join("")}</urlset>`;
 }

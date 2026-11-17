@@ -6,7 +6,7 @@ import innovativeOnlineIndustriesLogo from "../../../assets/logos/innovative-onl
 import { Marquee } from "../../ui/Marquee";
 import "./Footer.css";
 import { openPrivacyPreferences } from "../../../privacy/consent";
-import { privacyControlsEnabled } from "../../../privacy/config";
+import { privacyControlsEnabled, publicLegalPaths, legalDocumentTitle } from "../../../privacy/config";
 
 export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
   return (
@@ -56,12 +56,15 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
         </div>
       </div>
 
-      {["/", "/politica-de-datos", "/terminos-y-condiciones"].includes(pathname) ? (
+      {publicLegalPaths().length ? <nav className="footer__legal container-wide" aria-label="Información legal">
+        {publicLegalPaths().map(path => <a key={path} href={path}>{legalDocumentTitle(path.slice(1))}</a>)}
+      </nav> : ["/", "/politica-de-datos", "/terminos-y-condiciones"].includes(pathname) ? (
         <nav className="footer__legal container-wide" aria-label="Información legal">
           <a href="/politica-de-datos">Política de Tratamiento de Datos</a>
           <a href="/terminos-y-condiciones">Términos y Condiciones</a>
         </nav>
       ) : null}
+      {import.meta.env.DEV ? <nav className="footer__legal container-wide" aria-label="Revisión legal local"><a href="/__legal-review/legal-y-privacidad">Revisar borradores legales (solo local)</a></nav> : null}
       <div className="footer__bottom container-wide">
         <span>{brand.name}</span>
         <span>2026 · Automotive Upgrading</span>

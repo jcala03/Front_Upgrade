@@ -175,10 +175,17 @@ try {
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
         for (const path of ['/', '/tienda', '/politica-de-datos', '/terminos-y-condiciones', '/tienda?search=radio']) {
+          // Metadata updates can finish before the lazy Shop effect dispatches
+          // its request. Await the actual contract, not just the parent effect.
+          const filteredRequest = path.includes('?search=') ? page.waitForRequest(request => {
+            const url = new URL(request.url());
+            return request.method() === 'GET' && url.pathname === '/api/products' && url.searchParams.get('search') === 'radio';
+          }) : null;
           await page.goto(origin + path);
           await page.waitForFunction(() => window.__seoHydrated);
           assert.equal(await page.locator('h1').count(), 1, path);
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, path);
+          if (filteredRequest) await filteredRequest;
         }
       }
       assert.ok(requests.some(url => url.includes('search=radio')), 'Filtered shell must query the real filter contract, not hydrate unfiltered data');

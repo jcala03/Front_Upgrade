@@ -60,6 +60,7 @@ export function apacheRules(pages, origin) {
 }
 
 export async function prerender({ dist, renderer, options }) {
+  const legalPaths = renderer.legalPrerenderPaths?.() ?? [];
   const templatePath = resolve(dist, 'seo/template.html');
   // vite build refreshes index.html; keep that raw template for Node SSR/preview.
   const template = await readFile(resolve(dist, 'index.html'), 'utf8');
@@ -81,14 +82,14 @@ export async function prerender({ dist, renderer, options }) {
     if (/[\r\n\0]/.test(decodedPath) || url.pathname.startsWith('/tienda/') && !/^\/tienda\/[^/]+$/.test(decodedPath)) {
       throw new Error('Sitemap contains an unsupported product path.');
     }
-    if (url.origin !== options.siteUrl || url.search || url.hash || !['/', '/tienda', '/politica-de-datos'].includes(url.pathname) && !/^\/tienda\/[^/]+$/.test(url.pathname)) {
+    if (url.origin !== options.siteUrl || url.search || url.hash || !['/', '/tienda', '/politica-de-datos', ...legalPaths].includes(url.pathname) && !/^\/tienda\/[^/]+$/.test(url.pathname)) {
       throw new Error('Sitemap contains a noncanonical or nonpublic URL.');
     }
     return url.pathname;
   });
   if (!paths.includes('/') || !paths.includes('/tienda')) throw new Error('Sitemap lacks public entry pages.');
   const pages = [];
-  for (const path of [...new Set([...paths, '/politica-de-datos', '/terminos-y-condiciones'])]) {
+  for (const path of [...new Set([...paths, '/politica-de-datos', '/terminos-y-condiciones', ...legalPaths])]) {
     const result = await render(path);
     if (result.status !== 200 || result.body.includes('<!--seo-head-->') || !/<h1\b/.test(result.body)) {
       throw new Error(`Cannot prerender public route ${path}.`);

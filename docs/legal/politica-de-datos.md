@@ -1,0 +1,52 @@
+# Política de Tratamiento de Datos Personales
+
+## Compromiso con la privacidad
+UP GRADE 79 reconoce el derecho de las personas a decidir sobre su información. Esta política explica los tratamientos asociados a nuestra actividad comercial y a la operación de upgradecolombia.com. Se interpreta conforme a la Ley 1581 de 2012, su reglamentación compilada en el Decreto 1074 de 2015 y las instrucciones aplicables de la Superintendencia de Industria y Comercio. No sustituye los derechos legales ni convierte toda entrega de información en autorización para publicidad.
+
+## Responsable y contacto
+El responsable indicado por el negocio es {{responsibleIdentity}}, identificación {{taxIdDisplay}}, que opera comercialmente como UP GRADE 79. Domicilio y dirección de atención: {{address}}, {{city}}. Teléfono: {{phone}}. El canal para privacidad y ejercicio de derechos es {{email}}. Las comunicaciones deben permitir identificar la solicitud; nunca pediremos contraseñas, códigos bancarios ni datos completos de tarjetas para tramitarla.
+
+## Alcance y titulares
+La política comprende visitantes, compradores invitados, clientes registrados en los sistemas internos, solicitantes de cotizaciones, personas de contacto, colaboradores, usuarios del CRM y contactos de proveedores. El checkout público actualmente permite comprar como invitado; no debe confundirse un registro interno de cliente con una cuenta pública autogestionada. Los datos de trabajadores y proveedores se tratarán según la relación correspondiente y los avisos específicos que les sean aplicables.
+
+## Información recopilada
+Según la operación, podemos recibir nombre, identificación cuando sea pertinente, teléfono, correo, ciudad, dirección y destinatario de entrega; solicitudes de contacto; datos de vehículo, placa, VIN u observaciones que se suministren; marca, modelo, generación, año y selección OEM; productos, variantes, SKU, cantidades, cotizaciones e historial comercial. Se generan referencias de órdenes, registros de pago y estados financieros, solicitudes de garantía y comunicaciones. El CRM utiliza datos de acceso, vinculación con sede, actividad comercial, tareas y comisiones según los permisos de cada rol. Los registros técnicos de seguridad pueden incluir datos de conexión y errores necesarios para operar y proteger la plataforma.
+
+## Finalidades de la operación
+Utilizamos los datos pertinentes para responder consultas y cotizaciones, verificar la selección comercial y la información de compatibilidad, preparar y seguir pedidos, coordinar entrega o recogida, gestionar pagos y comprobantes, atender garantías y reclamaciones y cumplir obligaciones legales. La información de vehículos ayuda a orientar una selección, pero no constituye por sí sola una certificación de compatibilidad física. Para colaboradores y usuarios internos se utilizan los datos necesarios para autenticación, asignación de trabajo, seguridad, trazabilidad y gestión de su relación con el negocio. Los contactos de proveedores se usan para coordinar la relación comercial. No vendemos datos personales.
+
+## Autorización y excepciones
+Cuando la ley exija autorización, debe obtenerse antes del tratamiento, de forma informada, expresa y susceptible de consulta posterior. Informaremos qué datos se necesitan, con qué finalidades y cómo ejercer derechos. La aceptación de cookies analíticas es independiente de la operación comercial. Solo se prescindirá de autorización en los supuestos legales aplicables, como requerimientos de autoridades competentes en ejercicio de sus funciones, datos públicos y las demás excepciones del artículo 10 de la Ley 1581. Ello no elimina los demás deberes de protección. No se invocará genéricamente una compra como autorización ilimitada.
+
+## Comunicaciones promocionales
+La publicidad, novedades y promociones requieren una elección diferenciada de las comunicaciones necesarias para atender una operación. Rechazarlas no impide solicitar una cotización ni comprar. Una preferencia promocional no habilita el envío indiscriminado por todos los medios ni el uso de datos para otras finalidades. Puede retirarse escribiendo a {{email}}. La selección de analíticas no constituye autorización promocional, ni viceversa.
+
+## Datos sensibles y menores
+No solicitamos datos sensibles para comprar, cotizar o identificar un sistema OEM. Evita introducir datos de salud, biometría, orientación, creencias u otra información sensible en campos libres. Si un tratamiento excepcional resultara necesario, se informará su carácter facultativo y se exigirá la garantía legal correspondiente; no se condicionará un servicio ordinario a suministrarlos. La tienda no está dirigida a recopilar datos de niños. Cualquier situación relativa a menores se revisará respetando su interés superior, sus derechos y las reglas de representación y escucha que correspondan. Comunica la recepción no necesaria de esta información para evaluar su supresión segura.
+
+## Proveedores, encargados y destinatarios
+Solo se comunica información pertinente a quienes intervienen legítimamente en la operación: alojamiento y soporte tecnológico, gestión del pago, entrega, atención comercial y cumplimiento de obligaciones. El checkout utiliza Wompi para el proceso de pago; UP GRADE 79 conserva las referencias y estados necesarios, no debe solicitar ni recibir por sus formularios los datos completos de la tarjeta o su código de seguridad. Cuando el cliente decide enviar un mensaje por WhatsApp, la comunicación también queda sometida al servicio elegido. La transportadora se identifica al ofrecer o coordinar la entrega. No se afirma que todos los proveedores integrados en el código estén operando en cada pedido.
+
+## Transferencias y transmisiones
+Una transferencia a otro responsable no es lo mismo que el tratamiento por un encargado por cuenta nuestra. Antes de comunicar datos se revisarán finalidad, necesidad, seguridad y las condiciones de la relación. El uso de proveedores con infraestructura fuera de Colombia exige revisar las reglas de circulación internacional, contratos y demás requisitos legales aplicables; la sola aceptación de esta política no subsana una transferencia prohibida. No se anuncia una lista de países o subencargados que no haya sido verificada.
+
+## Seguridad y confidencialidad
+La protección incluye restringir accesos según función, autenticar usuarios internos y proteger los documentos y registros comerciales. El responsable debe mantener procedimientos de atención de incidentes, revisión de accesos y conservación segura. No existe garantía absoluta frente a incidentes. No compartas credenciales ni envíes números completos de tarjetas por correo, chat o campos de observaciones. Cualquier solicitud de información para verificar tu identidad deberá ser proporcional al riesgo y al derecho ejercido.
+
+## Conservación, eliminación y copias
+La información se conserva durante el tiempo necesario para atender las finalidades informadas, la relación comercial y las obligaciones legales o contractuales aplicables. Se revisará la necesidad de conservación y se eliminará, anonimizará o restringirá lo que ya no deba mantenerse. Una petición de supresión puede no proceder inmediatamente respecto de registros que deban conservarse por una obligación o reclamación; se explicará el fundamento. La eliminación de una copia descargada de un PDF no elimina la operación histórica. Las copias de respaldo deben gestionarse con acceso restringido y ciclos de conservación; no se promete una eliminación instantánea de todas las copias técnicas.
+
+## Derechos de las personas
+Puedes conocer, acceder, actualizar y rectificar tus datos; solicitar prueba de autorización cuando corresponda; conocer el uso dado; presentar consultas y reclamos; y solicitar revocatoria o supresión cuando proceda. El acceso a los datos se ejerce gratuitamente en los términos legales. Puedes acudir a la SIC después de agotar el trámite previo que exija la ley. La negativa a una finalidad opcional no autoriza represalias sobre servicios que no la requieren.
+
+## Presentación de consultas y reclamos
+Escribe a {{email}} indicando el derecho solicitado, una descripción clara, un medio de respuesta y los datos estrictamente necesarios para ubicar el registro. Puedes aportar documentos pertinentes, evitando información excesiva. Los representantes deben acreditar su facultad. El correo es un canal de recepción; no se presenta como una plataforma de radicación automática. Conserva tu mensaje y solicita constancia de recepción y referencia de seguimiento al equipo. Las solicitudes comerciales y las de datos personales se tramitan según sus reglas propias.
+
+## Plazos y trámite
+Las consultas de datos se atienden dentro de diez días hábiles desde su recibo; si no es posible, antes de vencer ese plazo se informan motivos y nueva fecha, sin superar cinco días hábiles adicionales. Los reclamos se atienden dentro de quince días hábiles desde el día siguiente a su recepción completa; una ampliación motivada no puede exceder ocho días hábiles adicionales. Si falta información, se requiere subsanación dentro de los cinco días siguientes; transcurridos dos meses sin aportarla se entiende desistida la reclamación, sin impedir una nueva presentación. Si quien recibe no es competente, se traslada dentro de dos días hábiles y se informa al interesado. Recibido el reclamo completo, debe incluirse la anotación legal de reclamo en trámite dentro de dos días hábiles, hasta resolverlo.
+
+## Cookies y medición
+Las tecnologías necesarias sostienen carrito, sesión, seguridad y continuidad del pedido. Las analíticas son opcionales. GA4 solo podrá cargarse cuando la integración esté habilitada y exista una elección analítica vigente; el consentimiento publicitario permanece denegado. No se remiten al sistema de medición nombres, correos, teléfonos, direcciones, identificaciones, tokens de órdenes ni consultas libres. Consulta la Política de Cookies y utiliza Configuración de cookies para cambiar tu elección. Cambiar estas preferencias no elimina los registros comerciales que deban mantenerse.
+
+## Actualizaciones y vigencia
+Fecha prevista de vigencia: {{effectiveDate}}. Las modificaciones se identificarán por fecha y versión y se comunicarán cuando corresponda. Una ampliación de finalidades que requiera autorización no se presume aceptada por el silencio. Este texto requiere revisión jurídica y aprobación antes de sustituir la política publicada. El canal permanente es {{email}}.
