@@ -1,6 +1,7 @@
 import { Instagram, MessageCircle, Play } from "lucide-react";
 import { brand } from "../../../data/brand";
 import { navigation } from "../../../data/navigation";
+import logo from "../../../assets/logos/upgrade79-logo.png";
 import innovativeOnlineIndustriesLogo from "../../../assets/logos/innovative-online-industries.jpeg";
 import { Marquee } from "../../ui/Marquee";
 import "./Footer.css";
@@ -15,8 +16,7 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
       <div className="footer__inner container-wide">
         <div className="footer__brand">
           <a className="footer__logo" href="/" aria-label="Volver al inicio">
-            <span>UP GRADE</span>
-            <strong>79</strong>
+            <img src={logo} alt="UP GRADE 79" width={150} height={150} loading="lazy" decoding="async" />
           </a>
           <p>Construimos presencia. No solo accesorios.</p>
           <div className="footer__socials" aria-label="Redes sociales">

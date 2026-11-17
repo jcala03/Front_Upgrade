@@ -15,21 +15,21 @@
 
 .footer__logo {
   display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
+  width: 150px;
+  max-width: 100%;
+  height: 76px;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 28px;
-  color: #fff;
-  font-size: 1.52rem;
-  font-weight: 910;
-  letter-spacing: -0.07em;
-  line-height: 1;
-  text-transform: uppercase;
-  transform: skewX(-8deg);
+  line-height: 0;
 }
 
-.footer__logo strong {
-  color: var(--color-accent);
-  letter-spacing: -0.1em;
+.footer__logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .footer__brand p {

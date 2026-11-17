@@ -95,7 +95,9 @@ body:has(.crm-layout),
 }
 
 .crm-layout__brand img {
+  display: block;
   width: 76px;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }

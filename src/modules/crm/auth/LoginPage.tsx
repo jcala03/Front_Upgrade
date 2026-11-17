@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import logo from "../../../assets/logos/upgrade79-logo.png";
 import { login } from "../../../api/auth";
 import { consumeAuthNotice, saveAuthUser } from "../../../utils/authStorage";
 import "./LoginPage.css";
@@ -38,7 +39,7 @@ export const LoginPage = () => {
     <main className="crm-login">
       <section className="crm-login__panel">
         <div className="crm-login__brand">
-          <span>UP GRADE 79</span>
+          <img className="crm-login__logo" src={logo} alt="UP GRADE 79" width={150} height={150} decoding="async" />
           <h1>CRM Access</h1>
           <p>Acceso interno para administración y operación.</p>
         </div>

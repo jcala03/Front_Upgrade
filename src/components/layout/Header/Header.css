@@ -69,25 +69,19 @@
 .site-header__brand {
   display: inline-flex;
   width: var(--header-logo-width, clamp(128px, 10vw, 174px));
+  height: 58px;
   align-items: center;
   justify-content: flex-start;
   text-decoration: none;
   line-height: 0;
-  filter:
-    drop-shadow(0 0 18px rgba(255, 255, 255, 0.12))
-    drop-shadow(0 0 18px rgba(0, 149, 212, 0.12));
   transition:
     opacity var(--transition-premium),
-    transform var(--transition-premium),
-    filter var(--transition-premium);
+    transform var(--transition-premium);
 }
 
 .site-header__brand:hover {
   opacity: 0.92;
   transform: translateY(-1px);
-  filter:
-    drop-shadow(0 0 22px rgba(255, 255, 255, 0.18))
-    drop-shadow(0 0 22px rgba(0, 149, 212, 0.22));
 }
 
 .site-header__brand img {
@@ -95,6 +89,7 @@
   width: 100%;
   height: auto;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .site-header__nav {
@@ -252,6 +247,7 @@
 
   .site-header__brand {
     width: 118px;
+    height: 52px;
   }
 
   .site-header--compact .site-header__brand {

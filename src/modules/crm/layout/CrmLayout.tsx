@@ -509,7 +509,7 @@ export const CrmLayout = ({
       <aside ref={navigationRef} id="crm-navigation" className={`crm-layout__sidebar${navigationOpen ? " is-open" : ""}`} aria-label="Navegación del CRM" aria-hidden={isCompactNavigation && !navigationOpen ? true : undefined} role={isCompactNavigation ? "dialog" : undefined} aria-modal={isCompactNavigation && navigationOpen ? true : undefined}>
         <div className="crm-layout__sidebar-header">
           <a className="crm-layout__brand" href={isStandardUser ? "/crm/me" : "/crm"} onClick={() => { persistSidebarScroll(); if (isCompactNavigation) setNavigationOpen(false); }}>
-            <img src={logo} alt="UP GRADE 79" />
+            <img src={logo} alt="UP GRADE 79" width={150} height={150} />
 
             <span>CRM interno</span>
           </a>

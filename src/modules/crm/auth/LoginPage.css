@@ -31,12 +31,13 @@
     #030303;
 }
 
-.crm-login__brand span {
-  color: var(--color-accent, #0095d4);
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
+.crm-login__logo {
+  display: block;
+  align-self: center;
+  width: 150px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .crm-login__brand h1 {
