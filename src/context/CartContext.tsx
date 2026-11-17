@@ -4,11 +4,13 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import type { Product, ProductVariant } from "../types/product";
 import type { ConfigurationContext } from "../types/productConfiguration";
 import { addCartItem, changeCartQuantity, consumeCartLines, cartItemKey, cartItemPrice, type CartItem, type CartLineQuantity } from "../domain/cartLines";
+import { trackCartChanges } from "../privacy/analytics";
 export { cartItemKey, cartItemPrice, cartItemStock } from "../domain/cartLines";
 export type { CartItem, CartLineQuantity } from "../domain/cartLines";
 
@@ -59,28 +61,45 @@ const readCart = (): CartItem[] => {
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>(() => readCart());
+  const analyticsPrevious = useRef(items);
+  const analyticsUserAction = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product: Product, quantity = 1, variant: ProductVariant | null = null, context?: ConfigurationContext) =>
+  useEffect(() => {
+    // An unavailable/blocked analytics transport must not interrupt commerce.
+    if (analyticsUserAction.current) { try { trackCartChanges(analyticsPrevious.current, items); } catch { /* No commercial effect. */ } }
+    analyticsPrevious.current = items;
+    analyticsUserAction.current = false;
+  }, [items]);
+
+  const addItem = (product: Product, quantity = 1, variant: ProductVariant | null = null, context?: ConfigurationContext) => {
+    analyticsUserAction.current = true;
     setItems(current => addCartItem(current, product, quantity, variant, context));
+  };
 
   const removeItem = (productId: number, variantId: number | null = null, context?: ConfigurationContext) => {
+    analyticsUserAction.current = true;
     setItems((currentItems: CartItem[]) =>
       currentItems.filter((item: CartItem) => cartItemKey(item.product.id, item.variant?.id, item.configuration_context) !== cartItemKey(productId, variantId, context))
     );
   };
 
-  const updateQuantity = (productId: number, variantId: number | null, quantity: number, context?: ConfigurationContext) =>
+  const updateQuantity = (productId: number, variantId: number | null, quantity: number, context?: ConfigurationContext) => {
+    analyticsUserAction.current = true;
     setItems(current => changeCartQuantity(current, productId, variantId, quantity, context));
+  };
 
   const clearCart = () => {
+    analyticsUserAction.current = true;
     setItems([]);
   };
 
   const consumeLines = (lines: CartLineQuantity[]) => {
+    // Paid-order reconciliation is not a customer removing an item.
+    analyticsUserAction.current = false;
     setItems(current => consumeCartLines(current, lines));
   };
 

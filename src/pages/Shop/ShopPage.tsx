@@ -34,6 +34,8 @@ import {
   vehicleSelectionQuery,
 } from "./shopFilters";
 import "./ShopPage.css";
+import { productAnalyticsItem, trackCommerce } from "../../privacy/analytics";
+import { useAnalyticsEvent } from "../../privacy/useAnalyticsEvent";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -91,6 +93,9 @@ export const ShopPage = ({
       : serializeShopFilters(parseShopFilters(query))
   );
   const signature = serializeShopFilters(filters);
+  useAnalyticsEvent(() => {
+    if (!productsLoading && !productsError) trackCommerce("view_item_list", products.map(p => productAnalyticsItem(p)), `shop:${products.map(p => p.id).join(",")}`);
+  }, [products, productsLoading, productsError]);
   const count = activeShopFilterCount(filters);
   const selectedCategory = categories.find(
     (c) => String(c.id) === filters.category_id
@@ -613,7 +618,9 @@ export const ShopPage = ({
                     : product.vehicle_compatibilities?.[0]?.vehicle_label ||
                       "Consulta compatibilidad";
                   return (
-                    <article className="shop-product-card" key={product.id}>
+                    <article className="shop-product-card" key={product.id} onClickCapture={event => {
+                      if ((event.target as HTMLElement).closest("a")) trackCommerce("select_item", [productAnalyticsItem(product)]);
+                    }}>
                       <a
                         className="shop-product-card__media"
                         href={productPath(product) + (vehicleSelectionQuery(serializeShopFilters(filters)) ? "?" + vehicleSelectionQuery(serializeShopFilters(filters)) : "")}

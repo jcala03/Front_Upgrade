@@ -4,6 +4,8 @@ import { navigation } from "../../../data/navigation";
 import innovativeOnlineIndustriesLogo from "../../../assets/logos/innovative-online-industries.jpeg";
 import { Marquee } from "../../ui/Marquee";
 import "./Footer.css";
+import { openPrivacyPreferences } from "../../../privacy/consent";
+import { privacyControlsEnabled } from "../../../privacy/config";
 
 export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
   return (
@@ -49,6 +51,7 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
               Instagram
             </a>
             <p>{brand.location}</p>
+            {privacyControlsEnabled ? <button className="footer__privacy" type="button" onClick={openPrivacyPreferences}>Configurar cookies</button> : null}
           </div>
         </div>
       </div>

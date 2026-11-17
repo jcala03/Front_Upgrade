@@ -14,6 +14,8 @@ import { cartItemKey, cartItemPrice, useCart, type CartItem } from "../../contex
 import { CREATE_IDEMPOTENCY_KEY, finishActiveCheckout, readActiveCheckout, storeCheckoutFulfillment, storeCreatedCheckout } from "../../utils/checkoutStorage";
 import "./CheckoutPage.css";
 import { getProductImageUrl } from "../../utils/getProductImageUrl";
+import { cartAnalyticsItems, trackCommerce } from "../../privacy/analytics";
+import { useAnalyticsEvent } from "../../privacy/useAnalyticsEvent";
 
 type CheckoutForm = {
   customerName: string;
@@ -41,6 +43,9 @@ const formatPrice = (value: number) => {
 
 export const CheckoutPage = () => {
   const { items, subtotal } = useCart();
+  useAnalyticsEvent(() => {
+    trackCommerce("begin_checkout", cartAnalyticsItems(items), `checkout:${items.map(i => `${i.product.id}:${i.variant?.id}:${i.quantity}`).join(",")}`);
+  }, [items]);
 
   const [initialCheckout] = useState(() => readActiveCheckout());
   const [form, setForm] = useState<CheckoutForm>(initialForm);

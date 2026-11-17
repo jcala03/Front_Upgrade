@@ -7,6 +7,8 @@ import { finishActiveCheckout, paymentAttemptStorage, preparePaymentRetry, readL
 import { startWompiCheckout } from "../../utils/wompiCheckout";
 import { paymentReturnCopy as statusCopy, terminalPaymentAttempt } from "../../utils/paymentPresentation";
 import "./PaymentReturnPage.css";
+import { trackConfirmedPurchase } from "../../privacy/analytics";
+import { useAnalyticsEvent } from "../../privacy/useAnalyticsEvent";
 
 const MAX_POLLS = 6;
 const POLL_DELAY = 5000;
@@ -27,6 +29,7 @@ export const PaymentReturnPage = () => {
   const token = readLastOrder()?.public_token ?? null;
   const { consumeLines } = useCart();
   const [order, setOrder] = useState<PublicOrder | null>(null);
+  useAnalyticsEvent(() => trackConfirmedPurchase(order), [order]);
   const [queryState, setQueryState] = useState<QueryState>(token ? "refreshing" : "idle");
   const [queryError, setQueryError] = useState("");
   const [paymentError, setPaymentError] = useState("");

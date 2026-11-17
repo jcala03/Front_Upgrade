@@ -6,6 +6,8 @@ import type { PublicOrder, PublicOrderItem } from "../../types/order";
 import { ConfigurationSummary } from "../../components/ConfigurationSummary";
 import { finishActiveCheckout, readLastOrder, reconcilePaidCart, startNewPurchase } from "../../utils/checkoutStorage";
 import "./OrderConfirmationPage.css";
+import { trackConfirmedPurchase } from "../../privacy/analytics";
+import { useAnalyticsEvent } from "../../privacy/useAnalyticsEvent";
 
 const formatPrice = (value: number, currency: string) => new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -37,6 +39,7 @@ export const OrderConfirmationPage = () => {
   const persisted = readLastOrder();
   const { consumeLines } = useCart();
   const [order, setOrder] = useState<PublicOrder | null>(null);
+  useAnalyticsEvent(() => trackConfirmedPurchase(order), [order]);
   const [loading, setLoading] = useState(Boolean(persisted));
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);

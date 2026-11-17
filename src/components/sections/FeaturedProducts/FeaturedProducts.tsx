@@ -19,6 +19,8 @@ import type { Product } from "../../../types/product";
 import { getProductImageUrl } from "../../../utils/getProductImageUrl";
 import "./FeaturedProducts.css";
 import { publicBootstrap } from "../../../seo/client";
+import { productAnalyticsItem, trackCommerce } from "../../../privacy/analytics";
+import { useAnalyticsEvent } from "../../../privacy/useAnalyticsEvent";
 
 const EUROPEAN_BRANDS = [
   { name: "BMW", logo: bmwLogo, modifier: "bmw" },
@@ -85,6 +87,7 @@ const ProductCard = ({ product, index }: ProductCardProps) => {
       <a
         className="featured-product-card__link"
         href={`/tienda/${product.slug}`}
+        onClick={() => trackCommerce("select_item", [productAnalyticsItem(product)])}
         aria-label={`Ver producto: ${product.name}`}
       >
         <div className="featured-product-card__media">
@@ -164,6 +167,9 @@ export const FeaturedProducts = ({
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const featuredProducts = useMemo(() => products.slice(0, 6), [products]);
+  useAnalyticsEvent(() => {
+    if (!isLoading && !hasError) trackCommerce("view_item_list", featuredProducts.map(p => productAnalyticsItem(p)), `featured:${featuredProducts.map(p => p.id).join(",")}`);
+  }, [featuredProducts, isLoading, hasError]);
 
   useEffect(() => {
     // The preview (including an explicit error/empty state) was resolved by SSR.

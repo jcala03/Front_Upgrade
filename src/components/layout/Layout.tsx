@@ -2,6 +2,7 @@ import { type ReactNode, useEffect } from "react";
 import { SmoothScroll } from "../effects/SmoothScroll";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { PrivacyControls } from "../../privacy/PrivacyControls";
 
 type LayoutProps = {
   children: ReactNode;
@@ -26,6 +27,7 @@ export const Layout = ({ children, pathname = typeof window === "undefined" ? "/
         <Header pathname={pathname} />
         {children}
         <Footer pathname={pathname} />
+        <PrivacyControls pathname={pathname} />
       </div>
     </SmoothScroll>
   );

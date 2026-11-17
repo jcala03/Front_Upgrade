@@ -17,6 +17,8 @@ import {
 import "./ProductDetailPage.css";
 import { ProductConfigurator, ProductConfigurationSummary } from "./ProductConfigurator";
 import { useProductConfigurator } from "./useProductConfigurator";
+import { productAnalyticsItem, trackCommerce } from "../../privacy/analytics";
+import { useAnalyticsEvent } from "../../privacy/useAnalyticsEvent";
 
 type ProductDetailPageProps = { slug: string; initialProduct?: Product; query?: string };
 const formatPrice = (value: number) =>
@@ -122,6 +124,9 @@ export const ProductDetailPage = ({
   const hasVariants = Boolean(product?.has_variants) || variants.length > 0;
   const selectedVariant = configuration.required ? configuration.selectedVariant
     : variants.find((v) => v.id === selectedVariantId) ?? null;
+  useAnalyticsEvent(() => {
+    if (product && status === "ready") trackCommerce("view_item", [productAnalyticsItem(product, selectedVariant)], `product:${product.id}:${selectedVariant?.id ?? "parent"}`);
+  }, [product, status, selectedVariant]);
   const presentationProduct = configuration.required ? configuration.fullProduct ?? product : product;
   const availableStock = Number(
     selectedVariant?.stock ??
