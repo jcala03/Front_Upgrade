@@ -1,5 +1,7 @@
 # GA4, branding y centro legal — entrega local
 
+Nota de release autorizado: este documento conserva la trazabilidad de la preparación inicial. El ID real `G-RXJ570E5BE` ya está configurado. La publicación del código y branding fue autorizada posteriormente; no la activación de Analytics ni la publicación de los seis borradores legales. Los controles de privacidad productivos siguen apagados. Véase `RELEASE_GA4_BRANDING_2026-11-16.md` para el alcance final.
+
 Fecha: 16 de noviembre de 2026. Base frontend: `origin/main` **4d0dadd607a320eff73786a5422a45ee1233e8a1**. Backend requerido sin cambios: **35600ea3e51d1dda809c513fc6fd614d5e34c088**.
 
 Se respetó el orden de trabajo: Analytics, branding y revisión legal. El autoalojamiento de Oswald se incorporó tras su autorización expresa al descubrir la conexión tipográfica previa. No se publicaron cambios ni se cambiaron los repositorios originales. Los worktrees preliminares y su contenido pendiente se conservaron.
@@ -27,13 +29,13 @@ Se respetó el orden de trabajo: Analytics, branding y revisión legal. El autoa
 
 ## Analytics y activación
 
-No se detectó un Measurement ID verificado en los archivos públicos inspeccionados ni se recibió uno durante la implementación. El identificador sintético está limitado a tests interceptados y no entra al build.
+El propietario confirmó posteriormente el Measurement ID `G-RXJ570E5BE`, ahora configurado en `.env.production`. El navegador de pruebas utiliza ese ID con todas las solicitudes Google interceptadas; los fixtures unitarios conservan su ID sintético.
 
 Eventos conectados: page_view, view_item_list, select_item, view_item, add_to_cart, remove_from_cart, begin_checkout y purchase. Precios y cantidades del flujo existente; COP; producto/variante exactos. No nombres, correos, teléfonos, direcciones, términos de búsqueda, tokens ni actividad de CRM.
 
 `purchase` depende del endpoint real de consulta de orden: estado `paid`, orden no cancelada, moneda y cantidades válidas; nunca de la URL o de una visita. Transaction ID estable `upgrade79-order-{id}` y deduplicación. No se generó ningún pago. Las órdenes mixtas con servicios quedan pendientes de un desglose analítico completo y no se miden como compra parcial.
 
-Se mantienen vacíos/apagados los valores de ejemplo `VITE_GA4_MEASUREMENT_ID`, `VITE_GA4_ENABLED`, `VITE_GA4_SETTINGS_REVIEWED`, `VITE_ANALYTICS_INFORMATION_REVIEWED`, `VITE_PRIVACY_CONTROLS_ENABLED` y `VITE_GA4_LOCAL_DEBUG`; no se modificó `.env.production`. Rechazar o retirar consentimiento bloquea eventos aunque se hubiera descargado la biblioteca; no puede deshacer solicitudes ya enviadas.
+`.env.production` contiene el ID real y mantiene explícitamente apagados `VITE_GA4_ENABLED`, `VITE_GA4_SETTINGS_REVIEWED`, `VITE_ANALYTICS_INFORMATION_REVIEWED`, `VITE_PRIVACY_CONTROLS_ENABLED` y `VITE_GA4_LOCAL_DEBUG`. Rechazar o retirar consentimiento bloquea eventos aunque se hubiera descargado la biblioteca; no puede deshacer solicitudes ya enviadas.
 
 Los pasos de DebugView y Realtime están en `GA4_CONSENT_RESULTADOS.md`. Antes de activar debe aprobarse la información enlazada: la política pública histórica no cubre por sí sola toda la nueva medición.
 

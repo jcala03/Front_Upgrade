@@ -5,9 +5,9 @@ Se reutilizaron los componentes del worktree legal existente, sin modificarlo ni
 
 ## Activación pendiente
 
-No se encontró un Measurement ID verificado en la configuración pública revisada. No se añadió uno real ni se configuró una propiedad de Google. El ID `G-TESTONLY01` existe únicamente en fixtures interceptados, nunca en `.env` ni en el build productivo.
+Actualización para el release autorizado: el propietario confirmó `G-RXJ570E5BE`, configurado en `.env.production` mediante `VITE_GA4_MEASUREMENT_ID`. No se cambió la propiedad de Google ni se enviaron visitas reales. El ID `G-TESTONLY01` continúa limitado a fixtures unitarios.
 
-La configuración de ejemplo deja apagados `VITE_PRIVACY_CONTROLS_ENABLED`, `VITE_GA4_ENABLED`, `VITE_GA4_SETTINGS_REVIEWED`, `VITE_ANALYTICS_INFORMATION_REVIEWED` y `VITE_GA4_LOCAL_DEBUG`; `VITE_GA4_MEASUREMENT_ID` queda vacío. No se modificó `.env.production`.
+La configuración productiva mantiene explícitamente apagados `VITE_PRIVACY_CONTROLS_ENABLED`, `VITE_GA4_ENABLED`, `VITE_GA4_SETTINGS_REVIEWED`, `VITE_ANALYTICS_INFORMATION_REVIEWED` y `VITE_GA4_LOCAL_DEBUG`. No se muestran controles que prometan activar un servicio bloqueado. `.env.example` mantiene el ID vacío como plantilla.
 
 Antes de activar: confirmar la propiedad y su ID, revisar la información de privacidad enlazada, revisar la configuración de GA4 (sin medición mejorada automática de formularios/URLs, sin datos proporcionados por usuarios ni señales publicitarias) y aprobar el despliegue conjunto. El centro legal completo sigue bloqueado por revisión del titular y las políticas.
 
