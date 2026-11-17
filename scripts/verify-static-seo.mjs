@@ -100,6 +100,57 @@ try {
   });
   assert.equal(www.status, 301); assert.equal(www.location, 'https://upgradecolombia.com/tienda?search=radio');
   results.push({ queryFlow: true, www301: true });
+  // Exercise the core fallback independently of mod_mime's AddCharset. This is
+  // an Apache compatibility fixture, not a claim of running Hostinger/LiteSpeed.
+  const accessPath = join(root, '.htaccess');
+  const installedRules = await readFile(accessPath, 'utf8');
+  assert.match(installedRules, /^AddDefaultCharset UTF-8$/m);
+  const withoutAddCharset = installedRules.replace(/^\s*AddCharset[^\r\n]*\r?\n/gm, '');
+  const withoutFallback = withoutAddCharset.replace(/^AddDefaultCharset UTF-8\r?\n/gm, '');
+  const fixtureTypes = [
+    ['js', /(?:javascript|ecmascript)/], ['css', /^text\/css/],
+    ['json', /^application\/json/], ['woff', /(?:font\/woff|application\/font-woff)/],
+    ['woff2', /(?:font\/woff2|application\/font-woff2)/], ['png', /^image\/png/],
+    ['jpg', /^image\/jpeg/], ['webp', /^image\/webp/], ['svg', /^image\/svg\+xml/],
+    ['mp4', /^video\/mp4/], ['xml', /^application\/xml/],
+  ];
+  for (const [extension] of fixtureTypes) {
+    await writeFile(join(root, `charset-fixture.${extension}`), Buffer.from([0, 1, 2, 127, 128, 254, 255]));
+  }
+  const snapshots = new Map();
+  try {
+    await writeFile(accessPath, withoutFallback);
+    assert.equal((await get('/')).headers.get('content-type'), 'text/html');
+    for (const [extension, expected] of fixtureTypes) {
+      const response = await get(`/charset-fixture.${extension}`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), expected);
+      snapshots.set(extension, { type: response.headers.get('content-type'), bytes: Buffer.from(await response.arrayBuffer()) });
+    }
+    await writeFile(accessPath, withoutAddCharset);
+    for (const path of ['/', '/tienda', '/login', '/politica-de-datos', '/offline.html', '/robots.txt']) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await get(path, { method });
+        assert.equal(response.status, 200, `${method} ${path}`);
+        assert.match(response.headers.get('content-type'), /^(?:text\/html|text\/plain);\s*charset=utf-8$/i);
+        await response.arrayBuffer();
+      }
+    }
+    for (const [extension] of fixtureTypes) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await get(`/charset-fixture.${extension}`, { method });
+        const before = snapshots.get(extension);
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get('content-type'), before.type, extension);
+        assert.doesNotMatch(response.headers.get('content-type'), /charset/i);
+        const bytes = Buffer.from(await response.arrayBuffer());
+        if (method === 'GET') assert.deepEqual(bytes, before.bytes, extension);
+      }
+    }
+    results.push({ coreUtf8WithoutAddCharset: true, getAndHead: true, unchangedAssetTypes: fixtureTypes.map(([extension]) => extension) });
+  } finally {
+    await writeFile(accessPath, installedRules);
+  }
   if (process.env.PLAYWRIGHT_MODULE) {
     const playwright = await import(process.env.PLAYWRIGHT_MODULE);
     const browser = await (playwright.default ?? playwright).chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', headless: true, args: ['--no-sandbox'] });
