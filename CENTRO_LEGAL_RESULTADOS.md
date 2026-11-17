@@ -45,7 +45,7 @@ Los borradores se contrastaron el 16 de noviembre de 2026, sin sustituir la revi
 
 ## Validaciones
 
-Pruebas focales legales: 4/4 PASS; consentimiento y SEO focales combinados: 20/20 PASS. Suite completa combinada final: 275/275 PASS en Node 22, sin eliminar pruebas ni escribir en bases de datos.
+Pruebas focales legales: 4/4 PASS; consentimiento y SEO focales combinados: 20/20 PASS. Suite completa combinada final: 277/277 PASS en Node 22, sin eliminar pruebas ni escribir en bases de datos.
 
 Build cliente, TypeScript, SSR y prerender: PASS. Se comprobó que las frases de los borradores no aparecen en los assets de producción ni en el renderer compilado con el guard cerrado. Se conserva el aviso previo de chunks grandes; no se ha trabajado en él.
 

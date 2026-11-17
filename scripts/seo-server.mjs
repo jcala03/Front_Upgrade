@@ -6,6 +6,7 @@ import { resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { renderRequest, buildOptions } from '../dist/seo/entry-server.js';
+import { publicFontMime } from './public-font-assets.mjs';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = resolve(dist, 'assets');
@@ -28,9 +29,9 @@ http.createServer(async (req, res) => {
       '/icons/pwa-192.png': 'image/png', '/icons/pwa-512.png': 'image/png',
       '/icons/pwa-maskable-512.png': 'image/png', '/icons/apple-touch-icon.png': 'image/png',
     };
-    if (Object.hasOwn(pwaFiles, pathname)) {
+    if (Object.hasOwn(pwaFiles, pathname) || publicFontMime(pathname)) {
       const bytes = await readFile(resolve(dist, '.' + pathname));
-      res.writeHead(200, { 'Content-Type': pwaFiles[pathname], 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Length': bytes.length, ...(pathname === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {}) });
+      res.writeHead(200, { 'Content-Type': pwaFiles[pathname] ?? publicFontMime(pathname), 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Length': bytes.length, ...(pathname === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {}) });
       return res.end(req.method === 'HEAD' ? undefined : bytes);
     }
     if (pathname.startsWith('/assets/')) {

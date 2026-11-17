@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { siteOrigin } from '../src/seo/model.ts';
+import { publicFontMime } from './public-font-assets.mjs';
 
 function isBackendRoute(pathname) {
   return (
@@ -39,7 +40,7 @@ export function publicSeoPlugin(mode) {
         ).pathname;
 
         // Las rutas del backend deben pasar al proxy de Vite.
-        if (isBackendRoute(pathname) || isPwaAsset(pathname)) {
+        if (isBackendRoute(pathname) || isPwaAsset(pathname) || publicFontMime(pathname)) {
           if (pathname === '/sw.js') res.setHeader('Cache-Control', 'no-cache');
           return next();
         }
@@ -51,7 +52,7 @@ export function publicSeoPlugin(mode) {
           pathname.startsWith('/assets/') ||
           pathname.startsWith('/.vite/') ||
           pathname.startsWith('/.well-known/') ||
-          pathname.startsWith('/__') ||
+          (pathname.startsWith('/__') && !pathname.startsWith('/__legal-review/')) ||
           /\.(?:js|ts|tsx|css|json|png|svg|webp|jpg|jpeg|gif|ico|mp4|woff2?|map)$/.test(pathname)
         ) {
           return next();
@@ -103,7 +104,7 @@ export function publicSeoPlugin(mode) {
 
         // No interpretar endpoints de Laravel como páginas SEO.
         if (
-          isBackendRoute(pathname) || isPwaAsset(pathname) ||
+          isBackendRoute(pathname) || isPwaAsset(pathname) || publicFontMime(pathname) ||
           pathname.startsWith('/assets/')
         ) {
           return next();

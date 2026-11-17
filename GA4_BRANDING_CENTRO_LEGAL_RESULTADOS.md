@@ -13,7 +13,7 @@ Se respetó el orden de trabajo: Analytics, branding y revisión legal. El autoa
 
 ## Pruebas finales
 
-- **275/275 PASS**, Node 22: 257 del baseline + 9 consentimiento/Analytics + 4 branding + 4 legales + 1 fuente. No se eliminaron pruebas.
+- **277/277 PASS**, Node 22: 257 del baseline + 9 consentimiento/Analytics + 4 branding + 4 legales + 3 fuente/middleware. No se eliminaron pruebas.
 - TypeScript `tsc -b`, build cliente, build SSR y prerender: **PASS**. Las cinco páginas productivas actuales se conservan. Los borradores no aparecen en los bundles productivos con el guard cerrado.
 - Chrome con fixture de consentimiento: no Analytics antes de aceptar, una etiqueta, publicidad denegada, navegación, recarga y retirada sin perder carrito/sesión. Google interceptado, ningún envío real.
 - Chrome con App real y SSR para la revisión legal: **49 combinaciones** de vista/ancho, sin errores de ejecución/hidratación, sin overflow; encabezados y anclas válidos; diálogo funcional; ninguna solicitud a Fonts/Analytics. Se utiliza Oswald local.
@@ -52,9 +52,14 @@ El backend se inspeccionó únicamente para confirmar el contrato público de ó
 1. `f4e3f820eacb0ffb22d85c66ed2cafb22388c86e` — consentimiento y Analytics.
 2. `8ac0683107e5a45d1003d0aef343962d858a3aaf` — logo original e iconos.
 3. `7257597d605dd681db5748df995569aad0f9eed4` — misma fuente Oswald autoalojada, autorización posterior.
-4. `feat(legal): integrate gated natural-person policy review` — integración local de borradores e informe; consultar HEAD para su SHA.
+4. `107b5856ce3c8ac64ecc6b272b36065b0c4755be` — integración local de borradores e informe.
+5. `fix(privacy): serve local fonts across dev and preview` — excepción estática limitada a seis archivos y SSR de la revisión local; consultar HEAD para su SHA.
 
 La rama final contiene los anteriores en orden. No se modificó main del checkout original ni se ejecutó push. No se deben trasladar indiscriminadamente los cambios pendientes del repositorio original a este release.
+
+La verificación adicional con el servidor Vite normal encontró que el middleware SEO interceptaba TTF y saltaba el prefijo `__legal-review`. Se corrigió esa integración, no los selectores ni el contenido de páginas: Vite dev/preview y el servidor Node admiten únicamente los seis archivos públicos de Oswald, manteniendo los MIME restantes, las rutas privadas y PWA. No se alteraron reglas Apache ni la cuestión UTF-8.
+
+Prueba real adicional: **36 GET/HEAD PASS** en Vite dev, preview y Node SSR, con MIME correcto y bytes idénticos al recurso original. Revisión legal: HTTP 200 con SSR en desarrollo; HTTP 404 en preview/Node productivos. El workflow copia `dist/.` completo al paquete, por lo que incluye `fonts/` sin modificar el workflow.
 
 ## Seguridad, publicación y siguientes pasos
 

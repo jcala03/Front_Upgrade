@@ -17,4 +17,8 @@ SHA-256:
 
 La fuente se despliega automáticamente con `public/`; no hay descarga externa en tiempo de ejecución. Se eliminaron únicamente los preconnect/stylesheet anteriores de Google Fonts. No se cambió ninguna directiva UTF-8, política de caché, Service Worker ni manifest.
 
+Los servidores Vite dev/preview y Node SSR reconocen mediante una lista compartida únicamente los cuatro TTF, su CSS y la licencia. Se evita que el middleware SEO los convierta en páginas 404; no se abre un directorio genérico ni se exponen archivos privados. El prefijo de revisión local sí llega al SSR en desarrollo, mientras permanece bloqueado en el renderer productivo.
+
 El navegador de pruebas carga la fuente local y verifica ausencia de conexiones a Fonts/Analytics. Producción sigue sin cambios hasta autorización posterior de publicación.
+
+Verificación final: 3 pruebas unitarias de fuente/middleware y 36 respuestas GET/HEAD reales en dev, preview y Node SSR, comparando bytes y MIME. La revisión legal devuelve 200 SSR solo en desarrollo, y 404 en los dos modos productivos. La copia completa de `dist/` del workflow incluye los archivos de fuente sin cambiarlo.
