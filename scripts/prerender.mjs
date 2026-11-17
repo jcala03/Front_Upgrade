@@ -9,9 +9,10 @@ const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function apacheRules(pages, origin) {
   const host = new URL(origin).hostname;
-  // Core fallback supported by LiteSpeed too: only text/html and text/plain
-  // receive a charset; never force asset MIME types or depend on AddCharset.
-  const lines = [begin, 'ErrorDocument 404 /seo/404.html', 'AddDefaultCharset UTF-8', '<IfModule mod_mime.c>',
+  // LiteSpeed applies an unscoped default more broadly than Apache. Limit the
+  // fallback to static documents, excluding PHP/API, scripts and other assets.
+  const lines = [begin, 'ErrorDocument 404 /seo/404.html',
+    '<FilesMatch "\\.(?:html|txt)$">', '  AddDefaultCharset UTF-8', '</FilesMatch>', '<IfModule mod_mime.c>',
     '  AddType text/plain .txt', '  AddType application/xml .xml',
     '  AddCharset UTF-8 .html .txt .xml', '</IfModule>',
     '<IfModule mod_headers.c>', '  <FilesMatch "\\.(?:html|txt|xml|webmanifest)$">',

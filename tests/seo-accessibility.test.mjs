@@ -52,7 +52,7 @@ test('public SSR images retain explicit alternatives including intentionally emp
 test('static UTF-8 applies to documents without changing backend routing or asset MIME types', () => {
   const rules = apacheRules([{ path: '/', file: 'index.html' }], origin);
   assert.match(rules, /AddCharset UTF-8 \.html \.txt \.xml/);
-  assert.ok(rules.indexOf('AddDefaultCharset UTF-8') < rules.indexOf('<IfModule mod_mime.c>'));
+  assert.match(rules, /<FilesMatch "\\\.\(\?:html\|txt\)\$">\n  AddDefaultCharset UTF-8\n<\/FilesMatch>/);
   assert.ok(!rules.includes('ForceType'));
   assert.ok(rules.includes('RewriteRule ^tienda/[^/]+/?$ laravel-api.php [END,QSA]'));
   assert.ok(rules.includes('RewriteRule ^sitemap\\.xml$ laravel-api.php [END,QSA]'));

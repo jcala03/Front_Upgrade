@@ -104,9 +104,9 @@ try {
   // an Apache compatibility fixture, not a claim of running Hostinger/LiteSpeed.
   const accessPath = join(root, '.htaccess');
   const installedRules = await readFile(accessPath, 'utf8');
-  assert.match(installedRules, /^AddDefaultCharset UTF-8$/m);
+  assert.match(installedRules, /^  AddDefaultCharset UTF-8$/m);
   const withoutAddCharset = installedRules.replace(/^\s*AddCharset[^\r\n]*\r?\n/gm, '');
-  const withoutFallback = withoutAddCharset.replace(/^AddDefaultCharset UTF-8\r?\n/gm, '');
+  const withoutFallback = withoutAddCharset.replace(/^  AddDefaultCharset UTF-8\r?\n/gm, '');
   const fixtureTypes = [
     ['js', /(?:javascript|ecmascript)/], ['css', /^text\/css/],
     ['json', /^application\/json/], ['woff', /(?:font\/woff|application\/font-woff)/],
