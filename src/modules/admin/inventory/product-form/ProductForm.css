@@ -117,6 +117,15 @@
   gap: 0.85rem 1rem;
 }
 
+.smart-product-form__shipping .smart-product-form__grid {
+  margin-top: 0.8rem;
+}
+
+.smart-product-form__shipping-status {
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .smart-product-form__pricing-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

@@ -6,6 +6,8 @@ import type { ProductCategoryField } from "../../../../types/productCategory";
 import type { ProductCompatibilityType, ProductTechnicalSpecs } from "../../../../types/product";
 import type { VehicleMultimediaSystem } from "../../../../types/vehicle";
 import { ProductDynamicFields } from "./ProductDynamicFields";
+import { ProductShippingFields, ShippingReadiness } from "./ProductShippingFields";
+import { shippingDraftErrors, variantShippingToDraft } from "./productShipping";
 import type {
   ProductFormErrors,
   ProductFormProps,
@@ -97,6 +99,7 @@ export const ProductForm = ({
 
       return {
         ...emptyVariant(index),
+        ...variantShippingToDraft(variant),
         main_image: variant.main_image,
         id: variant.id,
         name: variant.name,
@@ -358,6 +361,7 @@ export const ProductForm = ({
 
   const validate = () => {
     const nextErrors: ProductFormErrors = {};
+    Object.assign(nextErrors, shippingDraftErrors(form));
     // Validate the draft even when optional/advanced controls are collapsed.
     const validatePricingDraft = (draft: ProductFormState | ProductVariantDraft, key: string) => {
       for (const field of ["price", "cost_price", "tax_amount", "extra_charges"] as const) {
@@ -390,6 +394,7 @@ export const ProductForm = ({
 
     const seenSkus = new Set<string>();
     variants.forEach((variant, index) => {
+      if (!variant.use_general_shipping) Object.assign(nextErrors, shippingDraftErrors(variant, `variants.${index}.`));
       validatePricingDraft(variant, `variants.${index}.pricing`);
       const resolvedName = variant.name.trim() || suggestVariantName(variantFields, variant.specs);
       if (!resolvedName) nextErrors[`variants.${index}.name`] = "Indica un nombre o completa los detalles de la variante.";
@@ -517,6 +522,11 @@ export const ProductForm = ({
           <div className="smart-product-form__section-heading"><span>04</span><div><h3 id="product-pricing-title">Precio</h3><p>Valores comerciales base del producto.</p></div></div>
           <div className="smart-product-form__grid"><label className="smart-product-form__field"><span>Precio de venta</span><input type="number" inputMode="decimal" step="any" min="0" value={form.price} onChange={(event) => updateForm("price", event.target.value)} /></label></div>
           <InventoryNotice canViewInventory={canViewInventory} />
+          <div className="smart-product-form__subsection" aria-labelledby="product-shipping-title">
+            <h4 id="product-shipping-title">Datos para envío</h4>
+            <ProductShippingFields draft={form} onChange={updateForm} errors={errors} requiresShipping={form.requires_shipping} />
+            {variants.length ? <p className="smart-product-form__hint">Estas medidas se aplican a las variantes que las hereden. Si el embalaje cambia, define sus medidas en esa variante.</p> : null}
+          </div>
         </section>
 
         <section className="smart-product-form__section" aria-labelledby="product-variants-title">
@@ -562,6 +572,13 @@ export const ProductForm = ({
                     {readiness ? <p className="smart-product-form__hint" role="status">Preparación estructural: {readiness.structurally_ready ? "datos completos." : Object.values(readiness.issues).join(" ")} No certifica compatibilidad física ni activa el configurador público.</p> : null}
                   </div>
                   <div className="smart-product-form__subsection"><h4>Precio</h4><PricingFields draft={variant} update={(key, value) => updateVariant(index, key, value)} preview={pricing} error={errors[`variants.${index}.pricing`]} /></div>
+                  <div className="smart-product-form__subsection">
+                    <h4>Datos para envío de esta variante</h4>
+                    <label className="smart-product-form__check"><input type="checkbox" checked={variant.use_general_shipping} onChange={event => updateVariant(index, "use_general_shipping", event.target.checked)} /><span>Usar peso y medidas generales del producto</span></label>
+                    {variant.use_general_shipping
+                      ? <ShippingReadiness draft={form} requiresShipping={form.requires_shipping} />
+                      : <ProductShippingFields draft={variant} general={form} onChange={(key, value) => updateVariant(index, key, value)} errors={errors} errorPrefix={`variants.${index}.`} requiresShipping={form.requires_shipping} />}
+                  </div>
                   <div className="smart-product-form__subsection"><label className="smart-product-form__check"><input type="checkbox" disabled={requiresOem} checked={variant.use_general_compatibility} onChange={(event) => updateVariant(index, "use_general_compatibility", event.target.checked)} /><span>Usar la compatibilidad general del producto</span></label>{variant.use_general_compatibility ? <p className="smart-product-form__hint">Usará {form.compatibility_type === "universal" ? "compatibilidad universal" : `${generalCompatibilities.filter((row) => row.vehicle_brand_id).length} compatibilidades del producto`}.</p> : <><div className="smart-product-form__choice-grid smart-product-form__choice-grid--small">{(["universal", "vehicle_specific"] as ProductCompatibilityType[]).map((type) => <label className={variant.compatibility_type === type ? "smart-product-form__choice is-active" : "smart-product-form__choice"} key={type}><input type="radio" name={`variant-compatibility-${index}`} disabled={requiresOem && type === "universal"} checked={variant.compatibility_type === type} onChange={() => updateVariant(index, "compatibility_type", type)} /><strong>{type === "universal" ? "Universal" : "Específica"}</strong></label>)}</div>{errors[`variants.${index}.compatibility`] ? <p className="smart-product-form__section-error">{errors[`variants.${index}.compatibility`]}</p> : null}{variant.compatibility_type === "vehicle_specific" ? renderCompatibilityRows(variant.vehicle_compatibilities, variantRowsSetter, `variant-${index}`, true) : null}</>}</div>
                   <div className="smart-product-form__checks"><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_active} onChange={(event) => updateVariant(index, "is_active", event.target.checked)} /><span>Activa</span></label><label className="smart-product-form__check"><input type="checkbox" checked={variant.is_visible} onChange={(event) => updateVariant(index, "is_visible", event.target.checked)} /><span>Visible</span></label></div>
                 </article>

@@ -1,5 +1,6 @@
 import type { ProductCategoryField } from "../../../../types/productCategory";
 import type { ImageDraft } from "./ProductImagesEditor";
+import { emptyShippingDraft, shippingPayload, shippingToDraft } from "./productShipping";
 import type {
   AdminProduct,
   ProductCompatibilityType,
@@ -25,6 +26,8 @@ export const emptyCompatibility = (): VariantCompatibilityDraft => ({
 });
 
 export const emptyProductForm: ProductFormState = {
+  ...emptyShippingDraft(),
+  requires_shipping: true,
   name: "",
   description: "",
   category_id: "",
@@ -46,6 +49,8 @@ export const emptyProductForm: ProductFormState = {
 };
 
 export const emptyVariant = (index: number): ProductVariantDraft => ({
+  ...emptyShippingDraft(),
+  use_general_shipping: true,
   main_image: null,
   name: "",
   name_is_custom: false,
@@ -159,6 +164,7 @@ export const buildProductFormData = ({
   formData.append("product_brand_id", form.product_brand_id);
   formData.append("compatibility_type", productCompatibilityType);
   formData.append("sku", form.sku.trim());
+  Object.entries(shippingPayload(form)).forEach(([key, value]) => formData.append(key, value === null ? "" : String(value)));
 
   const productPricing = calculatePricingPreview(form);
   formData.append("price", String(productPricing.price));
@@ -206,6 +212,9 @@ export const buildProductFormData = ({
     const pricing = calculatePricingPreview(variant);
 
     if (variant.id) formData.append(`variants[${index}][id]`, String(variant.id));
+    // Explicit nulls mean inherit. Never copy the parent's measurements into variant overrides.
+    Object.entries(shippingPayload(variant.use_general_shipping ? emptyShippingDraft() : variant))
+      .forEach(([key, value]) => formData.append(`variants[${index}][${key}]`, value === null ? "" : String(value)));
     formData.append(`variants[${index}][name]`, variant.name.trim());
     formData.append(`variants[${index}][sku]`, variant.sku.trim());
     formData.append(`variants[${index}][compatibility_type]`, compatibilityType);
@@ -259,6 +268,8 @@ export const buildProductFormData = ({
 };
 
 export const productToFormState = (product: AdminProduct): ProductFormState => ({
+  ...shippingToDraft(product),
+  requires_shipping: product.requires_shipping ?? true,
   name: product.name,
   description: product.description ?? "",
   category_id: product.category_id ? String(product.category_id) : "",

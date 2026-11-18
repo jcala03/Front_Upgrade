@@ -1,5 +1,6 @@
 import type { ProductBrand } from "../../../../types/productBrand";
 import type { ProductCategory } from "../../../../types/productCategory";
+import type { ShippingDraft } from "./productShipping";
 import type {
   AdminProduct,
   ProductCompatibilityType,
@@ -14,7 +15,8 @@ import type {
   VehicleVersion,
 } from "../../../../types/vehicle";
 
-export type ProductFormState = {
+export type ProductFormState = ShippingDraft & {
+  requires_shipping: boolean;
   name: string;
   description: string;
   category_id: string;
@@ -48,7 +50,8 @@ export type VariantCompatibilityDraft = {
   is_advanced: boolean;
 };
 
-export type ProductVariantDraft = {
+export type ProductVariantDraft = ShippingDraft & {
+  use_general_shipping: boolean;
   main_image: string | null;
   id?: number;
   name: string;

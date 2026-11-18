@@ -160,6 +160,14 @@ export type ProductVariant = {
   vehicle_multimedia_system?: VehicleMultimediaSystem | null;
 };
 
+/** Medidas privadas del editor; no se incorporan al contrato público de producto. */
+export type ProductLogistics = {
+  weight_grams?: number | null;
+  length_mm?: number | null;
+  width_mm?: number | null;
+  height_mm?: number | null;
+};
+
 /** Variante del catálogo administrativo, sin stock operacional. */
 export type AdminProductVariant = Omit<
   ProductVariant,
@@ -168,9 +176,9 @@ export type AdminProductVariant = Omit<
   | "minimum_stock"
   | "stock_status"
   | "is_low_stock"
->;
+> & ProductLogistics;
 
-export type ProductVariantPayload = {
+export type ProductVariantPayload = ProductLogistics & {
   id?: number;
   vehicle_multimedia_system_id: number | null;
   compatibility_type?: ProductCompatibilityType | null;
@@ -286,16 +294,17 @@ export type AdminProduct = Omit<
   | "variants"
 > & {
   variants?: AdminProductVariant[];
+  requires_shipping?: boolean;
   commission_enabled: boolean;
   commission_amount: number | null;
-};
+} & ProductLogistics;
 
 export type ProductCommissionPayload = {
   commission_enabled: boolean;
   commission_amount: number | null;
 };
 
-export type ProductPayload = {
+export type ProductPayload = ProductLogistics & {
   name: string;
   description: string | null;
 
