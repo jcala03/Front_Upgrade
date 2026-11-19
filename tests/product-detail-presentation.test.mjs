@@ -74,3 +74,13 @@ test('resumen elegido no repite vehículo, SKU, precio o stock del bloque comerc
   assert.match(html, /3 · Configuración seleccionada/);assert.match(html, /CIC · 8 GB \/ 128 GB/);
   assert.ok(!/SKU|Precio|Disponibilidad|BMW/.test(html));assert.ok(!html.includes('Año'));
 });
+test('ficha limpia conserva descripción visible, precio único y orientación de entrega sin garantías inventadas', () => {
+  const p = traditionalProduct(true);
+  const html = renderToString(createElement(CartProvider, null, createElement(ProductDetailPage, { slug: p.slug, initialProduct: p, query: '' })));
+  assert.match(html, /<details class="product-detail__disclosure" open=""><summary>Descripción/);
+  assert.equal((html.match(/class="product-detail__purchase-info"/g) ?? []).length, 1);
+  assert.match(html, /Consulta disponibilidad y costo en el checkout\./);
+  assert.match(html, /Revisa tu pedido y el total antes de pagar\./);
+  assert.ok(!/Envío gratis|100% seguro|Garantía de por vida/.test(html));
+  assert.equal((html.match(/class="product-detail__price"/g) ?? []).length, 1);
+});

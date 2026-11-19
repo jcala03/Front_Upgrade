@@ -3,14 +3,7 @@ import { getPublicOrder, PublicCheckoutError, updateShippingAddress } from "../.
 import type { PublicFulfillmentType, PublicOrder, PublicShippingAddress } from "../../types/order";
 import { CheckoutPickupOptions } from "./CheckoutPickupOptions";
 import { CheckoutShippingQuotes } from "./CheckoutShippingQuotes";
-
-const requiredAddressFields: { key: keyof PublicShippingAddress; label: string; max: number; autoComplete?: string }[] = [
-  { key: "country_code", label: "País (código de dos letras)", max: 2, autoComplete: "shipping country" },
-  { key: "state", label: "Departamento / Estado", max: 120, autoComplete: "shipping address-level1" },
-  { key: "city", label: "Ciudad", max: 120, autoComplete: "shipping address-level2" },
-  { key: "postal_code", label: "Código postal", max: 20, autoComplete: "shipping postal-code" },
-  { key: "address_line1", label: "Dirección", max: 220, autoComplete: "shipping address-line1" },
-];
+import { CheckoutAddressFields } from "./CheckoutAddressFields";
 
 const messages: Record<string, string> = {
   MISSING_SHIPPING_ADDRESS: "Completa los datos de entrega.",
@@ -80,12 +73,16 @@ export function CheckoutDelivery({ token, buyerName, buyerPhone, initialMode, on
   }, [token, retry, buyerName, buyerPhone, onOrderChange, onCheckoutIssue]);
 
   function change(key: keyof PublicShippingAddress, value: string) {
-    setAddress((current) => ({ ...current, [key]: key === "country_code" ? value.toUpperCase() : value }));
+    changeAddress({ [key]: value });
+  }
+
+  function changeAddress(patch: Partial<PublicShippingAddress>) {
+    setAddress((current) => ({ ...current, ...patch }));
     setDirty(true);
     setStatus("idle");
     setError("");
     onCheckoutIssue("ADDRESS_DIRTY");
-    setFieldErrors((current) => ({ ...current, [key]: [] }));
+    setFieldErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !(key in patch))));
   }
 
   function updateOrder(current: PublicOrder) {
@@ -178,12 +175,8 @@ export function CheckoutDelivery({ token, buyerName, buyerPhone, initialMode, on
             <label><span>Nombre de quien recibe</span><input name="recipient_name" type="text" value={address.recipient_name} required maxLength={120} autoComplete="shipping name" disabled={status === "saving" || operationBusy || locked} onChange={(event) => change("recipient_name", event.target.value)} aria-invalid={!!fieldErrors.recipient_name?.length} aria-describedby={fieldErrors.recipient_name?.length ? "delivery-error-recipient_name" : undefined} />{fieldErrors.recipient_name?.length > 0 && <small id="delivery-error-recipient_name" className="checkout-delivery__field-error">{fieldErrors.recipient_name.join(" ")}</small>}</label>
             <label><span>Teléfono de quien recibe</span><input name="recipient_phone" type="tel" value={address.recipient_phone} required maxLength={40} autoComplete="shipping tel" disabled={status === "saving" || operationBusy || locked} onChange={(event) => change("recipient_phone", event.target.value)} aria-invalid={!!fieldErrors.recipient_phone?.length} aria-describedby={fieldErrors.recipient_phone?.length ? "delivery-error-recipient_phone" : undefined} />{fieldErrors.recipient_phone?.length > 0 && <small id="delivery-error-recipient_phone" className="checkout-delivery__field-error">{fieldErrors.recipient_phone.join(" ")}</small>}</label>
           </>}
-          {requiredAddressFields.map(({ key, label, max, autoComplete }) => <label key={key} className={key === "address_line1" ? "checkout-delivery__wide" : undefined}>
-            <span>{label}</span>
-            <input name={key} type="text" value={address[key] ?? ""} required maxLength={max} pattern={key === "country_code" ? "[A-Z]{2}" : ".*\\S.*"} title={key === "country_code" ? "Código de dos letras, por ejemplo CO o US" : undefined} autoComplete={autoComplete} disabled={status === "saving" || operationBusy || locked} onChange={(event) => change(key, event.target.value)} aria-invalid={!!fieldErrors[key]?.length} aria-describedby={fieldErrors[key]?.length ? `delivery-error-${key}` : undefined} />
-            {fieldErrors[key]?.length > 0 && <small id={`delivery-error-${key}`} className="checkout-delivery__field-error">{fieldErrors[key].join(" ")}</small>}
-          </label>)}
         </div>
+        <CheckoutAddressFields key={address.country_code} address={address} disabled={status === "saving" || operationBusy || locked} errors={fieldErrors} onChange={changeAddress} />
         <details className="checkout-optional" open={Boolean(address.address_line2 || address.delivery_notes)}>
           <summary>Agregar complemento o indicaciones (opcional)</summary>
           <div className="checkout-form__grid checkout-optional__content">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, Minus, Plus, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, Minus, Plus, ShoppingBag, ShieldCheck, Truck } from "lucide-react";
 import { getProductBySlug, ProductApiError } from "../../api/products";
 import { vehicleSelectionQuery } from "../Shop/shopFilters";
 import { useCart } from "../../context/CartContext";
@@ -463,10 +463,14 @@ export const ProductDetailPage = ({
             Ver carrito <span aria-hidden="true">→</span>
           </a>
           </section>
+          <ul className="product-detail__purchase-info" aria-label="Información de compra">
+            <li><Truck size={20} strokeWidth={1.5} aria-hidden="true" /><div><strong>Opciones de entrega</strong><span>Consulta disponibilidad y costo en el checkout.</span></div></li>
+            <li><ShieldCheck size={20} strokeWidth={1.5} aria-hidden="true" /><div><strong>Pago con Wompi</strong><span>Revisa tu pedido y el total antes de pagar.</span></div></li>
+          </ul>
         </div>
       </section>
       <section className="product-detail__information">
-        <details className="product-detail__disclosure">
+        <details className="product-detail__disclosure" open>
           <summary>Descripción</summary>
           <div><p>{productDescription(product)}</p></div>
         </details>
