@@ -32,6 +32,7 @@ const order = { id: 411, order_status: 'completed', payment_status: 'paid', curr
 
 test('preference rejects malformed, old, future and expired storage; rejection persists', () => {
   for (const raw of [null, '{', '{}', JSON.stringify({ version: 'old', analytics: true, updatedAt: Date.now() }),
+    JSON.stringify({ version: '2026-11-09.1', analytics: true, updatedAt: Date.now() }),
     JSON.stringify({ version: config.PRIVACY_VERSION, analytics: true, updatedAt: Date.now() + 10000 }),
     JSON.stringify({ version: config.PRIVACY_VERSION, analytics: true, updatedAt: Date.now() - 181 * 86400000 })]) assert.equal(consent.parseChoice(raw), null);
   assert.equal(consent.saveChoice(false).analytics, false);
@@ -89,10 +90,11 @@ test('withdrawal removes optional tags and blocks events without touching cart/s
   assert.equal(store.has('upgrade79_ga4_purchases'), false);
   accept(); assert.equal(a.analyticsAllowed(), true); assert.equal(scripts.size, 1);
 });
-test('private routes and unapproved legal identity remain closed', () => {
+test('private routes and unapproved policies remain closed despite confirmed identity', () => {
   location.pathname = '/crm'; a.syncAnalytics(); assert.equal(a.analyticsAllowed(), false); assert.equal(scripts.size, 0);
   assert.equal(config.legalIdentity.holderName, 'Juan Cano Jimenez');
-  assert.equal(config.legalIdentity.taxIdVerified, false); assert.equal(config.legalPublicationReady(), false);
+  assert.equal(config.legalIdentity.taxIdVerified, true); assert.equal(config.legalIdentity.taxId, '1143149923-4');
+  assert.equal(config.legalIdentity.reviewed, false); assert.equal(config.legalPublicationReady(), false);
 });
 test('missing ID, disabled measurement, unreviewed settings and an unknown host cannot activate analytics', () => {
   location.pathname = '/'; accept();

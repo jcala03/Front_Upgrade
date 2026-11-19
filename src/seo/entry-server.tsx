@@ -9,7 +9,7 @@ import { Atelier } from "../components/sections/Atelier";
 import { Contact } from "../components/sections/Contact";
 import { bookingDateSnapshot } from "../components/sections/Contact/publicBooking";
 import { LegalPage } from "../pages/Legal/LegalPage";
-import { LEGAL_RELEASE_READY, legalRoute } from "../privacy/config";
+import { LEGAL_RELEASE_READY, PRIVACY_POLICIES_RELEASE_READY, legalRoute } from "../privacy/config";
 export { publicLegalPaths as legalPrerenderPaths } from "../privacy/config";
 import { ShopPage } from "../pages/Shop";
 import { ProductDetailPage } from "../pages/ProductDetail";
@@ -55,7 +55,7 @@ export async function renderRequest(requestUrl: string, template: string, option
   }
   const privateRoute = /^(\/crm(?:\/|$)|\/admin(?:\/|$)|\/login$|\/carrito$|\/checkout(?:\/|$)|\/orden-confirmada$)/.test(path);
   const legal = legalRoute(path);
-  const LegalCenterPage = (import.meta.env.DEV || LEGAL_RELEASE_READY) && legal
+  const LegalCenterPage = (import.meta.env.DEV || LEGAL_RELEASE_READY || PRIVACY_POLICIES_RELEASE_READY) && legal
     ? (await import("../pages/Legal/LegalCenterPage")).default : null;
   let product: Product | undefined;
   let products: Product[] | undefined;

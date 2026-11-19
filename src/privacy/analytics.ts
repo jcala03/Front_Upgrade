@@ -1,5 +1,5 @@
 import { readChoice } from "./consent";
-import { analyticsInformationReviewed, privacyControlsEnabled } from "./config";
+import { analyticsInformationReviewed, analyticsStartReached, privacyControlsEnabled } from "./config";
 import type { Product, ProductVariant } from "../types/product";
 import type { PublicOrder } from "../types/order";
 import { cartItemKey, cartItemPrice, type CartItem } from "../domain/cartLines";
@@ -27,11 +27,13 @@ let runtimeDenied = false;
 let lastView = "";
 let generation = 0;
 const sent = new Set<string>();
+// The bypass is compiled out of production; only explicit local test fixtures use it.
+export const analyticsAvailableNow = () => ga4Settings.localDebug || analyticsStartReached();
 export function analyticsAllowed() {
   if (typeof window === "undefined") return false;
   const originAllowed = ["upgradecolombia.com", "www.upgradecolombia.com"].includes(location.hostname)
     || ga4Settings.localDebug && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  return originAllowed && privacyControlsEnabled && !blocked && !runtimeDenied && ga4Settings.enabled && ga4Settings.reviewed
+  return originAllowed && privacyControlsEnabled && analyticsAvailableNow() && !blocked && !runtimeDenied && ga4Settings.enabled && ga4Settings.reviewed
     && analyticsInformationReviewed && /^G-[A-Z0-9]{6,}$/.test(ga4Settings.id)
     && readChoice()?.analytics === true && analyticsRoute(window.location.pathname) !== null;
 }

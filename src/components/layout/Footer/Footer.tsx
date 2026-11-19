@@ -58,6 +58,7 @@ export const Footer = ({ pathname = "/" }: { pathname?: string }) => {
 
       {publicLegalPaths().length ? <nav className="footer__legal container-wide" aria-label="Información legal">
         {publicLegalPaths().map(path => <a key={path} href={path}>{legalDocumentTitle(path.slice(1))}</a>)}
+        {!publicLegalPaths().includes("/terminos-y-condiciones") ? <a href="/terminos-y-condiciones">Términos y Condiciones</a> : null}
       </nav> : ["/", "/politica-de-datos", "/terminos-y-condiciones"].includes(pathname) ? (
         <nav className="footer__legal container-wide" aria-label="Información legal">
           <a href="/politica-de-datos">Política de Tratamiento de Datos</a>

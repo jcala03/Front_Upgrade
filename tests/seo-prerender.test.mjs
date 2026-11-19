@@ -46,7 +46,9 @@ async function fixture(t, handler) {
 test('build estático usa SSR real: Home, tienda, producto y legales tienen metadata, H1 e hidratación', async t => {
   const { dist } = await fixture(t);
   const pages = await prerender({ dist, renderer, options });
-  assert.equal(pages.length, 5);
+  assert.equal(pages.length, 6);
+  assert.ok(pages.some(page => page.path === '/politica-de-cookies'));
+  assert.ok(!pages.some(page => ['/legal-y-privacidad', '/envios-y-entregas', '/cambios-devoluciones-y-garantias', '/centro-de-privacidad'].includes(page.path)));
   for (const page of pages) {
     const html = await readFile(join(dist, page.file), 'utf8');
     assert.match(html, /<html lang="es">/);
