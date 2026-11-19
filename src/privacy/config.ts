@@ -1,5 +1,5 @@
 export const OFFICIAL_EMAIL = "jcano@upgradecolombia.com";
-export const PRIVACY_VERSION = "2026-11-19.1";
+export const PRIVACY_VERSION = "2026-11-19.2";
 export const PREFERENCE_DAYS = 180;
 // Midnight in Colombia, not midnight UTC. No collection before legal validity.
 export const ANALYTICS_EFFECTIVE_AT = Date.parse("2026-11-19T00:00:00-05:00");

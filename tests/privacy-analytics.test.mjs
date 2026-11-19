@@ -18,7 +18,7 @@ const location = { hostname: '127.0.0.1', origin: 'http://127.0.0.1', pathname: 
 const eventTarget = new EventTarget();
 globalThis.location = location;
 globalThis.localStorage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
-globalThis.window = { location, dispatchEvent: event => eventTarget.dispatchEvent(event) };
+globalThis.window = { location, fetch: async () => new Response(null, {status:204}), dispatchEvent: event => eventTarget.dispatchEvent(event) };
 globalThis.document = { cookie: '', getElementById: id => scripts.get(id), querySelector: () => null,
   createElement: () => ({ remove() { scripts.delete(this.id); } }), head: { appendChild: script => scripts.set(script.id, script) } };
 after(() => { for (const key of ['window', 'document', 'location', 'localStorage']) delete globalThis[key]; });
@@ -32,6 +32,7 @@ const order = { id: 411, order_status: 'completed', payment_status: 'paid', curr
 
 test('preference rejects malformed, old, future and expired storage; rejection persists', () => {
   for (const raw of [null, '{', '{}', JSON.stringify({ version: 'old', analytics: true, updatedAt: Date.now() }),
+    JSON.stringify({ version: '2026-11-19.1', analytics: true, updatedAt: Date.now() }),
     JSON.stringify({ version: '2026-11-09.1', analytics: true, updatedAt: Date.now() }),
     JSON.stringify({ version: config.PRIVACY_VERSION, analytics: true, updatedAt: Date.now() + 10000 }),
     JSON.stringify({ version: config.PRIVACY_VERSION, analytics: true, updatedAt: Date.now() - 181 * 86400000 })]) assert.equal(consent.parseChoice(raw), null);

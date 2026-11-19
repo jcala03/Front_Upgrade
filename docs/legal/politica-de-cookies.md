@@ -25,7 +25,7 @@ La preferencia se guarda en localStorage bajo upgrade79_privacy_choice, tanto si
 Si el navegador impide guardar la decisión, las analíticas permanecen bloqueadas. La elección es propia del navegador y del origen donde se conserva; no se sincroniza automáticamente entre todos los equipos de una persona.
 
 ## 5. Analytics opcional y duración de sus identificadores
-El servicio de medición utiliza Google Analytics 4, flujo G-RXJ570E5BE. Solo se carga si UP GRADE 79 ha habilitado la recopilación y existe una aceptación analítica válida. Antes de aceptar no se descarga nuestra etiqueta de Google ni se envían nuestros eventos analíticos: se aplica Consent Mode v2 básico.
+El servicio de medición utiliza Google Analytics 4, flujo G-9SGBHZ5YT9. Solo se carga si UP GRADE 79 ha habilitado la recopilación y existe una aceptación analítica válida. Antes de aceptar no se descarga nuestra etiqueta de Google ni se envían nuestros eventos analíticos: se aplica Consent Mode v2 básico.
 
 Tras aceptar, la etiqueta puede establecer las cookies _ga y _ga_ asociadas al flujo. Nuestra configuración solicita una duración de 180 días, sin renovarla por cada evento. El navegador puede limitar su conservación o impedirlas. Esta duración no es el período de conservación de datos en los servidores de Google.
 

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createServer, loadEnv } from 'vite';
 const measurementId = loadEnv('production', process.cwd(), 'VITE_').VITE_GA4_MEASUREMENT_ID;
-assert.equal(measurementId, 'G-RXJ570E5BE');
+assert.equal(measurementId, 'G-9SGBHZ5YT9');
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fixture = `import React from 'react';import {hydrateRoot} from 'react-dom/client';
 import {PrivacyControls} from '/src/privacy/PrivacyControls.tsx';

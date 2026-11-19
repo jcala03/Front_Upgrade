@@ -1,5 +1,6 @@
 import { readChoice } from "./consent";
 import { analyticsInformationReviewed, analyticsStartReached, privacyControlsEnabled } from "./config";
+import { installAnalyticsTransportGuard } from "./analyticsTransport";
 import type { Product, ProductVariant } from "../types/product";
 import type { PublicOrder } from "../types/order";
 import { cartItemKey, cartItemPrice, type CartItem } from "../domain/cartLines";
@@ -24,6 +25,7 @@ let loaded = false;
 let scriptLoaded = false;
 let blocked = false;
 let runtimeDenied = false;
+let transportsGuarded = false;
 let lastView = "";
 let generation = 0;
 const sent = new Set<string>();
@@ -58,6 +60,10 @@ export function syncAnalytics() {
   }
   if (loaded) { w.gtag?.("consent", "update", { ...deniedConsent, analytics_storage: "granted" }); return; }
   if (document.querySelector('script[src*="googletagmanager.com"],script[src*="google-analytics.com"]')) { blocked = true; w[`ga-disable-${ga4Settings.id}`] = true; return; }
+  if (!transportsGuarded) {
+    transportsGuarded = installAnalyticsTransportGuard(window, analyticsAllowed, ga4Settings.id);
+    if (!transportsGuarded) { blocked = true; w[`ga-disable-${ga4Settings.id}`] = true; return; }
+  }
   w.dataLayer ??= [];
   w.gtag = function () { w.dataLayer!.push(arguments); };
   w.gtag("consent", "default", deniedConsent);

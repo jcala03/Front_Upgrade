@@ -6,8 +6,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 test('production receives the verified GA4 ID and approved policies, without premature collection or misleading controls', async () => {
   const env = loadEnv('production', process.cwd(), 'VITE_');
-  assert.equal(env.VITE_GA4_MEASUREMENT_ID, 'G-RXJ570E5BE');
-  for (const gate of ['VITE_PRIVACY_CONTROLS_ENABLED', 'VITE_GA4_ENABLED', 'VITE_GA4_SETTINGS_REVIEWED',
+  assert.equal(env.VITE_GA4_MEASUREMENT_ID, 'G-9SGBHZ5YT9');
+  assert.equal(env.VITE_GA4_SETTINGS_REVIEWED, 'true', 'client property settings explicitly confirmed on 2026-11-19');
+  for (const gate of ['VITE_PRIVACY_CONTROLS_ENABLED', 'VITE_GA4_ENABLED',
     'VITE_ANALYTICS_INFORMATION_REVIEWED']) assert.equal(env[gate], 'true', gate);
   assert.equal(env.VITE_GA4_LOCAL_DEBUG, 'false');
   const server = await createServer({ configFile: false, envFile: false, esbuild: { jsx: 'automatic' },
@@ -20,7 +21,7 @@ test('production receives the verified GA4 ID and approved policies, without pre
     const privacy = await server.ssrLoadModule('/src/privacy/config.ts');
     const { PrivacyControls } = await server.ssrLoadModule('/src/privacy/PrivacyControls.tsx');
     const { Footer } = await server.ssrLoadModule('/src/components/layout/Footer/Footer.tsx');
-    assert.equal(analytics.ga4Settings.id, 'G-RXJ570E5BE');
+    assert.equal(analytics.ga4Settings.id, 'G-9SGBHZ5YT9');
     assert.equal(analytics.ga4Settings.enabled, true);
     assert.equal(analytics.ga4Settings.localDebug, false);
     assert.equal(analytics.analyticsAllowed(), false);
@@ -51,6 +52,9 @@ test('production receives the verified GA4 ID and approved policies, without pre
       accepted = false;
       assert.equal(analytics.analyticsAllowed(), false, 'effective date does not substitute visitor acceptance');
       accepted = true;
+      analytics.ga4Settings.reviewed = false;
+      assert.equal(analytics.analyticsAllowed(), false, 'an unreviewed client property remains blocked even with consent');
+      analytics.ga4Settings.reviewed = true;
       assert.equal(analytics.analyticsAllowed(), true, 'reviewed production permits measurement only after date AND consent');
     } finally {
       Date.now = originalNow;
