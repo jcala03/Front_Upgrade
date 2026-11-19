@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import logo from "../../../assets/logos/upgrade79-logo.png";
 import { login } from "../../../api/auth";
 import { consumeAuthNotice, saveAuthUser } from "../../../utils/authStorage";
+import { resetSharedCrmSession } from "../../../utils/crmIdleSession";
 import "./LoginPage.css";
 
 export const LoginPage = () => {
@@ -21,6 +22,7 @@ export const LoginPage = () => {
 
       const response = await login(email, password);
 
+      resetSharedCrmSession();
       saveAuthUser(response.user);
 
       window.location.href = response.user.role === "admin" ? "/crm" : "/crm/me";

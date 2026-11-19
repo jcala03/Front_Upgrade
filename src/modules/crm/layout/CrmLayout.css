@@ -809,3 +809,16 @@ body:has(.crm-layout),
     justify-content: center;
   }
 }
+.crm-layout__session-notice {
+  position: fixed;
+  z-index: 1000;
+  inset: auto 1rem 1rem;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem;
+  border: 1px solid var(--color-primary, #2389f5);
+  border-radius: 0.75rem;
+  background: #151b25;
+  color: #fff;
+  font-size: 0.9rem;
+}

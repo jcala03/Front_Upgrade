@@ -1,4 +1,5 @@
 import type { AuthUser } from "../types/auth";
+import { clearSharedCrmSession, CRM_IDLE_NOTICE } from "./crmIdleSession";
 
 const USER_KEY = "upgrade79_crm_user";
 const AUTH_NOTICE_KEY = "upgrade79_auth_notice";
@@ -13,6 +14,7 @@ export const saveAuthUser = (user: AuthUser) => {
 };
 
 export const getAuthUser = (): AuthUser | null => {
+  if (typeof sessionStorage === "undefined") return null;
   const rawUser = sessionStorage.getItem(USER_KEY);
 
   if (!rawUser) {
@@ -38,12 +40,18 @@ export const getAuthUser = (): AuthUser | null => {
   }
 };
 
-export const clearAuthSession = () => {
+export const clearAuthSession = (expectedSessionId?: string, reason: "idle" | "logout" = "logout") => {
+  clearSharedCrmSession(expectedSessionId, reason);
   sessionStorage.removeItem(USER_KEY);
   window.dispatchEvent(new CustomEvent<AuthUser | null>(AUTH_USER_EVENT, { detail: null }));
 };
 
 export const handleInactiveAccountResponse = (status: number, payload: unknown) => {
+  if (status === 401 && getAuthUser()) {
+    const code = payload && typeof payload === "object" && "code" in payload ? payload.code : null;
+    expireAuthSession(undefined, code === "SESSION_EXPIRED" ? "idle" : "logout");
+    return true;
+  }
   const message = payload && typeof payload === "object" && "message" in payload
     ? (payload as { message?: unknown }).message
     : null;
@@ -56,6 +64,15 @@ export const handleInactiveAccountResponse = (status: number, payload: unknown) 
     window.location.replace("/login");
   }
   return true;
+};
+
+export const expireAuthSession = (expectedSessionId?: string, reason: "idle" | "logout" = "idle") => {
+  clearAuthSession(expectedSessionId, reason);
+  sessionStorage.setItem(AUTH_NOTICE_KEY, reason === "idle" ? CRM_IDLE_NOTICE : "Tu sesión terminó. Inicia sesión nuevamente.");
+  if (!inactiveRedirectStarted && window.location.pathname !== "/login") {
+    inactiveRedirectStarted = true;
+    window.location.replace("/login");
+  }
 };
 
 export const consumeAuthNotice = () => {

@@ -1,6 +1,7 @@
 import type { AuthUser, LoginResponse, MeResponse } from "../types/auth";
 import { handleInactiveAccountResponse } from "../utils/authStorage";
 import { currentRegistration, setDeviceOwner, updateAppBadge } from "../pwa/register";
+import type { CrmSessionInfo } from "../utils/crmIdleSession";
 
 export class AuthApiError extends Error {
   constructor(message: string, public status: number, public errors: Record<string, string[]> = {}) {
@@ -94,6 +95,39 @@ export const getMe = async (): Promise<MeResponse> => {
   }
 
   return response.json() as Promise<MeResponse>;
+};
+
+export const getCrmSession = async (): Promise<CrmSessionInfo> => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/session`, {
+    credentials: "include", headers: { Accept: "application/json" },
+  });
+  const result = await response.json().catch(() => null);
+  handleInactiveAccountResponse(response.status, result);
+  if (!response.ok) throw new AuthApiError("No se pudo verificar la sesión.", response.status);
+  return result.session as CrmSessionInfo;
+};
+
+export const recordCrmActivity = async (): Promise<CrmSessionInfo> => {
+  if (!getCookie("XSRF-TOKEN")) await getCsrfCookie();
+  const send = () => fetch(`${API_BASE_URL}/api/auth/activity`, {
+    method: "POST", credentials: "include", keepalive: true,
+    headers: { Accept: "application/json", ...csrfHeaders() },
+  });
+  let response = await send();
+  if (response.status === 419) { await getCsrfCookie(); response = await send(); }
+  const result = await response.json().catch(() => null);
+  handleInactiveAccountResponse(response.status, result);
+  if (!response.ok) throw new AuthApiError("No se pudo confirmar la actividad.", response.status);
+  return result.session as CrmSessionInfo;
+};
+
+export const endIdleCrmSession = async (sessionId: string): Promise<void> => {
+  // No preliminary /csrf-cookie request: it must not adopt a new credential after expiration.
+  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: "POST", credentials: "include", keepalive: true,
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...csrfHeaders() },
+    body: JSON.stringify({ idle_session_id: sessionId }),
+  });
 };
 
 export const logout = async (): Promise<void> => {

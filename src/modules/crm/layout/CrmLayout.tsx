@@ -28,11 +28,12 @@ import {
   X,
 } from "lucide-react";
 import logo from "../../../assets/logos/upgrade79-logo.png";
-import { logout } from "../../../api/auth";
+import { endIdleCrmSession, getCrmSession, logout, recordCrmActivity } from "../../../api/auth";
 import { getUnreadNotificationCount, NOTIFICATION_COUNT_EVENT } from "../../../api/notifications";
 import { PUSH_RECEIVED_EVENT, updateAppBadge } from "../../../pwa/register";
 import { PwaStatus } from "../../../pwa/PwaStatus";
-import { AUTH_USER_EVENT, clearAuthSession, getAuthUser, hasPermission } from "../../../utils/authStorage";
+import { AUTH_USER_EVENT, clearAuthSession, expireAuthSession, getAuthUser, hasPermission } from "../../../utils/authStorage";
+import { startCrmIdleSession } from "../../../utils/crmIdleSession";
 import type { AuthUser } from "../../../types/auth";
 import "./CrmLayout.css";
 
@@ -353,6 +354,20 @@ export const CrmLayout = ({
   const navigationRef = useRef<HTMLElement>(null);
   const navigationScrollRef = useRef<HTMLElement>(null);
   const navigationButtonRef = useRef<HTMLButtonElement>(null);
+  const [idleWarning, setIdleWarning] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    return startCrmIdleSession({
+      userId: user.id, status: getCrmSession, activity: recordCrmActivity,
+      warn: setIdleWarning,
+      expire: (sessionId, reason) => {
+        if (sessionId) void endIdleCrmSession(sessionId).catch(() => {});
+        void updateAppBadge(0);
+        expireAuthSession(sessionId ?? undefined, reason);
+      },
+    });
+  }, [user?.id]);
 
   const persistSidebarScroll = useCallback(() => {
     if (navigationScrollRef.current) saveSidebarScroll(user, navigationScrollRef.current.scrollTop);
@@ -505,6 +520,7 @@ export const CrmLayout = ({
 
   return (
     <div className="crm-layout">
+      {idleWarning ? <p className="crm-layout__session-notice" role="status">Tu sesión está por terminar por inactividad. Guarda los cambios pendientes; interactuar con el CRM mantiene la sesión activa.</p> : null}
       <button className={`crm-layout__nav-backdrop${navigationOpen ? " is-open" : ""}`} type="button" aria-label="Cerrar menú" tabIndex={-1} onClick={() => setNavigationOpen(false)} />
       <aside ref={navigationRef} id="crm-navigation" className={`crm-layout__sidebar${navigationOpen ? " is-open" : ""}`} aria-label="Navegación del CRM" aria-hidden={isCompactNavigation && !navigationOpen ? true : undefined} role={isCompactNavigation ? "dialog" : undefined} aria-modal={isCompactNavigation && navigationOpen ? true : undefined}>
         <div className="crm-layout__sidebar-header">

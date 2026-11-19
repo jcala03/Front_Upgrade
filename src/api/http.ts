@@ -193,6 +193,7 @@ export const apiDownload = async (path: string, query: QueryParams = {}, signal?
   }
 
   if (response.status === 401) {
+    handleInactiveAccountResponse(response.status, objectValue(await parseBody(response)));
     window.location.href = "/login";
     throw new ApiError("Tu sesión ha terminado.", 401);
   }
